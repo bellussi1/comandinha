@@ -128,7 +128,11 @@ const MenuAutoatendimento = () => {
       {/* Header fixo */}
       <div className="sticky top-0 bg-green-500 text-white p-4 shadow-md z-10">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold">Cardápio</h1>
+          <h1 className="text-xl font-bold">
+            Cardápio <br />
+            Barão Bar e Restaurante
+          </h1>
+
           <div className="flex items-center gap-2">
             <ShoppingCart />
             <span className="font-bold">R$ {total.toFixed(2)}</span>
