@@ -27,8 +27,8 @@ Este é um projeto de um sistema de autoatendimento para um restaurante virtual,
 
 1. **Clone o repositório**:
    ```bash
-   git clone https://github.com/seu-usuario/nome-do-repositorio.git
-   cd nome-do-repositorio
+   git clone https://github.com/bellussi1/menu-system.git
+   cd menu-system
    ```
 
 2. **Instale as dependências**:
