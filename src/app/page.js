@@ -1,4 +1,4 @@
-import MenuAutoatendimento from "@/components/Menuautoatendimento";
+import MenuAutoatendimento from "@/components/menuAutoatendimento";
 
 export default function Home() {
   return (
