@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { WelcomeScreen } from './WelcomeScreen';
-import { ConfirmationModal } from './ConfirmationModal';
-import CategorySection from './CategorySection';
-import Cart from './Cart';
+import { MenuWelcomeScreen } from './MenuWelcomeScreen';
+import { MenuConfirmationModal } from './MenuConfirmationModal';
+import MenuCategorySection from './MenuCategorySection';
+import MenuCart from './MenuCart';
 import { useCart } from '@/hooks/useCart';
 import { categories } from '@/services/menuData';
 
@@ -22,7 +22,7 @@ const MenuAutoatendimento = () => {
   return (
     <>
       {currentScreen === 'welcome' ? (
-        <WelcomeScreen onContinue={() => setCurrentScreen('menu')} />
+        <MenuWelcomeScreen onContinue={() => setCurrentScreen('menu')} />
       ) : (
         <div className="min-h-screen bg-gray-100">
           {/* Header */}
@@ -41,7 +41,7 @@ const MenuAutoatendimento = () => {
           {/* Conteúdo Principal */}
           <main className="p-4 pb-32">
             {categories.map((category) => (
-              <CategorySection
+              <MenuCategorySection
                 key={category.nome}
                 category={category}
                 onAddItem={addItem}
@@ -51,7 +51,7 @@ const MenuAutoatendimento = () => {
 
           {/* Carrinho */}
           {cart.length > 0 && (
-            <Cart
+            <MenuCart
               items={cart}
               total={total}
               onRemoveItem={removeItem}
@@ -61,7 +61,7 @@ const MenuAutoatendimento = () => {
           )}
 
           {/* Modal de Confirmação */}
-          {showConfirmation && <ConfirmationModal />}
+          {showConfirmation && <MenuConfirmationModal />}
         </div>
       )}
     </>

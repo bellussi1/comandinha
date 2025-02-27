@@ -1,7 +1,13 @@
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/menu/MenuCard";
+
 import MenuItem from "./MenuItem";
 
-const CategorySection = ({ category, onAddItem }) => {
+const MenuCategorySection = ({ category, onAddItem }) => {
   return (
     <Card className="mb-4">
       <CardHeader className="py-3">
@@ -19,4 +25,4 @@ const CategorySection = ({ category, onAddItem }) => {
   );
 };
 
-export default CategorySection;
+export default MenuCategorySection;

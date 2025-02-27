@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/menu/MenuCard";
 import { Plus, Minus, ShoppingCart, ArrowRight, Check } from "lucide-react";
 
 const TelaBoasVindas = ({ onContinue }) => (

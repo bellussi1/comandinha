@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 
-export const WelcomeScreen = ({ onContinue }) => (
+export const MenuWelcomeScreen = ({ onContinue }) => (
   <div className="min-h-screen bg-gradient-to-b from-green-500 to-green-600 flex flex-col items-center justify-center p-6 text-white">
     <h1 className="text-4xl font-bold mb-4 text-center">Bem-vindo ao</h1>
     <h2 className="text-3xl font-bold mb-8 text-center">

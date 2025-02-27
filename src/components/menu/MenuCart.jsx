@@ -1,6 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 
-const Cart = ({ items, total, onRemoveItem, onAddItem, onCheckout }) => {
+const MenuCart = ({ items, total, onRemoveItem, onAddItem, onCheckout }) => {
   if (items.length === 0) return null;
 
   return (
@@ -43,4 +43,4 @@ const Cart = ({ items, total, onRemoveItem, onAddItem, onCheckout }) => {
   );
 };
 
-export default Cart;
+export default MenuCart;
