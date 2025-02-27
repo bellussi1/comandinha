@@ -1,7 +1,15 @@
-import MenuAutoatendimento from "@/components/MenuAutoatendimento";
+import dynamic from 'next/dynamic';
+
+// Carregamento otimizado sem SSR
+const MenuAutoatendimento = dynamic(
+  () => import('@/components/menu-autoatendimento'),
+  { ssr: true }
+);
 
 export default function Home() {
   return (
-    <MenuAutoatendimento />
+    <main>
+      <MenuAutoatendimento />
+    </main>
   );
 }
