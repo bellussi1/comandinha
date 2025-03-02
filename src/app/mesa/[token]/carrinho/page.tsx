@@ -25,31 +25,7 @@ import {
   SheetDescription,
 } from "@/src/components/ui/sheet";
 
-// Tipos
-interface Produto {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco: number;
-  categoria: string;
-  imagem: string;
-  popular?: boolean;
-  tempoPreparo?: number;
-  restricoes?: string[];
-}
-
-interface ItemCarrinho extends Produto {
-  quantidade: number;
-  observacoes?: string;
-  adicionais?: Array<{ nome: string; preco: number }>;
-}
-
-interface Pedido {
-  id: string;
-  itens: ItemCarrinho[];
-  timestamp: number;
-  status: "confirmado" | "em-preparo" | "entregue";
-}
+import { ItemCarrinho, Pedido } from "@/src/types";
 
 export default function CarrinhoPage() {
   const params = useParams();

@@ -1,43 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  Users,
-  UserPlus,
-  UserMinus,
-  Check,
-  Divide,
-} from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
-import { useToast } from "@/src/components/ui/use-toast";
 import { Toaster } from "@/src/components/ui/toaster";
-
-// Types
-interface Produto {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco: number;
-  categoria: string;
-  imagem: string;
-  popular?: boolean;
-  tempoPreparo?: number;
-  restricoes?: string[];
-}
-
-interface ItemCarrinho extends Produto {
-  quantidade: number;
-  observacoes?: string;
-  adicionais?: Array<{ nome: string; preco: number }>;
-}
-
-interface ItemDivisao extends ItemCarrinho {
-  pessoas: number[];
-}
+import { useToast } from "@/src/components/ui/use-toast";
+import type { ItemCarrinho, ItemDivisao } from "@/src/types";
+import {
+  ArrowLeft,
+  Check,
+  Divide,
+  UserMinus,
+  UserPlus,
+  Users,
+} from "lucide-react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function DividirContaPage() {
   const params = useParams();

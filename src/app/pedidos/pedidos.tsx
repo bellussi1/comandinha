@@ -1,42 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  Clock,
-  CheckCircle,
-  Utensils,
-  ShoppingBag,
-  Search,
-  X,
-  SlidersHorizontal,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-  SheetFooter,
-  SheetClose,
-} from "@/components/ui/sheet";
+import { ThemeToggle } from "@/src/components/theme-toggle";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { Input } from "@/src/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Toaster } from "@/components/ui/toaster";
-import type { Pedido } from "@/types";
+} from "@/src/components/ui/select";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/src/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
+import { Toaster } from "@/src/components/ui/toaster";
+import type { Pedido } from "@/src/types";
+import {
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  Search,
+  ShoppingBag,
+  SlidersHorizontal,
+  Utensils,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function PedidosGlobalPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -123,7 +123,7 @@ export default function PedidosGlobalPage() {
       result = result.filter(
         (pedido) =>
           pedido.id.toLowerCase().includes(query) ||
-          (pedido.mesa && pedido.mesa.toLowerCase().includes(query))
+          (pedido.id && pedido.id.toLowerCase().includes(query))
       );
     }
 
@@ -340,9 +340,9 @@ export default function PedidosGlobalPage() {
                       <Clock className="h-4 w-4 mr-1" />
                       {formatarData(pedido.timestamp)}
                     </div>
-                    {pedido.mesa && (
+                    {pedido.id && (
                       <div className="flex items-center">
-                        <span className="font-medium">Mesa: {pedido.mesa}</span>
+                        <span className="font-medium">Mesa: {pedido.id}</span>
                       </div>
                     )}
                   </div>

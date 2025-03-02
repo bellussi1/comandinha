@@ -1,137 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { ThemeToggle } from "@/src/components/theme-toggle";
+import { Checkbox } from "@/src/components/ui/checkbox";
+import { Toaster } from "@/src/components/ui/toaster";
+import { useToast } from "@/src/components/ui/use-toast";
+import { produtos } from "@/src/services/produto-service";
+import type { ItemCarrinho, Produto } from "@/src/types";
+import {
+  Bell,
+  ChevronRight,
+  Clock,
+  Filter,
+  Minus,
+  Plus,
+  Receipt,
+  ShoppingCart,
+  Star,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import {
-  Bell,
-  ShoppingCart,
-  Clock,
-  ChevronRight,
-  Filter,
-  Star,
-  Plus,
-  Minus,
-  Receipt,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Badge } from "../../../components/ui/badge";
 import { Button } from "../../../components/ui/button";
 import { Card, CardContent } from "../../../components/ui/card";
-import { Badge } from "../../../components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { ThemeToggle } from "@/src/components/theme-toggle";
-import { useToast } from "@/src/components/ui/use-toast";
-import { Toaster } from "@/src/components/ui/toaster";
-import { Checkbox } from "@/src/components/ui/checkbox";
-import { X } from "lucide-react";
-
-// Tipos
-interface Produto {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco: number;
-  categoria: string;
-  imagem: string;
-  popular?: boolean;
-  tempoPreparo?: number;
-  restricoes?: string[];
-}
-
-interface ItemCarrinho extends Produto {
-  quantidade: number;
-  observacoes?: string;
-  adicionais?: Array<{ nome: string; preco: number }>;
-}
-
-// Dados de exemplo
-const produtos: Produto[] = [
-  {
-    id: "1",
-    nome: "Hambúrguer Artesanal",
-    descricao:
-      "Pão brioche, 180g de carne, queijo cheddar, bacon e molho especial",
-    preco: 32.9,
-    categoria: "principais",
-    imagem: "/placeholder.svg?height=200&width=300",
-    popular: true,
-    tempoPreparo: 20,
-    restricoes: [],
-  },
-  {
-    id: "2",
-    nome: "Batata Frita",
-    descricao: "Porção de batatas fritas crocantes com sal e orégano",
-    preco: 18.9,
-    categoria: "entradas",
-    imagem: "/placeholder.svg?height=200&width=300",
-    tempoPreparo: 15,
-    restricoes: ["vegetariano"],
-  },
-  {
-    id: "3",
-    nome: "Refrigerante",
-    descricao: "Lata 350ml",
-    preco: 6.9,
-    categoria: "bebidas",
-    imagem: "/placeholder.svg?height=200&width=300",
-    tempoPreparo: 5,
-    restricoes: ["vegetariano", "sem-gluten"],
-  },
-  {
-    id: "4",
-    nome: "Salada Caesar",
-    descricao: "Alface americana, croutons, parmesão e molho caesar",
-    preco: 24.9,
-    categoria: "entradas",
-    imagem: "/placeholder.svg?height=200&width=300",
-    tempoPreparo: 10,
-    restricoes: ["vegetariano"],
-  },
-  {
-    id: "5",
-    nome: "Pudim de Leite",
-    descricao: "Pudim de leite condensado com calda de caramelo",
-    preco: 14.9,
-    categoria: "sobremesas",
-    imagem: "/placeholder.svg?height=200&width=300",
-    popular: true,
-    tempoPreparo: 5,
-    restricoes: ["vegetariano"],
-  },
-  {
-    id: "6",
-    nome: "Suco Natural",
-    descricao: "Suco de laranja, abacaxi ou maracujá",
-    preco: 9.9,
-    categoria: "bebidas",
-    imagem: "/placeholder.svg?height=200&width=300",
-    tempoPreparo: 8,
-    restricoes: ["vegetariano", "sem-gluten"],
-  },
-  {
-    id: "7",
-    nome: "Picanha Grelhada",
-    descricao:
-      "300g de picanha grelhada com batatas rústicas e molho chimichurri",
-    preco: 69.9,
-    categoria: "principais",
-    imagem: "/placeholder.svg?height=200&width=300",
-    tempoPreparo: 25,
-    restricoes: [],
-  },
-  {
-    id: "8",
-    nome: "Sorvete Artesanal",
-    descricao:
-      "Duas bolas de sorvete artesanal nos sabores chocolate, creme ou morango",
-    preco: 16.9,
-    categoria: "sobremesas",
-    imagem: "/placeholder.svg?height=200&width=300",
-    tempoPreparo: 5,
-    restricoes: ["vegetariano"],
-  },
-];
 
 export default function MenuPage() {
   const params = useParams();
@@ -355,7 +249,7 @@ export default function MenuPage() {
             >
               <div className="relative h-48">
                 <Image
-                  src={produto.imagem || "/placeholder.svg"}
+                  src={produto.imagem || "/assets/placeholder.svg"}
                   alt={produto.nome}
                   fill
                   className="object-cover"
@@ -475,7 +369,7 @@ export default function MenuPage() {
           <div className="bg-background w-full max-w-md rounded-t-lg sm:rounded-lg shadow-lg overflow-hidden max-h-[90vh] flex flex-col">
             <div className="relative h-64">
               <Image
-                src={produtoSelecionado.imagem || "/placeholder.svg"}
+                src={produtoSelecionado.imagem || "/assets/placeholder.svg"}
                 alt={produtoSelecionado.nome}
                 fill
                 className="object-cover"

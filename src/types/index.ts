@@ -1,5 +1,3 @@
-// Common types for the Comandinha application
-
 export interface Produto {
   id: string;
   nome: string;

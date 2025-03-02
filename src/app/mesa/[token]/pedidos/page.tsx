@@ -1,44 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { ItemCarrinho, Pedido } from "@/src/types";
 import {
   ArrowLeft,
-  Clock,
   CheckCircle,
-  Utensils,
+  Clock,
   ShoppingBag,
+  Utensils,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
-// Tipos
-interface Produto {
-  id: string;
-  nome: string;
-  descricao: string;
-  preco: number;
-  categoria: string;
-  imagem: string;
-  popular?: boolean;
-  tempoPreparo?: number;
-  restricoes?: string[];
-}
-
-interface ItemCarrinho extends Produto {
-  quantidade: number;
-  observacoes?: string;
-  adicionais?: Array<{ nome: string; preco: number }>;
-}
-
-interface Pedido {
-  id: string;
-  itens: ItemCarrinho[];
-  timestamp: number;
-  status: "confirmado" | "em-preparo" | "entregue";
-}
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function PedidosPage() {
   const params = useParams();

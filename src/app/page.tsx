@@ -1,6 +1,6 @@
+import { QrCode } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
-import { QrCode, Receipt } from "lucide-react";
 
 export default function Home() {
   return (
