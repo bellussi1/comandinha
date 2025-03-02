@@ -10,6 +10,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Comandinha - Sistema de Comandas Digital",
   description: "Gerencie seus pedidos de forma simples e intuitiva",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
