@@ -1,6 +1,6 @@
 import type { Produto } from "../types";
 
-const PLACEHOLDER_IMAGE = "/src/assets/placeholder.svg";
+const PLACEHOLDER_IMAGE = "/placeholder.svg";
 
 export const produtos: Produto[] = [
   {
