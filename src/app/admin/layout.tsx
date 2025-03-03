@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { Bell, LogOut } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
+import { Bell, LogOut } from "lucide-react";
+import type { ReactNode } from "react";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (

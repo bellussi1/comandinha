@@ -1,6 +1,12 @@
-import { QrCode } from "lucide-react";
+import { QrCode, Settings } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 export default function Home() {
   return (
@@ -25,6 +31,29 @@ export default function Home() {
             acessar o menu.
           </p>
         </div>
+      </div>
+
+      {/* Admin Menu Button */}
+      <div className="fixed bottom-4 right-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-full shadow-lg"
+            >
+              <Settings className="h-5 w-5" />
+              <span className="sr-only">Menu administrativo</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem asChild>
+              <Link href="/admin" className="w-full cursor-pointer">
+                Acessar Admin
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </main>
   );
