@@ -12,7 +12,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-6 text-center">
       <div className="max-w-md mx-auto">
-        <h1 className="text-4xl font-bold mb-4">Comandinha</h1>
+        <h1 className="text-4xl font-black mb-4">COMANDINHA</h1>
         <p className="text-muted-foreground mb-8">
           Sistema de comandas digital para restaurantes. Escaneie o QR Code da
           sua mesa para começar.
@@ -31,29 +31,6 @@ export default function Home() {
             acessar o menu.
           </p>
         </div>
-      </div>
-
-      {/* Admin Menu Button */}
-      <div className="fixed bottom-4 right-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 rounded-full shadow-lg"
-            >
-              <Settings className="h-5 w-5" />
-              <span className="sr-only">Menu administrativo</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem asChild>
-              <Link href="/admin" className="w-full cursor-pointer">
-                Acessar Admin
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </main>
   );
