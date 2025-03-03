@@ -1,61 +1,61 @@
-# Restaurante Virtual - Menu Autoatendimento
+# 🍽️ Comandinha - Sistema de Comandas Digital
 
-Este é um projeto de um sistema de autoatendimento para um restaurante virtual, construído utilizando **Next.js**, **React**, e **Tailwind CSS**. O objetivo do sistema é permitir que clientes façam pedidos de maneira rápida e intuitiva diretamente na tela, escolhendo entre pratos principais e bebidas.
+Comandinha é um sistema digital de comandas desenvolvido para restaurantes, permitindo que os clientes façam pedidos diretamente de suas mesas através de QR Codes. O sistema oferece uma interface intuitiva tanto para clientes quanto para a equipe do restaurante.
 
-## Tecnologias Utilizadas
+![Comandinha Screenshot](public/placeholder.svg)
 
-- **Next.js** - Framework React para desenvolvimento de aplicações server-side e estáticas.
-- **React** - Biblioteca JavaScript para construção de interfaces de usuário.
-- **Tailwind CSS** - Framework de CSS utilitário para estilização rápida e personalizada.
-- **Lucide-react** - Ícones para uso em componentes interativos.
+## 🚀 Funcionalidades
 
-## Funcionalidades
+### Para Clientes
 
-- Tela de boas-vindas para introdução do restaurante e início do pedido.
-- Menu interativo com categorias de pratos e bebidas.
-- Adicionar e remover itens do carrinho com atualização em tempo real do total.
-- Confirmação do pedido com feedback visual para o usuário.
-- Persistência do layout principal, facilitando a navegação e acessibilidade.
+- 📱 Acesso ao cardápio digital através de QR Code
+- 🛒 Carrinho de pedidos com gestão de quantidades
+- 💬 Adição de observações para cada item
+- 🔍 Filtros por categoria e restrições alimentares
+- 🛎️ Chamada de garçom com seleção de motivo
+- 💳 Divisão de conta inteligente
+- 📊 Acompanhamento de status dos pedidos
 
-## Estrutura de Componentes
+### Recursos do Sistema
 
-- **MenuAutoatendimento**: Componente principal que gerencia o menu, o carrinho e a confirmação de pedidos.
-- **TelaBoasVindas**: Componente de boas-vindas para apresentar o restaurante.
-- **ConfirmacaoPedido**: Componente de modal que confirma visualmente o pedido ao usuário.
+- 🎨 Design responsivo para todos os dispositivos
+- 🌓 Suporte a tema claro/escuro
+- 💪 Interface robusta e intuitiva
+- ⚡ Desempenho otimizado
+- 🔒 Armazenamento local seguro
+
+## 🛠️ Tecnologias Utilizadas
+
+- [Next.js 14](https://nextjs.org/) - Framework React com App Router
+- [TypeScript](https://www.typescriptlang.org/) - Tipagem estática
+- [Tailwind CSS](https://tailwindcss.com/) - Estilização
+- [shadcn/ui](https://ui.shadcn.com/) - Componentes de UI
+- [Lucide Icons](https://lucide.dev/) - Ícones
+- [next-themes](https://github.com/pacocoursey/next-themes) - Gestão de temas
 
 ## Como Executar o Projeto
 
 1. **Clone o repositório**:
+
    ```bash
    git clone https://github.com/bellussi1/menu-system.git
    cd menu-system
    ```
 
 2. **Instale as dependências**:
+
    ```bash
    npm install
    ```
 
 3. **Inicie o servidor de desenvolvimento**:
+
    ```bash
    npm run dev
    ```
 
-4. **Acesse o projeto**: 
+4. **Acesse o projeto**:
    Abra o navegador e vá para [http://localhost:3000](http://localhost:3000).
-
-## Organização dos Arquivos
-
-- **/components**: Contém os componentes React do projeto, incluindo `MenuAutoatendimento`, `TelaBoasVindas` e `ConfirmacaoPedido`.
-- **/pages**: Inclui o arquivo `page.js`, responsável por renderizar o componente `MenuAutoatendimento` como página inicial.
-- **/styles**: Contém os arquivos de configuração do Tailwind e estilos globais (caso haja).
-
-## Melhorias Futuras
-
-- Adicionar a persistência do carrinho para evitar a perda de itens ao atualizar a página.
-- Implementar animações adicionais para uma experiência de usuário mais rica.
-- Integrar com um backend para processar e armazenar pedidos.
-- Adicionar testes unitários e de integração.
 
 ## Contribuindo
 
