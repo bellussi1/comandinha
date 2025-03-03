@@ -1,21 +1,22 @@
 "use client";
 
-import { Button } from "@/src/components/ui/button";
-import { Card, CardContent } from "@/src/components/ui/card";
-import { Toaster } from "@/src/components/ui/toaster";
-import { useToast } from "@/src/components/ui/use-toast";
-import type { ItemCarrinho, ItemDivisao } from "@/src/types";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ArrowLeft,
+  Users,
+  UserPlus,
+  UserMinus,
   Check,
   Divide,
-  UserMinus,
-  UserPlus,
-  Users,
 } from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
+import { useToast } from "@/src/components/ui/use-toast";
+import { Toaster } from "@/src/components/ui/toaster";
+import { getCarrinho } from "@/src/services/carrinho";
+import type { ItemCarrinho, ItemDivisao } from "@/src/types";
 
 export default function DividirContaPage() {
   const params = useParams();
@@ -30,21 +31,18 @@ export default function DividirContaPage() {
 
   // Carregar carrinho do localStorage
   useEffect(() => {
-    const carrinhoSalvo = localStorage.getItem(`carrinho-${token}`);
-    if (carrinhoSalvo) {
-      const itens = JSON.parse(carrinhoSalvo);
-      setCarrinho(itens);
+    const carrinhoSalvo = getCarrinho(token);
+    setCarrinho(carrinhoSalvo);
 
-      // Inicializar itens de divisão
-      const divisao = itens.map((item: ItemCarrinho) => ({
-        ...item,
-        pessoas: divisaoIgualitaria
-          ? Array.from({ length: numPessoas }, (_, i) => i)
-          : [0],
-      }));
+    // Inicializar itens de divisão
+    const divisao = carrinhoSalvo.map((item: ItemCarrinho) => ({
+      ...item,
+      pessoas: divisaoIgualitaria
+        ? Array.from({ length: numPessoas }, (_, i) => i)
+        : [0],
+    }));
 
-      setItensDivisao(divisao);
-    }
+    setItensDivisao(divisao);
   }, [token, divisaoIgualitaria, numPessoas]);
 
   // Atualizar divisão quando o número de pessoas muda
