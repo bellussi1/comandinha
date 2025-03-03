@@ -1,105 +1,97 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  Trash2,
-  Plus,
-  Minus,
-  Receipt,
-  Users,
-  CheckCircle2,
-} from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
-import { useToast } from "@/src/components/ui/use-toast";
-import { Toaster } from "@/src/components/ui/toaster";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetDescription,
 } from "@/src/components/ui/sheet";
-
-import { ItemCarrinho, Pedido } from "@/src/types";
+import { Toaster } from "@/src/components/ui/toaster";
+import { useToast } from "@/src/components/ui/use-toast";
+import {
+  atualizarQuantidade,
+  getCarrinho,
+  limparCarrinho,
+  removerItem,
+} from "@/src/services/carrinho";
+import { adicionarPedido } from "@/src/services/pedidos";
+import type { ItemCarrinho } from "@/src/types";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Minus,
+  Plus,
+  Receipt,
+  Trash2,
+  Users,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function CarrinhoPage() {
   const params = useParams();
   const router = useRouter();
-
   const { token } = params;
   const { toast } = useToast();
 
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [confirmacaoAberta, setConfirmacaoAberta] = useState(false);
 
-  // Carregar carrinho e pedidos do localStorage
+  // Carregar carrinho
   useEffect(() => {
-    const carrinhoSalvo = localStorage.getItem(`carrinho-${token}`);
-    if (carrinhoSalvo) {
-      setCarrinho(JSON.parse(carrinhoSalvo));
-    }
-
-    const pedidosSalvos = localStorage.getItem(`pedidos-${token}`);
-    if (pedidosSalvos) {
-      setPedidos(JSON.parse(pedidosSalvos));
+    if (typeof token === "string") {
+      const carrinhoSalvo = getCarrinho(token);
+      setCarrinho(carrinhoSalvo);
     }
   }, [token]);
-
-  // Salvar carrinho e pedidos no localStorage quando atualizados
-  useEffect(() => {
-    localStorage.setItem(`carrinho-${token}`, JSON.stringify(carrinho));
-    localStorage.setItem(`pedidos-${token}`, JSON.stringify(pedidos));
-  }, [carrinho, pedidos, token]);
 
   const totalCarrinho = carrinho.reduce((total, item) => {
     return total + item.preco * item.quantidade;
   }, 0);
 
   const incrementarQuantidade = (id: string) => {
-    setCarrinho((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantidade: item.quantidade + 1 } : item
-      )
-    );
+    const item = carrinho.find((i) => i.id === id);
+    if (item && typeof token === "string") {
+      atualizarQuantidade(token, id, item.quantidade + 1);
+      setCarrinho(getCarrinho(token));
+    }
   };
 
   const decrementarQuantidade = (id: string) => {
-    setCarrinho((prev) =>
-      prev.map((item) =>
-        item.id === id && item.quantidade > 1
-          ? { ...item, quantidade: item.quantidade - 1 }
-          : item
-      )
-    );
+    const item = carrinho.find((i) => i.id === id);
+    if (item && item.quantidade > 1 && typeof token === "string") {
+      atualizarQuantidade(token, id, item.quantidade - 1);
+      setCarrinho(getCarrinho(token));
+    }
   };
 
-  const removerItem = (id: string) => {
-    setCarrinho((prev) => prev.filter((item) => item.id !== id));
-    toast({
-      title: "Item removido",
-      description: "O item foi removido do seu pedido",
-      duration: 3000,
-    });
+  const removerItemDoCarrinho = (id: string) => {
+    if (typeof token === "string") {
+      removerItem(token, id);
+      setCarrinho(getCarrinho(token));
+      toast({
+        title: "Item removido",
+        description: "O item foi removido do seu pedido",
+        duration: 3000,
+      });
+    }
   };
 
   const enviarPedido = () => {
-    if (carrinho.length === 0) return;
+    if (carrinho.length === 0 || typeof token !== "string") return;
 
-    const novoPedido: Pedido = {
-      id: Date.now().toString(),
+    const novoPedido = adicionarPedido({
+      mesa: token,
       itens: [...carrinho],
-      timestamp: Date.now(),
-      status: "confirmado",
-    };
+    });
 
-    setPedidos((prev) => [...prev, novoPedido]);
+    limparCarrinho(token);
     setCarrinho([]);
     setObservacoesGerais("");
     setConfirmacaoAberta(false);
@@ -110,7 +102,6 @@ export default function CarrinhoPage() {
       duration: 5000,
     });
 
-    // Redirecionar para a página de pedidos após um breve delay
     setTimeout(() => {
       router.push(`/mesa/${token}/pedidos`);
     }, 1500);
@@ -173,7 +164,7 @@ export default function CarrinhoPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removerItem(item.id)}
+                          onClick={() => removerItemDoCarrinho(item.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                           <span className="sr-only">Remover</span>

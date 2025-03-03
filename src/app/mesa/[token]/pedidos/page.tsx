@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getPedidosPorMesa } from "@/src/services/pedidos";
 
 export default function PedidosPage() {
   const params = useParams();
@@ -23,33 +24,10 @@ export default function PedidosPage() {
 
   // Carregar pedidos do localStorage
   useEffect(() => {
-    const pedidosSalvos = localStorage.getItem(`pedidos-${token}`);
-    if (pedidosSalvos) {
-      setPedidos(JSON.parse(pedidosSalvos));
+    if (typeof token === "string") {
+      const pedidosMesa = getPedidosPorMesa(token);
+      setPedidos(pedidosMesa);
     }
-
-    // Para demonstração, atualizar status dos pedidos automaticamente
-    const interval = setInterval(() => {
-      setPedidos((prev) =>
-        prev.map((pedido) => {
-          if (
-            pedido.status === "confirmado" &&
-            Date.now() - pedido.timestamp > 30000
-          ) {
-            return { ...pedido, status: "em-preparo" };
-          }
-          if (
-            pedido.status === "em-preparo" &&
-            Date.now() - pedido.timestamp > 60000
-          ) {
-            return { ...pedido, status: "entregue" };
-          }
-          return pedido;
-        })
-      );
-    }, 10000);
-
-    return () => clearInterval(interval);
   }, [token]);
 
   // Salvar pedidos no localStorage quando atualizados

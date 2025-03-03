@@ -1,10 +1,15 @@
 "use client";
 
 import { ThemeToggle } from "@/src/components/theme-toggle";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardContent } from "@/src/components/ui/card";
 import { Checkbox } from "@/src/components/ui/checkbox";
+import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
-import { produtos } from "@/src/services/produto-service";
+import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
+import { filtrarProdutos } from "@/src/services/produtos";
 import type { ItemCarrinho, Produto } from "@/src/types";
 import {
   Bell,
@@ -22,10 +27,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent } from "../../../components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 
 export default function MenuPage() {
   const params = useParams();
@@ -46,49 +47,20 @@ export default function MenuPage() {
 
   // Carregar carrinho do localStorage
   useEffect(() => {
-    const carrinhoSalvo = localStorage.getItem(`carrinho-${token}`);
-    if (carrinhoSalvo) {
-      setCarrinho(JSON.parse(carrinhoSalvo));
+    if (typeof token === "string") {
+      const carrinhoSalvo = getCarrinho(token);
+      setCarrinho(carrinhoSalvo);
     }
   }, [token]);
 
-  // Salvar carrinho no localStorage quando atualizado
-  useEffect(() => {
-    if (carrinho.length > 0) {
-      localStorage.setItem(`carrinho-${token}`, JSON.stringify(carrinho));
-    }
-  }, [carrinho, token]);
-
-  const filtrarProdutosPorCategoria = (categoria: string) => {
-    let produtosFiltrados = produtos;
-
-    // Filtrar por categoria
-    if (categoria !== "todos") {
-      produtosFiltrados = produtosFiltrados.filter(
-        (produto) => produto.categoria === categoria
-      );
-    }
-
-    // Aplicar filtros adicionais
-    if (filtroVegetariano) {
-      produtosFiltrados = produtosFiltrados.filter(
-        (produto) =>
-          produto.restricoes && produto.restricoes.includes("vegetariano")
-      );
-    }
-
-    if (filtroSemGluten) {
-      produtosFiltrados = produtosFiltrados.filter(
-        (produto) =>
-          produto.restricoes && produto.restricoes.includes("sem-gluten")
-      );
-    }
-
-    return produtosFiltrados;
-  };
+  const produtosFiltrados = filtrarProdutos({
+    categoria: categoriaAtiva,
+    vegetariano: filtroVegetariano,
+    semGluten: filtroSemGluten,
+  });
 
   const adicionarAoCarrinho = () => {
-    if (!produtoSelecionado) return;
+    if (!produtoSelecionado || typeof token !== "string") return;
 
     const novoProdutoCarrinho: ItemCarrinho = {
       ...produtoSelecionado,
@@ -96,7 +68,8 @@ export default function MenuPage() {
       observacoes: observacoes.trim() || undefined,
     };
 
-    setCarrinho((prev) => [...prev, novoProdutoCarrinho]);
+    adicionarItem(token, novoProdutoCarrinho);
+    setCarrinho(getCarrinho(token));
     setModalProdutoAberto(false);
     setQuantidade(1);
     setObservacoes("");
@@ -146,7 +119,9 @@ export default function MenuPage() {
       <header className="sticky top-0 z-10 bg-background border-b">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="font-bold text-lg">Mesa {token}</h1>
+            <h1 className="font-bold text-lg">
+              Mesa {typeof token === "string" ? token : ""}
+            </h1>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -155,7 +130,9 @@ export default function MenuPage() {
               className="rounded-full"
               asChild
             >
-              <Link href={`/mesa/${token}/pedidos`}>
+              <Link
+                href={`/mesa/${typeof token === "string" ? token : ""}/pedidos`}
+              >
                 <Receipt className="h-5 w-5" />
                 <span className="sr-only">Ver pedidos</span>
               </Link>
@@ -176,7 +153,11 @@ export default function MenuPage() {
               className="rounded-full relative"
               asChild
             >
-              <Link href={`/mesa/${token}/carrinho`}>
+              <Link
+                href={`/mesa/${
+                  typeof token === "string" ? token : ""
+                }/carrinho`}
+              >
                 <ShoppingCart className="h-5 w-5" />
                 {totalItensCarrinho > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
@@ -241,7 +222,7 @@ export default function MenuPage() {
 
         {/* Lista de produtos */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtrarProdutosPorCategoria(categoriaAtiva).map((produto) => (
+          {produtosFiltrados.map((produto) => (
             <Card
               key={produto.id}
               className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -249,7 +230,7 @@ export default function MenuPage() {
             >
               <div className="relative h-48">
                 <Image
-                  src={produto.imagem || "/assets/placeholder.svg"}
+                  src={produto.imagem || "/placeholder.svg"}
                   alt={produto.nome}
                   fill
                   className="object-cover"
@@ -369,7 +350,7 @@ export default function MenuPage() {
           <div className="bg-background w-full max-w-md rounded-t-lg sm:rounded-lg shadow-lg overflow-hidden max-h-[90vh] flex flex-col">
             <div className="relative h-64">
               <Image
-                src={produtoSelecionado.imagem || "/assets/placeholder.svg"}
+                src={produtoSelecionado.imagem || "/placeholder.svg"}
                 alt={produtoSelecionado.nome}
                 fill
                 className="object-cover"
@@ -494,7 +475,9 @@ export default function MenuPage() {
             className="w-full shadow-lg gap-2 justify-between py-6"
             asChild
           >
-            <Link href={`/mesa/${token}/carrinho`}>
+            <Link
+              href={`/mesa/${typeof token === "string" ? token : ""}/carrinho`}
+            >
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />
                 <span>
