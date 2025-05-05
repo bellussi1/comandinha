@@ -105,14 +105,6 @@ export default function MenuPage() {
     return total + item.quantidade;
   }, 0);
 
-  const chamarGarcom = () => {
-    toast({
-      title: "Garçom chamado",
-      description: "Um garçom virá até sua mesa em instantes",
-      duration: 5000,
-    });
-  };
-
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -137,15 +129,7 @@ export default function MenuPage() {
                 <span className="sr-only">Ver pedidos</span>
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-full"
-              onClick={chamarGarcom}
-            >
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">Chamar garçom</span>
-            </Button>
+
             <ThemeToggle />
             <Button
               variant="outline"
