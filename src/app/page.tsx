@@ -19,11 +19,6 @@ export default function Home() {
               Acessar Demo
             </Link>
           </Button>
-
-          <p className="text-sm text-muted-foreground mt-4">
-            Em um restaurante real, você escanearia o QR Code da sua mesa para
-            acessar o menu.
-          </p>
         </div>
       </div>
     </main>
