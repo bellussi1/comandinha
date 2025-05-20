@@ -42,6 +42,7 @@ export default function CarrinhoPage() {
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [confirmacaoAberta, setConfirmacaoAberta] = useState(false);
+  const [enviandoPedido, setEnviandoPedido] = useState(false);
 
   // Carregar carrinho
   useEffect(() => {
@@ -83,35 +84,44 @@ export default function CarrinhoPage() {
     }
   };
 
-  const enviarPedido = () => {
+  const enviarPedido = async () => {
     if (carrinho.length === 0 || typeof token !== "string") return;
 
-    const novoPedido = adicionarPedido({
-      mesa: token,
-      itens: [...carrinho],
-    });
+    try {
+      setEnviandoPedido(true);
 
-    limparCarrinho(token);
-    setCarrinho([]);
-    setObservacoesGerais("");
-    setConfirmacaoAberta(false);
+      // Transformar carrinho para formato esperado pela API
+      const novoPedido = await adicionarPedido({
+        mesa: token,
+        itens: [...carrinho],
+        observacoesGerais: observacoesGerais || undefined,
+      });
 
-    toast({
-      title: "Pedido enviado com sucesso!",
-      description: "Seu pedido foi recebido e está sendo preparado",
-      duration: 5000,
-    });
+      // Limpar o carrinho após enviar o pedido
+      limparCarrinho(token);
+      setCarrinho([]);
+      setObservacoesGerais("");
+      setConfirmacaoAberta(false);
 
-    setTimeout(() => {
-      router.push(`/mesa/${token}/pedidos`);
-    }, 1500);
-  };
+      toast({
+        title: "Pedido enviado com sucesso!",
+        description: "Seu pedido foi recebido e está sendo preparado",
+        duration: 5000,
+      });
 
-  const formatarData = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+      setTimeout(() => {
+        router.push(`/mesa/${token}/pedidos`);
+      }, 1500);
+    } catch (error) {
+      console.error("Erro ao enviar pedido:", error);
+      toast({
+        title: "Erro ao enviar pedido",
+        description: "Não foi possível realizar seu pedido. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setEnviandoPedido(false);
+    }
   };
 
   return (

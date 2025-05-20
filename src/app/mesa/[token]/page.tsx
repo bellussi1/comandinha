@@ -9,13 +9,18 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
-import { filtrarProdutos } from "@/src/services/produtos";
+import { ativarMesa, validarToken } from "@/src/services/mesa";
+import {
+  filtrarProdutos,
+  getProdutosPorCategoria,
+  getProdutosRecomendados,
+} from "@/src/services/produtos";
 import type { ItemCarrinho, Produto } from "@/src/types";
 import {
-  Bell,
   ChevronRight,
   Clock,
   Filter,
+  Loader2,
   Minus,
   Plus,
   Receipt,
@@ -25,13 +30,15 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function MenuPage() {
   const params = useParams();
+  const router = useRouter();
   const { token } = params;
   const { toast } = useToast();
+
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(
     null
@@ -40,10 +47,57 @@ export default function MenuPage() {
   const [categoriaAtiva, setCategoriaAtiva] = useState("todos");
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
   const [observacoes, setObservacoes] = useState("");
-
   const [filtroAtivo, setFiltroAtivo] = useState<string | null>(null);
   const [filtroVegetariano, setFiltroVegetariano] = useState(false);
   const [filtroSemGluten, setFiltroSemGluten] = useState(false);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isValidMesa, setIsValidMesa] = useState(false);
+
+  // Verificar token da mesa
+  useEffect(() => {
+    async function verificarMesa() {
+      if (typeof token === "string" && token !== "demo") {
+        try {
+          console.log("Verificando mesa:", token);
+
+          // Forçar ativação da mesa para obter token válido
+          try {
+            const ativacaoResponse = await ativarMesa(token);
+            console.log("Mesa ativada:", ativacaoResponse);
+            setIsValidMesa(true);
+          } catch (ativacaoError) {
+            console.log("Falha na ativação, tentando validação simples");
+
+            // Se ativação falhar, tentar validação simples
+            const isValid = await validarToken(token);
+            console.log("Resultado validação:", isValid);
+            setIsValidMesa(isValid);
+
+            if (!isValid) {
+              toast({
+                title: "Mesa inválida",
+                description: "Esta mesa não está disponível",
+                variant: "destructive",
+              });
+              setTimeout(() => router.push("/"), 3000);
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao verificar mesa:", error);
+          setIsValidMesa(false);
+          toast({
+            title: "Erro",
+            description: "Não foi possível verificar esta mesa",
+            variant: "destructive",
+          });
+        }
+      } else if (token === "demo") {
+        setIsValidMesa(true);
+      }
+    }
+    verificarMesa();
+  }, [token, toast, router]);
 
   // Carregar carrinho do localStorage
   useEffect(() => {
@@ -53,57 +107,111 @@ export default function MenuPage() {
     }
   }, [token]);
 
-  const produtosFiltrados = filtrarProdutos({
-    categoria: categoriaAtiva,
-    vegetariano: filtroVegetariano,
-    semGluten: filtroSemGluten,
-  });
+  // Buscar produtos pela API
+  useEffect(() => {
+    async function fetchProdutos() {
+      try {
+        setLoading(true);
+        let produtosBuscados: Produto[];
 
-  const adicionarAoCarrinho = () => {
-    if (!produtoSelecionado || typeof token !== "string") return;
+        if (categoriaAtiva === "todos") {
+          // Se for "todos", buscar recomendados ou todos os produtos
+          produtosBuscados = await getProdutosRecomendados(20);
+        } else {
+          // Buscar produtos por categoria específica
+          produtosBuscados = await getProdutosPorCategoria(
+            categoriaAtiva as any
+          );
+        }
 
-    const novoProdutoCarrinho: ItemCarrinho = {
-      ...produtoSelecionado,
-      quantidade,
-      observacoes: observacoes.trim() || undefined,
-    };
+        // Aplicar filtros de vegetariano e sem gluten no cliente
+        if (filtroVegetariano || filtroSemGluten) {
+          produtosBuscados = await filtrarProdutos({
+            categoria: categoriaAtiva as any,
+            vegetariano: filtroVegetariano,
+            semGluten: filtroSemGluten,
+          });
+        }
 
-    adicionarItem(token, novoProdutoCarrinho);
-    setCarrinho(getCarrinho(token));
-    setModalProdutoAberto(false);
-    setQuantidade(1);
-    setObservacoes("");
+        setProdutos(produtosBuscados);
+      } catch (error) {
+        console.error("Erro ao buscar produtos:", error);
+        toast({
+          title: "Erro ao carregar produtos",
+          description:
+            "Não foi possível carregar os produtos. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    toast({
-      title: "Produto adicionado",
-      description: `${novoProdutoCarrinho.nome} foi adicionado ao seu pedido`,
-      duration: 3000,
-    });
-  };
+    fetchProdutos();
+  }, [categoriaAtiva, filtroVegetariano, filtroSemGluten, toast]);
 
+  // Funções auxiliares
   const abrirModalProduto = (produto: Produto) => {
     setProdutoSelecionado(produto);
+    setQuantidade(1);
+    setObservacoes("");
     setModalProdutoAberto(true);
   };
 
   const fecharModalProduto = () => {
     setModalProdutoAberto(false);
-    setProdutoSelecionado(null);
-    setQuantidade(1);
-    setObservacoes("");
+    setTimeout(() => {
+      setProdutoSelecionado(null);
+    }, 300);
   };
 
-  const incrementarQuantidade = () => setQuantidade((prev) => prev + 1);
-  const decrementarQuantidade = () =>
-    setQuantidade((prev) => (prev > 1 ? prev - 1 : 1));
+  const incrementarQuantidade = () => {
+    setQuantidade((prev) => prev + 1);
+  };
 
-  const totalCarrinho = carrinho.reduce((total, item) => {
-    return total + item.preco * item.quantidade;
-  }, 0);
+  const decrementarQuantidade = () => {
+    if (quantidade > 1) {
+      setQuantidade((prev) => prev - 1);
+    }
+  };
 
-  const totalItensCarrinho = carrinho.reduce((total, item) => {
-    return total + item.quantidade;
-  }, 0);
+  const adicionarAoCarrinho = () => {
+    if (!produtoSelecionado || typeof token !== "string") return;
+
+    const item: ItemCarrinho = {
+      ...produtoSelecionado,
+      quantidade,
+      observacoes: observacoes.trim() || undefined,
+    };
+
+    adicionarItem(token, item);
+
+    // Atualizar estado local
+    setCarrinho(getCarrinho(token));
+
+    // Feedback e fechamento
+    toast({
+      title: "Item adicionado",
+      description: `${quantidade}x ${produtoSelecionado.nome} adicionado ao pedido`,
+    });
+
+    fecharModalProduto();
+  };
+
+  // Calcula o total de itens no carrinho
+  const totalItensCarrinho = carrinho.reduce(
+    (total, item) => total + item.quantidade,
+    0
+  );
+
+  // Calcula o valor total do carrinho
+  const totalCarrinho = carrinho.reduce(
+    (total, item) => total + item.preco * item.quantidade,
+    0
+  );
+
+  // Filtrar produtos por busca (se implementarmos depois)
+  const produtosFiltrados = produtos;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -205,58 +313,84 @@ export default function MenuPage() {
         </div>
 
         {/* Lista de produtos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {produtosFiltrados.map((produto) => (
-            <Card
-              key={produto.id}
-              className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => abrirModalProduto(produto)}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Carregando produtos...</p>
+          </div>
+        ) : produtosFiltrados.length === 0 ? (
+          <div className="text-center py-12">
+            <h3 className="text-xl font-medium mb-2">
+              Nenhum produto encontrado
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              Tente mudar os filtros ou selecionar outra categoria.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFiltroVegetariano(false);
+                setFiltroSemGluten(false);
+                setCategoriaAtiva("todos");
+              }}
             >
-              <div className="relative h-48">
-                <Image
-                  src={produto.imagem || "/placeholder.svg"}
-                  alt={produto.nome}
-                  fill
-                  className="object-cover"
-                />
-                {produto.popular && (
-                  <Badge className="absolute top-2 right-2 bg-primary">
-                    <Star className="h-3 w-3 mr-1" /> Popular
-                  </Badge>
-                )}
-              </div>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold">{produto.nome}</h3>
-                  <span className="font-bold text-primary">
-                    R$ {produto.preco.toFixed(2).replace(".", ",")}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                  {produto.descricao}
-                </p>
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {produto.tempoPreparo} min
-                  {produto.restricoes && produto.restricoes.length > 0 && (
-                    <div className="flex ml-3 gap-1">
-                      {produto.restricoes.includes("vegetariano") && (
-                        <Badge variant="outline" className="text-xs px-1 h-5">
-                          Veg
-                        </Badge>
-                      )}
-                      {produto.restricoes.includes("sem-gluten") && (
-                        <Badge variant="outline" className="text-xs px-1 h-5">
-                          S/G
-                        </Badge>
-                      )}
-                    </div>
+              Limpar filtros
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {produtosFiltrados.map((produto) => (
+              <Card
+                key={produto.id}
+                className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => abrirModalProduto(produto)}
+              >
+                <div className="relative h-48">
+                  <Image
+                    src={produto.imagem || "/placeholder.svg"}
+                    alt={produto.nome}
+                    fill
+                    className="object-cover"
+                  />
+                  {produto.popular && (
+                    <Badge className="absolute top-2 right-2 bg-primary">
+                      <Star className="h-3 w-3 mr-1" /> Popular
+                    </Badge>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold">{produto.nome}</h3>
+                    <span className="font-bold text-primary">
+                      R$ {produto.preco.toFixed(2).replace(".", ",")}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    {produto.descricao}
+                  </p>
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3 mr-1" />
+                    {produto.tempoPreparo} min
+                    {produto.restricoes && produto.restricoes.length > 0 && (
+                      <div className="flex ml-3 gap-1">
+                        {produto.restricoes.includes("vegetariano") && (
+                          <Badge variant="outline" className="text-xs px-1 h-5">
+                            Veg
+                          </Badge>
+                        )}
+                        {produto.restricoes.includes("sem-gluten") && (
+                          <Badge variant="outline" className="text-xs px-1 h-5">
+                            S/G
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </main>
 
       {/* Modal de filtros */}
@@ -345,22 +479,8 @@ export default function MenuPage() {
                 className="absolute top-2 right-2 rounded-full bg-background/50 hover:bg-background/70"
                 onClick={fecharModalProduto}
               >
+                <X className="h-5 w-5" />
                 <span className="sr-only">Fechar</span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="lucide lucide-x"
-                >
-                  <path d="M18 6 6 18" />
-                  <path d="m6 6 12 12" />
-                </svg>
               </Button>
             </div>
 

@@ -1,4 +1,5 @@
 import type { ItemCarrinho } from "../types";
+import api from "./api";
 
 const STORAGE_PREFIX = "@comandinha:";
 
@@ -41,6 +42,11 @@ export const adicionarItem = (mesa: string, item: ItemCarrinho): void => {
 
   if (itemExistente >= 0) {
     carrinho[itemExistente].quantidade += item.quantidade;
+
+    // Se tiver observações, atualizar
+    if (item.observacoes) {
+      carrinho[itemExistente].observacoes = item.observacoes;
+    }
   } else {
     carrinho.push(item);
   }
@@ -67,5 +73,34 @@ export const atualizarQuantidade = (
   if (itemIndex >= 0) {
     carrinho[itemIndex].quantidade = quantidade;
     salvarCarrinho(mesa, carrinho);
+  }
+};
+
+// Novas funções para sincronização com a API (opcional, depende da necessidade)
+export const enviarCarrinhoParaPedido = async (
+  mesa: string,
+  observacoesGerais?: string
+) => {
+  const carrinho = getCarrinho(mesa);
+  if (carrinho.length === 0) return null;
+
+  // Chama o serviço de pedidos para enviar o pedido
+  try {
+    const response = await api.post("/pedidos", {
+      itens: carrinho.map((item) => ({
+        produtoId: parseInt(item.id),
+        quantidade: item.quantidade,
+        observacoes: item.observacoes || null,
+      })),
+      observacoesGerais: observacoesGerais || null,
+    });
+
+    // Limpa o carrinho após enviar o pedido
+    limparCarrinho(mesa);
+
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao enviar pedido:", error);
+    throw new Error("Não foi possível enviar o pedido");
   }
 };
