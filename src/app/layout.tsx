@@ -4,8 +4,7 @@ import type React from "react";
 import { ThemeProvider } from "../components/theme-provider";
 import { Toaster } from "../components/ui/toaster";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
+import { roboto } from "../lib/fonts";
 
 export const metadata: Metadata = {
   title: "Comandinha - Sistema de Comandas Digital",
@@ -19,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={roboto.className}>
         <ThemeProvider>
           {children}
           <Toaster />
