@@ -1,87 +1,117 @@
 "use client";
 
+import { ThemeToggle } from "@/src/components/theme-toggle";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { Toaster } from "@/src/components/ui/toaster";
+import { useToast } from "@/src/components/ui/use-toast";
+import { getPedidosPorMesa } from "@/src/services/pedidos";
 import { ItemCarrinho, Pedido } from "@/src/types";
 import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  Loader2,
   ShoppingBag,
   Utensils,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getPedidosPorMesa } from "@/src/services/pedidos";
 
 export default function PedidosPage() {
   const params = useParams();
-  const { token } = params;
+  const { token } = params as { token: string };
+  const { toast } = useToast();
 
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Carregar pedidos do localStorage
   useEffect(() => {
-    if (typeof token === "string") {
-      const pedidosMesa = getPedidosPorMesa(token);
-      setPedidos(pedidosMesa);
+    async function carregarPedidos() {
+      if (!token) return;
+
+      try {
+        setLoading(true);
+        setError(null);
+        const pedidosData = await getPedidosPorMesa(token);
+        setPedidos(pedidosData);
+      } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+        setError("Não foi possível carregar os pedidos. Tente novamente.");
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar os pedidos. Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [token]);
 
-  // Salvar pedidos no localStorage quando atualizados
-  useEffect(() => {
-    localStorage.setItem(`pedidos-${token}`, JSON.stringify(pedidos));
-  }, [pedidos, token]);
+    carregarPedidos();
 
-  const formatarData = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString("pt-BR", {
+    // Atualizar pedidos periodicamente
+    const intervalId = setInterval(carregarPedidos, 30000); // Atualiza a cada 30s
+    return () => clearInterval(intervalId);
+  }, [token, toast]);
+
+  // Formatação da hora do pedido (HH:MM)
+  const formatarHora = (timestamp: number) => {
+    return new Date(timestamp).toLocaleTimeString("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
-  const formatarData2 = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString("pt-BR", {
+  // Formatação completa da data e hora
+  const formatarDataCompleta = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
+      year: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
     });
   };
 
-  const getStatusBadge = (status: Pedido["status"]) => {
-    switch (status) {
-      case "confirmado":
-        return <Badge className="bg-blue-500">Confirmado</Badge>;
-      case "em-preparo":
-        return <Badge className="bg-orange-500">Em preparo</Badge>;
-      case "entregue":
-        return <Badge className="bg-green-500">Entregue</Badge>;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusIcon = (status: Pedido["status"]) => {
-    switch (status) {
-      case "confirmado":
-        return <CheckCircle className="h-5 w-5 text-blue-500" />;
-      case "em-preparo":
-        return <Utensils className="h-5 w-5 text-orange-500" />;
-      case "entregue":
-        return <ShoppingBag className="h-5 w-5 text-green-500" />;
-      default:
-        return null;
-    }
-  };
-
+  // Cálculo do total de um pedido
   const calcularTotalPedido = (itens: ItemCarrinho[]) => {
     return itens.reduce(
       (total, item) => total + item.preco * item.quantidade,
       0
     );
+  };
+
+  // Ícone do status do pedido
+  const getStatusIcon = (status: Pedido["status"]) => {
+    switch (status) {
+      case "confirmado":
+        return <CheckCircle className="h-5 w-5 text-blue-500" />;
+      case "preparando":
+        return <Utensils className="h-5 w-5 text-orange-500" />;
+      case "entregue":
+        return <ShoppingBag className="h-5 w-5 text-green-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-500" />;
+    }
+  };
+
+  // Badge do status do pedido
+  const getStatusBadge = (status: Pedido["status"]) => {
+    switch (status) {
+      case "confirmado":
+        return <Badge className="bg-blue-500">Confirmado</Badge>;
+      case "preparando":
+        return <Badge className="bg-orange-500">Em preparo</Badge>;
+      case "entregue":
+        return <Badge className="bg-green-500">Entregue</Badge>;
+      default:
+        return <Badge className="bg-gray-500">Desconhecido</Badge>;
+    }
   };
 
   return (
@@ -98,16 +128,35 @@ export default function PedidosPage() {
             </Button>
             <h1 className="font-bold text-lg">Seus pedidos</h1>
           </div>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       {/* Conteúdo principal */}
       <main className="flex-1 container mx-auto px-4 py-6">
-        {pedidos.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Carregando seus pedidos...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 mb-4 text-destructive">
+              <X className="w-16 h-16" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Erro ao carregar pedidos</h2>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Tentar novamente
+            </Button>
+          </div>
+        ) : pedidos.length > 0 ? (
           <div className="space-y-6">
             {pedidos
               .slice()
-              .reverse()
+              .sort((a, b) => b.timestamp - a.timestamp) // Ordena do mais recente para o mais antigo
               .map((pedido) => (
                 <Card key={pedido.id} className="overflow-hidden">
                   <CardContent className="p-4">
@@ -123,8 +172,15 @@ export default function PedidosPage() {
 
                     <div className="flex items-center text-sm text-muted-foreground mb-4">
                       <Clock className="h-4 w-4 mr-1" />
-                      {formatarData2(pedido.timestamp)}
+                      {formatarDataCompleta(pedido.timestamp)}
                     </div>
+
+                    {pedido.observacoesGerais && (
+                      <div className="bg-muted p-3 rounded-md mb-4 text-sm">
+                        <p className="font-medium mb-1">Observações:</p>
+                        <p>{pedido.observacoesGerais}</p>
+                      </div>
+                    )}
 
                     <div className="space-y-2 mb-4">
                       {pedido.itens.map((item, index) => (
@@ -137,6 +193,11 @@ export default function PedidosPage() {
                               {item.quantidade}x{" "}
                             </span>
                             <span>{item.nome}</span>
+                            {item.observacoes && (
+                              <p className="text-xs text-muted-foreground ml-5">
+                                {item.observacoes}
+                              </p>
+                            )}
                           </div>
                           <span>
                             R${" "}
@@ -152,7 +213,7 @@ export default function PedidosPage() {
                       <span>Total</span>
                       <span>
                         R${" "}
-                        {(calcularTotalPedido(pedido.itens) * 1.1)
+                        {calcularTotalPedido(pedido.itens)
                           .toFixed(2)
                           .replace(".", ",")}
                       </span>
@@ -176,6 +237,8 @@ export default function PedidosPage() {
           </div>
         )}
       </main>
+
+      <Toaster />
     </div>
   );
 }

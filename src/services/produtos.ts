@@ -1,128 +1,107 @@
-import type { Produto } from "../types";
+import api from "./api";
+import type { Produto, CategoriaProduto } from "../types";
 
-const PLACEHOLDER_IMAGE = "/placeholder.svg";
+export const getProdutosPorCategoria = async (
+  categoria: CategoriaProduto
+): Promise<Produto[]> => {
+  try {
+    if (categoria === "todos") {
+      const response = await api.get("/produtos");
+      return response.data;
+    } else {
+      // Primeiro precisamos obter o ID da categoria
+      const categorias = await api.get("/categorias/");
+      const categoriaObj = categorias.data.find(
+        (cat: any) => cat.nome.toLowerCase() === categoria.toLowerCase()
+      );
 
-export const produtos: Produto[] = [
-  {
-    id: "1",
-    nome: "Hambúrguer Artesanal",
-    descricao:
-      "Pão brioche, 180g de carne, queijo cheddar, bacon e molho especial",
-    preco: 32.9,
-    categoria: "principais",
-    imagem: PLACEHOLDER_IMAGE,
-    popular: true,
-    tempoPreparo: 20,
-    restricoes: [],
-  },
-  {
-    id: "2",
-    nome: "Batata Frita",
-    descricao: "Porção de batatas fritas crocantes com sal e orégano",
-    preco: 18.9,
-    categoria: "entradas",
-    imagem: PLACEHOLDER_IMAGE,
-    tempoPreparo: 15,
-    restricoes: ["vegetariano"],
-  },
-  {
-    id: "3",
-    nome: "Refrigerante",
-    descricao: "Lata 350ml",
-    preco: 6.9,
-    categoria: "bebidas",
-    imagem: PLACEHOLDER_IMAGE,
-    tempoPreparo: 5,
-    restricoes: ["vegetariano", "sem-gluten"],
-  },
-  {
-    id: "4",
-    nome: "Salada Caesar",
-    descricao: "Alface americana, croutons, parmesão e molho caesar",
-    preco: 24.9,
-    categoria: "entradas",
-    imagem: PLACEHOLDER_IMAGE,
-    tempoPreparo: 10,
-    restricoes: ["vegetariano"],
-  },
-  {
-    id: "5",
-    nome: "Pudim de Leite",
-    descricao: "Pudim de leite condensado com calda de caramelo",
-    preco: 14.9,
-    categoria: "sobremesas",
-    imagem: PLACEHOLDER_IMAGE,
-    popular: true,
-    tempoPreparo: 5,
-    restricoes: ["vegetariano"],
-  },
-  {
-    id: "6",
-    nome: "Suco Natural",
-    descricao: "Suco de laranja, abacaxi ou maracujá",
-    preco: 9.9,
-    categoria: "bebidas",
-    imagem: PLACEHOLDER_IMAGE,
-    tempoPreparo: 8,
-    restricoes: ["vegetariano", "sem-gluten"],
-  },
-  {
-    id: "7",
-    nome: "Picanha Grelhada",
-    descricao:
-      "300g de picanha grelhada com batatas rústicas e molho chimichurri",
-    preco: 69.9,
-    categoria: "principais",
-    imagem: PLACEHOLDER_IMAGE,
-    tempoPreparo: 25,
-    restricoes: [],
-  },
-  {
-    id: "8",
-    nome: "Sorvete Artesanal",
-    descricao:
-      "Duas bolas de sorvete artesanal nos sabores chocolate, creme ou morango",
-    preco: 16.9,
-    categoria: "sobremesas",
-    imagem: PLACEHOLDER_IMAGE,
-    tempoPreparo: 5,
-    restricoes: ["vegetariano"],
-  },
-];
+      if (!categoriaObj) return [];
 
-export const getProdutosPorCategoria = (categoria: string) => {
-  if (categoria === "todos") return produtos;
-  return produtos.filter((produto) => produto.categoria === categoria);
+      const response = await api.get(`/categorias/${categoriaObj.id}/produtos`);
+      return mapearProdutosAPI(response.data);
+    }
+  } catch (error) {
+    console.error("Erro ao buscar produtos por categoria:", error);
+    return [];
+  }
 };
 
-export const getProdutoById = (id: string) => {
-  return produtos.find((produto) => produto.id === id);
+export const getProdutoById = async (id: string): Promise<Produto | null> => {
+  try {
+    const response = await api.get(`/produtos/${id}`);
+    return mapearProdutoAPI(response.data);
+  } catch (error) {
+    console.error("Erro ao buscar produto por ID:", error);
+    return null;
+  }
 };
 
-export const filtrarProdutos = ({
+export const filtrarProdutos = async ({
   categoria,
   vegetariano,
   semGluten,
 }: {
-  categoria: string;
+  categoria: CategoriaProduto;
   vegetariano: boolean;
   semGluten: boolean;
-}) => {
-  let produtosFiltrados = getProdutosPorCategoria(categoria);
+}): Promise<Produto[]> => {
+  try {
+    let produtos: Produto[] = [];
 
-  if (vegetariano) {
-    produtosFiltrados = produtosFiltrados.filter(
-      (produto) =>
-        produto.restricoes && produto.restricoes.includes("vegetariano")
-    );
+    // Buscar produtos por categoria
+    produtos = await getProdutosPorCategoria(categoria);
+
+    // Aplicar filtros no client-side (a API não tem endpoint específico para esses filtros)
+    if (vegetariano) {
+      produtos = produtos.filter(
+        (produto) =>
+          produto.restricoes && produto.restricoes.includes("vegetariano")
+      );
+    }
+
+    if (semGluten) {
+      produtos = produtos.filter(
+        (produto) =>
+          produto.restricoes && produto.restricoes.includes("sem-gluten")
+      );
+    }
+
+    return produtos;
+  } catch (error) {
+    console.error("Erro ao filtrar produtos:", error);
+    return [];
   }
+};
 
-  if (semGluten) {
-    produtosFiltrados = produtosFiltrados.filter(
-      (produto) =>
-        produto.restricoes && produto.restricoes.includes("sem-gluten")
-    );
+// Função auxiliar para mapear produtos da API para o formato esperado pelo front
+function mapearProdutoAPI(produtoAPI: any): Produto {
+  return {
+    id: produtoAPI.id.toString(),
+    nome: produtoAPI.nome,
+    descricao: produtoAPI.descricao || "",
+    preco: produtoAPI.preco,
+    categoria: produtoAPI.categoriaId
+      ? produtoAPI.categoriaId.toString()
+      : "outros",
+    imagem: produtoAPI.imagemUrl || "/placeholder.svg",
+    popular: produtoAPI.popular || false,
+    tempoPreparo: produtoAPI.tempoPreparoMinutos || 15,
+    restricoes: produtoAPI.restricoes || [],
+  };
+}
+
+function mapearProdutosAPI(produtosAPI: any[]): Produto[] {
+  return produtosAPI.map(mapearProdutoAPI);
+}
+
+export const getProdutosRecomendados = async (
+  limite: number = 5
+): Promise<Produto[]> => {
+  try {
+    const response = await api.get(`/produtos/recomendados?limite=${limite}`);
+    return mapearProdutosAPI(response.data);
+  } catch (error) {
+    console.error("Erro ao buscar produtos recomendados:", error);
+    return [];
   }
-
-  return produtosFiltrados;
 };

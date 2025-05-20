@@ -24,11 +24,15 @@ import {
 } from "@/src/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
+import { useToast } from "@/src/components/ui/use-toast";
+import api from "@/src/services/api";
+import { atualizarStatusPedido } from "@/src/services/pedidos";
 import type { Pedido } from "@/src/types";
 import {
   ArrowLeft,
   CheckCircle,
   Clock,
+  Loader2,
   Search,
   ShoppingBag,
   SlidersHorizontal,
@@ -39,43 +43,95 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function PedidosGlobalPage() {
+  const { toast } = useToast();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [filteredPedidos, setFilteredPedidos] = useState<Pedido[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [dateFilter, setDateFilter] = useState<string>("todos");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Carregar todos os pedidos de todas as mesas
   useEffect(() => {
-    // Em um ambiente real, isso seria uma chamada de API
-    // Para demonstração, vamos buscar do localStorage e combinar todos os pedidos
-    const allPedidos: Pedido[] = [];
+    async function carregarTodosPedidos() {
+      try {
+        setLoading(true);
+        setError(null);
 
-    // Simular pedidos de várias mesas
-    const tableIds = ["demo", "1", "2", "3", "4", "5"];
+        // Buscar todas as mesas
+        const mesasResponse = await api.get("/mesas");
+        const mesas = mesasResponse.data;
 
-    tableIds.forEach((tableId) => {
-      const pedidosSalvos = localStorage.getItem(`pedidos-${tableId}`);
-      if (pedidosSalvos) {
-        const tablePedidos = JSON.parse(pedidosSalvos);
-        // Adicionar o número da mesa aos pedidos
-        const pedidosComMesa = tablePedidos.map((pedido: Pedido) => ({
-          ...pedido,
-          mesa: tableId,
-        }));
-        allPedidos.push(...pedidosComMesa);
+        const allPedidos: Pedido[] = [];
+
+        // Para cada mesa, buscar os pedidos
+        for (const mesa of mesas) {
+          try {
+            const pedidosResponse = await api.get(`/mesas/${mesa.id}/pedidos`);
+
+            // Verificar a estrutura da resposta
+            if (
+              pedidosResponse.data &&
+              Array.isArray(pedidosResponse.data.pedidos)
+            ) {
+              // Mapear os pedidos para o formato esperado pelo componente
+              const pedidosDaMesa = pedidosResponse.data.pedidos.map(
+                (pedido: any) => ({
+                  id: pedido.pedidoId.toString(),
+                  mesa: mesa.id.toString(),
+                  itens: pedido.itens.map((item: any) => ({
+                    id: item.produtoId.toString(),
+                    nome: item.nome,
+                    preco: item.precoUnitario,
+                    quantidade: item.quantidade,
+                    observacoes: item.observacoes,
+                    categoria: "",
+                    descricao: "",
+                    imagem: "/placeholder.svg",
+                  })),
+                  timestamp: new Date(pedido.timestamp).getTime(),
+                  status: pedido.status,
+                })
+              );
+
+              allPedidos.push(...pedidosDaMesa);
+            }
+          } catch (error) {
+            console.error(`Erro ao buscar pedidos da mesa ${mesa.id}:`, error);
+          }
+        }
+
+        // Ordenar por timestamp (mais recente primeiro)
+        allPedidos.sort((a, b) => b.timestamp - a.timestamp);
+
+        setPedidos(allPedidos);
+        setFilteredPedidos(allPedidos);
+      } catch (error) {
+        console.error("Erro ao carregar pedidos:", error);
+        setError(
+          "Não foi possível carregar os pedidos. Verifique sua conexão."
+        );
+        toast({
+          title: "Erro ao carregar pedidos",
+          description:
+            "Não foi possível carregar os pedidos. Verifique sua conexão.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-    });
+    }
 
-    // Ordenar por timestamp (mais recente primeiro)
-    allPedidos.sort((a, b) => b.timestamp - a.timestamp);
+    carregarTodosPedidos();
 
-    setPedidos(allPedidos);
-    setFilteredPedidos(allPedidos);
-  }, []);
+    // Atualizar a cada minuto para manter os dados recentes
+    const intervalId = setInterval(carregarTodosPedidos, 60000);
+    return () => clearInterval(intervalId);
+  }, [toast]);
 
-  // Aplicar filtros quando os critérios mudarem
+  // Aplicar filtros quando os critérios mudarem - mantido sem alteração
   useEffect(() => {
     let result = [...pedidos];
 
@@ -123,12 +179,50 @@ export default function PedidosGlobalPage() {
       result = result.filter(
         (pedido) =>
           pedido.id.toLowerCase().includes(query) ||
-          (pedido.id && pedido.id.toLowerCase().includes(query))
+          (pedido.mesa && pedido.mesa.toLowerCase().includes(query))
       );
     }
 
     setFilteredPedidos(result);
   }, [pedidos, statusFilter, dateFilter, searchQuery]);
+
+  // Nova função para atualizar status de pedidos
+  const handleUpdateStatus = async (
+    pedidoId: string,
+    mesaId: string,
+    novoStatus: string
+  ) => {
+    try {
+      const success = await atualizarStatusPedido(
+        pedidoId,
+        novoStatus as "confirmado" | "preparando" | "entregue",
+        mesaId
+      );
+
+      if (success) {
+        // Atualizar localmente
+        setPedidos(
+          pedidos.map((p) =>
+            p.id === pedidoId ? { ...p, status: novoStatus as any } : p
+          )
+        );
+
+        toast({
+          title: "Status atualizado",
+          description: `Pedido #${pedidoId} atualizado para ${novoStatus}`,
+        });
+      } else {
+        throw new Error("Falha ao atualizar status");
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      toast({
+        title: "Erro ao atualizar status",
+        description: "Não foi possível atualizar o status do pedido",
+        variant: "destructive",
+      });
+    }
+  };
 
   const formatarData = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("pt-BR", {
@@ -144,7 +238,7 @@ export default function PedidosGlobalPage() {
     switch (status) {
       case "confirmado":
         return <Badge className="bg-blue-500">Confirmado</Badge>;
-      case "em-preparo":
+      case "preparando":
         return <Badge className="bg-orange-500">Em preparo</Badge>;
       case "entregue":
         return <Badge className="bg-green-500">Entregue</Badge>;
@@ -157,7 +251,7 @@ export default function PedidosGlobalPage() {
     switch (status) {
       case "confirmado":
         return <CheckCircle className="h-5 w-5 text-blue-500" />;
-      case "em-preparo":
+      case "preparando":
         return <Utensils className="h-5 w-5 text-orange-500" />;
       case "entregue":
         return <ShoppingBag className="h-5 w-5 text-green-500" />;
@@ -167,11 +261,9 @@ export default function PedidosGlobalPage() {
   };
 
   const calcularTotalPedido = (pedido: Pedido) => {
-    return (
-      pedido.itens.reduce(
-        (total, item) => total + item.preco * item.quantidade,
-        0
-      ) * 1.1
+    return pedido.itens.reduce(
+      (total, item) => total + item.preco * item.quantidade,
+      0
     );
   };
 
@@ -320,7 +412,23 @@ export default function PedidosGlobalPage() {
 
       {/* Conteúdo principal */}
       <main className="flex-1 container mx-auto px-4 py-6">
-        {filteredPedidos.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p>Carregando pedidos...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="mx-auto w-16 h-16 mb-4 text-destructive">
+              <X className="w-16 h-16" />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Erro ao carregar pedidos</h2>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Tentar novamente
+            </Button>
+          </div>
+        ) : filteredPedidos.length > 0 ? (
           <div className="space-y-6">
             {filteredPedidos.map((pedido) => (
               <Card key={pedido.id} className="overflow-hidden">
@@ -340,9 +448,9 @@ export default function PedidosGlobalPage() {
                       <Clock className="h-4 w-4 mr-1" />
                       {formatarData(pedido.timestamp)}
                     </div>
-                    {pedido.id && (
+                    {pedido.mesa && (
                       <div className="flex items-center">
-                        <span className="font-medium">Mesa: {pedido.id}</span>
+                        <span className="font-medium">Mesa: {pedido.mesa}</span>
                       </div>
                     )}
                   </div>
@@ -375,6 +483,55 @@ export default function PedidosGlobalPage() {
                       R${" "}
                       {calcularTotalPedido(pedido).toFixed(2).replace(".", ",")}
                     </span>
+                  </div>
+
+                  {/* Nova seção para atualizar status */}
+                  <div className="border-t mt-3 pt-3">
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant={
+                          pedido.status === "confirmado" ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          handleUpdateStatus(
+                            pedido.id,
+                            pedido.mesa,
+                            "confirmado"
+                          )
+                        }
+                        disabled={pedido.status === "entregue"}
+                      >
+                        Confirmado
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          pedido.status === "preparando" ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          handleUpdateStatus(
+                            pedido.id,
+                            pedido.mesa,
+                            "preparando"
+                          )
+                        }
+                        disabled={pedido.status === "entregue"}
+                      >
+                        Preparando
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          pedido.status === "entregue" ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          handleUpdateStatus(pedido.id, pedido.mesa, "entregue")
+                        }
+                      >
+                        Entregue
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

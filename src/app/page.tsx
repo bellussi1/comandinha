@@ -1,12 +1,6 @@
-import { QrCode, Settings } from "lucide-react";
+import { QrCode } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
 
 export default function Home() {
   return (
@@ -20,7 +14,7 @@ export default function Home() {
 
         <div className="flex flex-col gap-4">
           <Button asChild size="lg" className="gap-2">
-            <Link href="/mesa/demo">
+            <Link href="/mesa/2">
               <QrCode className="h-5 w-5" />
               Acessar Demo
             </Link>

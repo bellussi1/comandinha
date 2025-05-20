@@ -20,8 +20,9 @@ export interface Pedido {
   id: string;
   itens: ItemCarrinho[];
   timestamp: number;
-  status: "confirmado" | "em-preparo" | "entregue";
+  status: "confirmado" | "preparando" | "entregue";
   mesa: string;
+  observacoesGerais?: string;
 }
 
 export interface ItemDivisao extends ItemCarrinho {
@@ -36,10 +37,9 @@ export type CategoriaProduto =
   | "sobremesas";
 
 export interface Mesa {
-  numero: string;
+  id: number;
+  nome: string;
   status: "livre" | "ocupada" | "reservada" | "manutencao";
-  pedidosEmAberto: number;
-  ultimaAtualizacao: number;
 }
 
 export interface Admin {
@@ -48,4 +48,31 @@ export interface Admin {
   email: string;
   cargo: "gerente" | "garcom" | "cozinheiro";
   permissoes: string[];
+}
+
+// Novos tipos para a API
+export interface MesaAtivacao {
+  token: string;
+  expiraEm: string;
+  mesaId: string;
+  mesaNome: string;
+}
+
+export interface PedidoAPI {
+  pedidoId: number;
+  timestamp: string;
+  status: string;
+  itens: ItemPedidoAPI[];
+  valorTotal: number;
+  estimativaEntrega: string;
+  observacoesGerais?: string | null;
+}
+
+export interface ItemPedidoAPI {
+  produtoId: number;
+  nome: string;
+  quantidade: number;
+  precoUnitario: number;
+  observacoes?: string | null;
+  subtotal: number;
 }
