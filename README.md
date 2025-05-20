@@ -1,81 +1,108 @@
-# 🍽️ Comandinha - Sistema de Comandas Digital
+# 🍽️ Comandinha - Sistema de Comandas Digitais
 
-Comandinha é um sistema digital de comandas desenvolvido para restaurantes, permitindo que os clientes façam pedidos diretamente de suas mesas através de QR Codes. O sistema oferece uma interface intuitiva tanto para clientes quanto para a equipe do restaurante.
+**Gerencie pedidos de restaurante de forma moderna e intuitiva!**
 
-![Comandinha Screenshot](public/placeholder.svg)
+O Comandinha é uma solução completa para digitalizar o processo de pedidos em restaurantes, oferecendo uma experiência seamless para clientes e estabelecimentos.
 
-## 🚀 Funcionalidades
+![Preview do Sistema](https://via.placeholder.com/800x400.png?text=Preview+do+Sistema+Comandinha)
 
-### Para Clientes
+## ✨ Recursos Principais
 
-- 📱 Acesso ao cardápio digital através de QR Code
-- 🛒 Carrinho de pedidos com gestão de quantidades
-- 💬 Adição de observações para cada item
-- 🔍 Filtros por categoria e restrições alimentares
-- 🛎️ Chamada de garçom com seleção de motivo
-- 💳 Divisão de conta inteligente
-- 📊 Acompanhamento de status dos pedidos
+- **🚀 Acesso Instantâneo** via QR Code nas mesas
+- 📱 **Cardápio Digital** interativo com fotos e descrições
+- 👥 **Divisão de Conta** simplificada entre clientes
+- 📊 **Painel Administrativo** para acompanhamento de pedidos
+- 🔄 **Sincronização Automática** com a cozinha/bar
+- 🌓 **Modo Escuro** para melhor experiência visual
 
-### Recursos do Sistema
+## 🛠 Tecnologias Utilizadas
 
-- 🎨 Design responsivo para todos os dispositivos
-- 🌓 Suporte a tema claro/escuro
-- 💪 Interface robusta e intuitiva
-- ⚡ Desempenho otimizado
-- 🔒 Armazenamento local seguro
+- **Frontend:**
+  ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+  ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
+  ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-## 🛠️ Tecnologias Utilizadas
+- **Backend:**
+  [Repositório Backend](https://github.com/thiagombrs/comandinha-backend/tree/main)
 
-- [Next.js 14](https://nextjs.org/) - Framework React com App Router
-- [TypeScript](https://www.typescriptlang.org/) - Tipagem estática
-- [Tailwind CSS](https://tailwindcss.com/) - Estilização
-- [shadcn/ui](https://ui.shadcn.com/) - Componentes de UI
-- [Lucide Icons](https://lucide.dev/) - Ícones
-- [next-themes](https://github.com/pacocoursey/next-themes) - Gestão de temas
+- **Ferramentas:**
+  ![Axios](https://img.shields.io/badge/Axios-5A29E4?style=for-the-badge)
+  ![shadcn/ui](https://img.shields.io/badge/shadcn/ui-000000?style=for-the-badge)
+  ![React Query](https://img.shields.io/badge/React_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white)
 
-## Como Executar o Projeto
+## ⚙️ Pré-requisitos
 
-1. **Clone o repositório**:
+- Node.js v18+
+- npm v9+
+- Git
+- Conexão com a API Comandinha
 
-   ```bash
-   git clone https://github.com/bellussi1/menu-system.git
-   cd menu-system
-   ```
+## 🚀 Instalação
 
-2. **Instale as dependências**:
+1. **Clone o repositório**
 
-   ```bash
-   npm install
-   ```
+```
+git clone https://github.com/bellussi1/comandinha
+cd comandinha
+```
 
-3. **Inicie o servidor de desenvolvimento**:
+2. **Instale as dependências**
 
-   ```bash
-   npm run dev
-   ```
+```
+npm install
+```
 
-4. **Acesse o projeto**:
-   Abra o navegador e vá para [http://localhost:3000](http://localhost:3000).
+3. **Configure as variáveis de ambiente**
 
-## Contribuindo
+```
+cp .env.example .env.local
+```
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir uma _issue_ ou enviar um _pull request_.
+Edite o .env.local com suas credenciais:
 
-1. **Fork o repositório**
-2. **Crie uma branch para sua feature**:
-   ```bash
-   git checkout -b feature/nova-feature
-   ```
-3. **Faça o commit das suas mudanças**:
-   ```bash
-   git commit -m "Adiciona nova funcionalidade"
-   ```
-4. **Push para a branch**:
-   ```bash
-   git push origin feature/nova-feature
-   ```
-5. **Abra um Pull Request**
+```
+NEXT_PUBLIC_API_URL=https://sua-api.com
+```
 
-## Licença
+## 🌍 Uso do Sistema
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+**Modo Desenvolvimento:**
+
+```
+npm run dev
+```
+
+Acesse: http://localhost:3000
+
+## 🤝 Como Contribuir
+
+1. Faça um Fork do projeto
+2. Crie sua Branch:
+
+```
+git checkout -b feat/nova-feature
+```
+
+3. Commit suas mudanças:
+
+```
+git commit -m 'Adiciona nova feature'
+```
+
+4. Push para a Branch:
+
+```
+git push origin feat/nova-feature
+```
+
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Distribuído sob a Licença MIT. Veja LICENSE para mais informações.
+
+---
+
+** Equipe Comandinha **
+
+🌐 Site: [https://barao-comandinha.vercel.app](https://barao-comandinha.vercel.app)
