@@ -9,7 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
-import { validarToken } from "@/src/services/mesa";
+import { ativarMesa, validarToken } from "@/src/services/mesa";
 import {
   filtrarProdutos,
   getProdutosPorCategoria,
