@@ -1,5 +1,10 @@
 import api from "./api";
-import type { Pedido, ItemCarrinho } from "../types";
+import type {
+  Pedido,
+  PedidoProducao,
+  StatusPedido,
+  ItemCarrinho,
+} from "../types";
 
 export const getPedidosPorMesa = async (mesa: string): Promise<Pedido[]> => {
   try {
@@ -48,6 +53,29 @@ export const adicionarPedido = async (pedido: {
   } catch (error) {
     console.error("Erro ao adicionar pedido:", error);
     throw new Error("Não foi possível realizar o pedido");
+  }
+};
+
+export const getPedidosProducao = async (): Promise<PedidoProducao[]> => {
+  try {
+    const response = await api.get("/pedidos/producao");
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao buscar pedidos em produção:", error);
+    throw new Error("Não foi possível carregar os pedidos em produção");
+  }
+};
+
+export const atualizarStatusPedidoProducao = async (
+  pedidoId: string,
+  novoStatus: StatusPedido
+): Promise<boolean> => {
+  try {
+    await api.patch(`/pedidos/${pedidoId}/status`, { status: novoStatus });
+    return true;
+  } catch (error) {
+    console.error("Erro ao atualizar status do pedido:", error);
+    throw new Error("Não foi possível atualizar o status do pedido");
   }
 };
 

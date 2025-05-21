@@ -76,3 +76,33 @@ export interface ItemPedidoAPI {
   observacoes?: string | null;
   subtotal: number;
 }
+
+// Definição dos status possíveis para um pedido
+export type StatusPedido = "confirmado" | "preparando" | "pronto" | "entregue";
+
+// Adicionais no pedido em produção
+export interface AdicionalProducao {
+  id: string;
+  nome: string;
+  preco: number;
+}
+
+// Item de pedido em produção
+export interface ItemPedidoProducao {
+  produtoNome: string;
+  produtoDescricao: string | null;
+  produtoAdicionais: AdicionalProducao[] | null;
+  quantidade: number;
+  observacoes: string | null;
+}
+
+// Pedido em produção
+export interface PedidoProducao {
+  id?: string;
+  mesaNome: string;
+  timestamp: string;
+  status: string;
+  observacoesGerais: string | null;
+  estimativaEntrega: string;
+  itens: ItemPedidoProducao[];
+}
