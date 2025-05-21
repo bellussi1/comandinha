@@ -5,6 +5,8 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { ThemeToggle } from "@/src/components/theme-toggle";
+import { StatusBadge } from "@/src/components/status/StatusBadge";
+import { StatusIcon } from "@/src/components/status/StatusIcon";
 import { ArrowLeft, Clock, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -13,11 +15,7 @@ import { getPedidosPorMesa } from "@/src/services/pedidos";
 import { Pedido } from "@/src/types";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
-import {
-  formatarDataCompleta,
-  getStatusBadge,
-  getStatusIcon,
-} from "@/src/utils/formatters";
+import { formatarDataCompleta } from "@/src/utils/formatters";
 
 export default function PedidosPage() {
   const params = useParams();
@@ -63,6 +61,11 @@ export default function PedidosPage() {
       (total, item) => total + item.preco * item.quantidade,
       0
     );
+  };
+  
+  // Função local para formatar valores monetários
+  const formatarValor = (valor: number): string => {
+    return valor.toFixed(2).replace(".", ",");
   };
 
   return (
@@ -113,12 +116,12 @@ export default function PedidosPage() {
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center mb-3">
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(pedido.status)}
+                        <StatusIcon status={pedido.status} />
                         <h3 className="font-medium">
                           Pedido #{pedido.id.slice(-4)}
                         </h3>
                       </div>
-                      {getStatusBadge(pedido.status)}
+                      <StatusBadge status={pedido.status} />
                     </div>
 
                     <div className="flex items-center text-sm text-muted-foreground mb-4">
@@ -153,10 +156,7 @@ export default function PedidosPage() {
                             )}
                           </div>
                           <span>
-                            R${" "}
-                            {(item.preco * item.quantidade)
-                              .toFixed(2)
-                              .replace(".", ",")}
+                            R$ {formatarValor(item.preco * item.quantidade)}
                           </span>
                         </div>
                       ))}
@@ -165,10 +165,7 @@ export default function PedidosPage() {
                     <div className="border-t pt-3 flex justify-between items-center font-medium">
                       <span>Total</span>
                       <span>
-                        R${" "}
-                        {calcularTotalPedido(pedido)
-                          .toFixed(2)
-                          .replace(".", ",")}
+                        R$ {formatarValor(calcularTotalPedido(pedido))}
                       </span>
                     </div>
                   </CardContent>

@@ -266,7 +266,7 @@ export default function AdminPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-lg">
-                      Mesa {pedido.mesaNome}
+                       {pedido.mesaNome}
                     </CardTitle>
                     <CardDescription>
                       Pedido feito às {formatarDataHora(pedido.timestamp)}
