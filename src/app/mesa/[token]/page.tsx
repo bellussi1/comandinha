@@ -115,8 +115,8 @@ export default function MenuPage() {
         let produtosBuscados: Produto[];
 
         if (categoriaAtiva === "todos") {
-          // Se for "todos", buscar recomendados ou todos os produtos
-          produtosBuscados = await getProdutosRecomendados(20);
+          // Se for "todos", buscar todos os produtos
+          produtosBuscados = await getProdutosPorCategoria("todos");
         } else {
           // Buscar produtos por categoria específica
           produtosBuscados = await getProdutosPorCategoria(

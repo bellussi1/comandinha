@@ -1,25 +1,21 @@
+// src/app/mesa/[token]/pedidos/page.tsx
 "use client";
 
-import { ThemeToggle } from "@/src/components/theme-toggle";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
-import { Toaster } from "@/src/components/ui/toaster";
-import { useToast } from "@/src/components/ui/use-toast";
-import { getPedidosPorMesa } from "@/src/services/pedidos";
-import { ItemCarrinho, Pedido } from "@/src/types";
-import {
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-  Loader2,
-  ShoppingBag,
-  Utensils,
-  X,
-} from "lucide-react";
+import { ThemeToggle } from "@/src/components/theme-toggle";
+import { StatusBadge } from "@/src/components/status/StatusBadge";
+import { StatusIcon } from "@/src/components/status/StatusIcon";
+import { ArrowLeft, Clock, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getPedidosPorMesa } from "@/src/services/pedidos";
+import { Pedido } from "@/src/types";
+import { Toaster } from "@/src/components/ui/toaster";
+import { useToast } from "@/src/components/ui/use-toast";
+import { formatarDataCompleta } from "@/src/utils/formatters";
 
 export default function PedidosPage() {
   const params = useParams();
@@ -59,59 +55,17 @@ export default function PedidosPage() {
     return () => clearInterval(intervalId);
   }, [token, toast]);
 
-  // Formatação da hora do pedido (HH:MM)
-  const formatarHora = (timestamp: number) => {
-    return new Date(timestamp).toLocaleTimeString("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Formatação completa da data e hora
-  const formatarDataCompleta = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   // Cálculo do total de um pedido
-  const calcularTotalPedido = (itens: ItemCarrinho[]) => {
-    return itens.reduce(
+  const calcularTotalPedido = (pedido: Pedido): number => {
+    return pedido.itens.reduce(
       (total, item) => total + item.preco * item.quantidade,
       0
     );
   };
-
-  // Ícone do status do pedido
-  const getStatusIcon = (status: Pedido["status"]) => {
-    switch (status) {
-      case "confirmado":
-        return <CheckCircle className="h-5 w-5 text-blue-500" />;
-      case "preparando":
-        return <Utensils className="h-5 w-5 text-orange-500" />;
-      case "entregue":
-        return <ShoppingBag className="h-5 w-5 text-green-500" />;
-      default:
-        return <Clock className="h-5 w-5 text-gray-500" />;
-    }
-  };
-
-  // Badge do status do pedido
-  const getStatusBadge = (status: Pedido["status"]) => {
-    switch (status) {
-      case "confirmado":
-        return <Badge className="bg-blue-500">Confirmado</Badge>;
-      case "preparando":
-        return <Badge className="bg-orange-500">Em preparo</Badge>;
-      case "entregue":
-        return <Badge className="bg-green-500">Entregue</Badge>;
-      default:
-        return <Badge className="bg-gray-500">Desconhecido</Badge>;
-    }
+  
+  // Função local para formatar valores monetários
+  const formatarValor = (valor: number): string => {
+    return valor.toFixed(2).replace(".", ",");
   };
 
   return (
@@ -162,17 +116,19 @@ export default function PedidosPage() {
                   <CardContent className="p-4">
                     <div className="flex justify-between items-center mb-3">
                       <div className="flex items-center gap-2">
-                        {getStatusIcon(pedido.status)}
+                        <StatusIcon status={pedido.status} />
                         <h3 className="font-medium">
                           Pedido #{pedido.id.slice(-4)}
                         </h3>
                       </div>
-                      {getStatusBadge(pedido.status)}
+                      <StatusBadge status={pedido.status} />
                     </div>
 
                     <div className="flex items-center text-sm text-muted-foreground mb-4">
                       <Clock className="h-4 w-4 mr-1" />
-                      {formatarDataCompleta(pedido.timestamp)}
+                      {formatarDataCompleta(
+                        new Date(pedido.timestamp).toISOString()
+                      )}
                     </div>
 
                     {pedido.observacoesGerais && (
@@ -200,10 +156,7 @@ export default function PedidosPage() {
                             )}
                           </div>
                           <span>
-                            R${" "}
-                            {(item.preco * item.quantidade)
-                              .toFixed(2)
-                              .replace(".", ",")}
+                            R$ {formatarValor(item.preco * item.quantidade)}
                           </span>
                         </div>
                       ))}
@@ -212,10 +165,7 @@ export default function PedidosPage() {
                     <div className="border-t pt-3 flex justify-between items-center font-medium">
                       <span>Total</span>
                       <span>
-                        R${" "}
-                        {calcularTotalPedido(pedido.itens)
-                          .toFixed(2)
-                          .replace(".", ",")}
+                        R$ {formatarValor(calcularTotalPedido(pedido))}
                       </span>
                     </div>
                   </CardContent>

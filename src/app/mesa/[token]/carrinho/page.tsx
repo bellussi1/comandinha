@@ -1,7 +1,9 @@
+// src/app/mesa/[token]/carrinho/page.tsx
 "use client";
 
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
+import { Textarea } from "@/src/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -27,16 +29,18 @@ import {
   Receipt,
   Trash2,
   Users,
+  Loader2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { calcularTotalItems } from "@/src/utils/calculadores";
 
 export default function CarrinhoPage() {
   const params = useParams();
   const router = useRouter();
-  const { token } = params;
+  const { token } = params as { token: string };
   const { toast } = useToast();
 
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
@@ -46,19 +50,15 @@ export default function CarrinhoPage() {
 
   // Carregar carrinho
   useEffect(() => {
-    if (typeof token === "string") {
-      const carrinhoSalvo = getCarrinho(token);
-      setCarrinho(carrinhoSalvo);
-    }
+    const carrinhoSalvo = getCarrinho(token);
+    setCarrinho(carrinhoSalvo);
   }, [token]);
 
-  const totalCarrinho = carrinho.reduce((total, item) => {
-    return total + item.preco * item.quantidade;
-  }, 0);
+  const totalCarrinho = calcularTotalItems(carrinho);
 
   const incrementarQuantidade = (id: string) => {
     const item = carrinho.find((i) => i.id === id);
-    if (item && typeof token === "string") {
+    if (item) {
       atualizarQuantidade(token, id, item.quantidade + 1);
       setCarrinho(getCarrinho(token));
     }
@@ -66,26 +66,24 @@ export default function CarrinhoPage() {
 
   const decrementarQuantidade = (id: string) => {
     const item = carrinho.find((i) => i.id === id);
-    if (item && item.quantidade > 1 && typeof token === "string") {
+    if (item && item.quantidade > 1) {
       atualizarQuantidade(token, id, item.quantidade - 1);
       setCarrinho(getCarrinho(token));
     }
   };
 
   const removerItemDoCarrinho = (id: string) => {
-    if (typeof token === "string") {
-      removerItem(token, id);
-      setCarrinho(getCarrinho(token));
-      toast({
-        title: "Item removido",
-        description: "O item foi removido do seu pedido",
-        duration: 3000,
-      });
-    }
+    removerItem(token, id);
+    setCarrinho(getCarrinho(token));
+    toast({
+      title: "Item removido",
+      description: "O item foi removido do seu pedido",
+      duration: 3000,
+    });
   };
 
   const enviarPedido = async () => {
-    if (carrinho.length === 0 || typeof token !== "string") return;
+    if (carrinho.length === 0) return;
 
     try {
       setEnviandoPedido(true);
@@ -138,154 +136,139 @@ export default function CarrinhoPage() {
             </Button>
             <h1 className="font-bold text-lg">Seu pedido</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-1" asChild>
-              <Link href={`/mesa/${token}/pedidos`}>
-                <Receipt className="h-4 w-4" />
-                <span>Pedidos</span>
+          {carrinho.length > 0 && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/mesa/${token}/dividir-conta`}>
+                <Users className="h-4 w-4 mr-2" />
+                Dividir conta
               </Link>
             </Button>
-          </div>
+          )}
         </div>
       </header>
 
       {/* Conteúdo principal */}
       <main className="flex-1 container mx-auto px-4 py-6">
-        {carrinho.length > 0 ? (
-          <>
-            <h2 className="text-xl font-bold mb-4">Itens no carrinho</h2>
-
-            <div className="space-y-4 mb-6">
-              {carrinho.map((item) => (
-                <Card key={item.id} className="overflow-hidden">
-                  <div className="flex">
-                    <div className="relative h-24 w-24 flex-shrink-0">
-                      <Image
-                        src={item.imagem || "/placeholder.svg"}
-                        alt={item.nome}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <CardContent className="p-3 flex-1">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium">{item.nome}</h3>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => removerItemDoCarrinho(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remover</span>
-                        </Button>
-                      </div>
-
-                      {item.observacoes && (
-                        <p className="text-xs text-muted-foreground mt-1 mb-2">
-                          Obs: {item.observacoes}
-                        </p>
-                      )}
-
-                      <div className="flex justify-between items-center mt-2">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => decrementarQuantidade(item.id)}
-                            disabled={item.quantidade <= 1}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-6 text-center">
-                            {item.quantidade}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => incrementarQuantidade(item.id)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <span className="font-medium">
-                          R${" "}
-                          {(item.preco * item.quantidade)
-                            .toFixed(2)
-                            .replace(".", ",")}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </div>
-                </Card>
-              ))}
-            </div>
-
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <h3 className="font-medium mb-2">Observações gerais</h3>
-                <textarea
-                  className="w-full p-3 border rounded-md h-24 bg-background"
-                  placeholder="Alguma observação para todo o pedido?"
-                  value={observacoesGerais}
-                  onChange={(e) => setObservacoesGerais(e.target.value)}
-                />
-              </CardContent>
-            </Card>
-
-            <Card className="mb-6">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">
-                    Taxa de serviço (10%)
-                  </span>
-                  <span>
-                    R$ {(totalCarrinho * 0.1).toFixed(2).replace(".", ",")}
-                  </span>
-                </div>
-                <div className="border-t my-2 pt-2 flex justify-between items-center font-bold">
-                  <span>Total</span>
-                  <span className="text-primary text-lg">
-                    R$ {(totalCarrinho * 1.1).toFixed(2).replace(".", ",")}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 gap-1" asChild>
-                <Link href={`/mesa/${token}/dividir-conta`}>
-                  <Users className="h-4 w-4" />
-                  <span>Dividir conta</span>
-                </Link>
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => setConfirmacaoAberta(true)}
-              >
-                Confirmar pedido
-              </Button>
-            </div>
-          </>
-        ) : (
+        {carrinho.length === 0 ? (
           <div className="text-center py-12">
             <div className="mx-auto w-16 h-16 mb-4 text-muted-foreground">
               <Receipt className="w-16 h-16" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Seu carrinho está vazio</h2>
+            <h2 className="text-xl font-bold mb-2">Carrinho vazio</h2>
             <p className="text-muted-foreground mb-6">
-              Adicione itens do cardápio para fazer seu pedido
+              Adicione itens ao seu pedido para continuar
             </p>
             <Button asChild>
               <Link href={`/mesa/${token}`}>Ver cardápio</Link>
             </Button>
           </div>
+        ) : (
+          <>
+            <div className="space-y-4 mb-8">
+              {carrinho.map((item) => (
+                <Card key={item.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex gap-4">
+                      <div className="relative h-20 w-20 flex-shrink-0">
+                        <Image
+                          src={item.imagem || "/placeholder.svg"}
+                          alt={item.nome}
+                          fill
+                          className="object-cover rounded-md"
+                        />
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-medium">{item.nome}</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => removerItemDoCarrinho(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Remover</span>
+                          </Button>
+                        </div>
+
+                        {item.observacoes && (
+                          <p className="text-sm text-muted-foreground mb-1">
+                            {item.observacoes}
+                          </p>
+                        )}
+
+                        <div className="flex justify-between items-center mt-2">
+                          <div className="flex items-center border rounded-md">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => decrementarQuantidade(item.id)}
+                              disabled={item.quantidade <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center">
+                              {item.quantidade}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => incrementarQuantidade(item.id)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+
+                          <div className="font-medium">
+                            R${" "}
+                            {(item.preco * item.quantidade)
+                              .toFixed(2)
+                              .replace(".", ",")}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="mb-6">
+              <h3 className="font-medium mb-2">Observações gerais</h3>
+              <Textarea
+                placeholder="Alguma observação para o pedido todo? Ex: Mesa longe do banheiro..."
+                value={observacoesGerais}
+                onChange={(e) => setObservacoesGerais(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center font-medium text-lg mb-6">
+                <span>Total</span>
+                <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
+              </div>
+
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => setConfirmacaoAberta(true)}
+                disabled={enviandoPedido}
+              >
+                {enviandoPedido ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>Fazer pedido</>
+                )}
+              </Button>
+            </div>
+          </>
         )}
       </main>
 
@@ -295,11 +278,11 @@ export default function CarrinhoPage() {
           <SheetHeader>
             <SheetTitle>Confirmar pedido</SheetTitle>
             <SheetDescription>
-              Revise seu pedido antes de confirmar
+              Confira os itens do seu pedido antes de confirmar
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-6 space-y-4">
+          <div className="space-y-4 my-6">
             {carrinho.map((item) => (
               <div key={item.id} className="flex justify-between items-center">
                 <div>
@@ -313,42 +296,38 @@ export default function CarrinhoPage() {
               </div>
             ))}
 
-            <div className="border-t pt-4 mt-4">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
-              </div>
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-muted-foreground">
-                  Taxa de serviço (10%)
-                </span>
-                <span>
-                  R$ {(totalCarrinho * 0.1).toFixed(2).replace(".", ",")}
-                </span>
-              </div>
-              <div className="flex justify-between items-center font-bold mt-2">
-                <span>Total</span>
-                <span className="text-primary">
-                  R$ {(totalCarrinho * 1.1).toFixed(2).replace(".", ",")}
-                </span>
-              </div>
+            <div className="border-t pt-4 flex justify-between items-center font-medium">
+              <span>Total</span>
+              <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
             </div>
+          </div>
 
-            {observacoesGerais && (
-              <div className="border-t pt-4 mt-4">
-                <h4 className="font-medium mb-1">Observações:</h4>
-                <p className="text-sm text-muted-foreground">
-                  {observacoesGerais}
-                </p>
-              </div>
-            )}
-
-            <div className="border-t pt-4 mt-4">
-              <Button className="w-full gap-2" onClick={enviarPedido}>
-                <CheckCircle2 className="h-4 w-4" />
-                Confirmar e enviar pedido
-              </Button>
-            </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setConfirmacaoAberta(false)}
+              disabled={enviandoPedido}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={enviarPedido}
+              disabled={enviandoPedido}
+            >
+              {enviandoPedido ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Confirmar pedido
+                </>
+              )}
+            </Button>
           </div>
         </SheetContent>
       </Sheet>
