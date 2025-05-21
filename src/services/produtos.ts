@@ -1,24 +1,35 @@
 import api from "./api";
-import type { Produto, CategoriaProduto } from "../types";
+import { API_ENDPOINTS } from "@/src/constants";
+import type { Produto, CategoriaProduto } from "@/src/types";
+import { mapearProdutoAPI, mapearProdutosAPI } from "@/src/adapters/produtoAdapter";
 
+/**
+ * Busca produtos de uma categoria específica
+ */
 export const getProdutosPorCategoria = async (
   categoria: CategoriaProduto
 ): Promise<Produto[]> => {
   try {
     if (categoria === "todos") {
-      const response = await api.get("/produtos");
-      return response.data;
+      const response = await api.get(API_ENDPOINTS.PRODUTOS);
+      console.log("API Response (todos):", response.data);
+      const produtos = mapearProdutosAPI(response.data);
+      console.log("Produtos mapeados:", produtos);
+      return produtos;
     } else {
       // Primeiro precisamos obter o ID da categoria
-      const categorias = await api.get("/categorias/");
+      const categorias = await api.get(`${API_ENDPOINTS.CATEGORIAS}/`);
       const categoriaObj = categorias.data.find(
         (cat: any) => cat.nome.toLowerCase() === categoria.toLowerCase()
       );
 
       if (!categoriaObj) return [];
 
-      const response = await api.get(`/categorias/${categoriaObj.id}/produtos`);
-      return mapearProdutosAPI(response.data);
+      const response = await api.get(`${API_ENDPOINTS.CATEGORIAS}/${categoriaObj.id}/produtos`);
+      console.log(`API Response (${categoria}):`, response.data);
+      const produtos = mapearProdutosAPI(response.data);
+      console.log("Produtos mapeados:", produtos);
+      return produtos;
     }
   } catch (error) {
     console.error("Erro ao buscar produtos por categoria:", error);
@@ -26,9 +37,12 @@ export const getProdutosPorCategoria = async (
   }
 };
 
+/**
+ * Busca um produto pelo ID
+ */
 export const getProdutoById = async (id: string): Promise<Produto | null> => {
   try {
-    const response = await api.get(`/produtos/${id}`);
+    const response = await api.get(`${API_ENDPOINTS.PRODUTOS}/${id}`);
     return mapearProdutoAPI(response.data);
   } catch (error) {
     console.error("Erro ao buscar produto por ID:", error);
@@ -36,6 +50,9 @@ export const getProdutoById = async (id: string): Promise<Produto | null> => {
   }
 };
 
+/**
+ * Filtra produtos com base em diversos critérios
+ */
 export const filtrarProdutos = async ({
   categoria,
   vegetariano,
@@ -46,59 +63,33 @@ export const filtrarProdutos = async ({
   semGluten: boolean;
 }): Promise<Produto[]> => {
   try {
-    let produtos: Produto[] = [];
-
     // Buscar produtos por categoria
-    produtos = await getProdutosPorCategoria(categoria);
+    const produtos = await getProdutosPorCategoria(categoria);
 
     // Aplicar filtros no client-side (a API não tem endpoint específico para esses filtros)
-    if (vegetariano) {
-      produtos = produtos.filter(
-        (produto) =>
-          produto.restricoes && produto.restricoes.includes("vegetariano")
-      );
-    }
-
-    if (semGluten) {
-      produtos = produtos.filter(
-        (produto) =>
-          produto.restricoes && produto.restricoes.includes("sem-gluten")
-      );
-    }
-
-    return produtos;
+    return produtos.filter(produto => {
+      if (vegetariano && (!produto.restricoes || !produto.restricoes.includes("vegetariano"))) {
+        return false;
+      }
+      if (semGluten && (!produto.restricoes || !produto.restricoes.includes("sem-gluten"))) {
+        return false;
+      }
+      return true;
+    });
   } catch (error) {
     console.error("Erro ao filtrar produtos:", error);
     return [];
   }
 };
 
-// Função auxiliar para mapear produtos da API para o formato esperado pelo front
-function mapearProdutoAPI(produtoAPI: any): Produto {
-  return {
-    id: produtoAPI.id.toString(),
-    nome: produtoAPI.nome,
-    descricao: produtoAPI.descricao || "",
-    preco: produtoAPI.preco,
-    categoria: produtoAPI.categoriaId
-      ? produtoAPI.categoriaId.toString()
-      : "outros",
-    imagem: produtoAPI.imagemUrl || "/placeholder.svg",
-    popular: produtoAPI.popular || false,
-    tempoPreparo: produtoAPI.tempoPreparoMinutos || 15,
-    restricoes: produtoAPI.restricoes || [],
-  };
-}
-
-function mapearProdutosAPI(produtosAPI: any[]): Produto[] {
-  return produtosAPI.map(mapearProdutoAPI);
-}
-
+/**
+ * Busca produtos recomendados
+ */
 export const getProdutosRecomendados = async (
   limite: number = 5
 ): Promise<Produto[]> => {
   try {
-    const response = await api.get(`/produtos/recomendados?limite=${limite}`);
+    const response = await api.get(`${API_ENDPOINTS.PRODUTOS}/recomendados?limite=${limite}`);
     return mapearProdutosAPI(response.data);
   } catch (error) {
     console.error("Erro ao buscar produtos recomendados:", error);

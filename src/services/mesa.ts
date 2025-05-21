@@ -1,6 +1,6 @@
 import api from "./api";
-
-const TOKEN_PREFIX = "@comandinha:token:";
+import { TokenManager } from "./tokenManager";
+import { API_ENDPOINTS } from "@/src/constants";
 
 interface MesaAtivacaoResponse {
   token: string;
@@ -9,17 +9,18 @@ interface MesaAtivacaoResponse {
   mesaNome: string;
 }
 
+/**
+ * Ativa uma mesa e obtém token de autenticação
+ */
 export const ativarMesa = async (
   mesaId: string
 ): Promise<MesaAtivacaoResponse> => {
   try {
-    const response = await api.post("/mesas/ativar", { mesaId });
+    const response = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, { mesaId });
     const data = response.data;
 
-    // Salvar token no localStorage
-    if (typeof window !== "undefined") {
-      localStorage.setItem(`${TOKEN_PREFIX}${mesaId}`, data.token);
-    }
+    // Salvar token usando TokenManager
+    TokenManager.setToken(mesaId, data.token);
 
     return data;
   } catch (error) {
@@ -28,18 +29,21 @@ export const ativarMesa = async (
   }
 };
 
+/**
+ * Valida se uma mesa está ativa com um token válido
+ */
 export const validarToken = async (mesaId: string): Promise<boolean> => {
   try {
-    console.log(`Tentando validar mesa: ${mesaId}`); // Log para debug
+    console.log(`Tentando validar mesa: ${mesaId}`);
 
     // Verificar se já existe um token salvo para esta mesa
-    const tokenSalvo = localStorage.getItem(`@comandinha:token:${mesaId}`);
+    const tokenSalvo = TokenManager.getToken(mesaId);
 
     if (tokenSalvo) {
       console.log("Token encontrado no localStorage");
       try {
         // Tentar validar usando o endpoint de validação real
-        const validacaoResponse = await api.get("/mesas/validar", {
+        const validacaoResponse = await api.get(`${API_ENDPOINTS.MESAS}/validar`, {
           headers: { Authorization: `Bearer ${tokenSalvo}` },
         });
 
@@ -54,14 +58,11 @@ export const validarToken = async (mesaId: string): Promise<boolean> => {
     // Se não temos token ou validação falhou, tentar ativar a mesa
     try {
       console.log("Tentando ativar a mesa");
-      const ativacaoResponse = await api.post("/mesas/ativar", { mesaId });
+      const ativacaoResponse = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, { mesaId });
 
       // Se a ativação for bem-sucedida, salvar o token e retornar válido
       if (ativacaoResponse.data && ativacaoResponse.data.token) {
-        localStorage.setItem(
-          `@comandinha:token:${mesaId}`,
-          ativacaoResponse.data.token
-        );
+        TokenManager.setToken(mesaId, ativacaoResponse.data.token);
         console.log("Mesa ativada com sucesso");
         return true;
       }
@@ -72,7 +73,7 @@ export const validarToken = async (mesaId: string): Promise<boolean> => {
     // Se chegamos aqui, tentar uma última verificação simples
     try {
       // Verificar apenas se a mesa existe usando uma listagem
-      const listResponse = await api.get("/mesas");
+      const listResponse = await api.get(API_ENDPOINTS.MESAS);
       const mesas = listResponse.data;
 
       // Verificar se o ID está na lista
@@ -95,15 +96,18 @@ export const validarToken = async (mesaId: string): Promise<boolean> => {
   }
 };
 
+/**
+ * Atualiza o token de uma mesa
+ */
 export const refreshToken = async (
   mesaId: string
 ): Promise<MesaAtivacaoResponse | null> => {
   try {
-    const response = await api.post(`/mesas/${mesaId}/refresh`);
+    const response = await api.post(`${API_ENDPOINTS.MESAS}/${mesaId}/refresh`);
     const data = response.data;
 
-    // Atualizar token no localStorage
-    localStorage.setItem(`${TOKEN_PREFIX}${mesaId}`, data.token);
+    // Atualizar token usando TokenManager
+    TokenManager.setToken(mesaId, data.token);
 
     return data;
   } catch (error) {
@@ -112,14 +116,17 @@ export const refreshToken = async (
   }
 };
 
+/**
+ * Fecha a conta de uma mesa
+ */
 export const fecharConta = async (mesaId: string, formaPagamento: string) => {
   try {
-    const response = await api.post(`/mesas/${mesaId}/fechar`, {
+    const response = await api.post(`${API_ENDPOINTS.MESAS}/${mesaId}/fechar`, {
       formaPagamento,
     });
 
-    // Remover token após fechar a conta
-    localStorage.removeItem(`${TOKEN_PREFIX}${mesaId}`);
+    // Remover token usando TokenManager
+    TokenManager.removeToken(mesaId);
 
     return response.data;
   } catch (error) {

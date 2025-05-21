@@ -1,5 +1,6 @@
 // src/services/admin.ts
 import api from "./api";
+import { API_ENDPOINTS, STATUS } from "@/src/constants";
 import { PedidoProducao, StatusPedido } from "@/src/types";
 
 /**
@@ -8,7 +9,7 @@ import { PedidoProducao, StatusPedido } from "@/src/types";
  */
 export const listarPedidosProducao = async (): Promise<PedidoProducao[]> => {
   try {
-    const response = await api.get("/pedidos/producao");
+    const response = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
 
     // Garantir que cada pedido tenha um ID
     const pedidosComId = response.data.map((pedido: any, index: number) => ({
@@ -40,7 +41,7 @@ export const atualizarStatusPedido = async (
       mensagem: mensagem || null,
     };
 
-    await api.patch(`/pedidos/${pedidoId}/status`, payload);
+    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, payload);
     return true;
   } catch (error) {
     console.error(`Erro ao atualizar status do pedido ${pedidoId}:`, error);
@@ -54,7 +55,7 @@ export const atualizarStatusPedido = async (
 export const confirmarPedido = async (pedidoId: string): Promise<boolean> => {
   return atualizarStatusPedido(
     pedidoId,
-    "confirmado",
+    STATUS.CONFIRMADO as StatusPedido,
     "Pedido confirmado pelo restaurante"
   );
 };
@@ -67,7 +68,7 @@ export const iniciarPreparacaoPedido = async (
 ): Promise<boolean> => {
   return atualizarStatusPedido(
     pedidoId,
-    "preparando",
+    STATUS.PREPARANDO as StatusPedido,
     "Pedido está sendo preparado"
   );
 };
@@ -80,7 +81,7 @@ export const marcarPedidoPronto = async (
 ): Promise<boolean> => {
   return atualizarStatusPedido(
     pedidoId,
-    "pronto",
+    STATUS.PRONTO as StatusPedido,
     "Pedido está pronto para entrega"
   );
 };
@@ -93,7 +94,7 @@ export const marcarPedidoEntregue = async (
 ): Promise<boolean> => {
   return atualizarStatusPedido(
     pedidoId,
-    "entregue",
+    STATUS.ENTREGUE as StatusPedido,
     "Pedido foi entregue ao cliente"
   );
 };

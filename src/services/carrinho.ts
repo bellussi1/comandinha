@@ -1,12 +1,16 @@
-import type { ItemCarrinho } from "../types";
+import type { ItemCarrinho } from "@/src/types";
 import api from "./api";
+import { API_ENDPOINTS, STORAGE_KEYS } from "../constants";
+import { formatarPedidoParaAPI } from "../adapters/pedidoAdapter";
+import { TokenManager } from "./tokenManager";
 
-const STORAGE_PREFIX = "@comandinha:";
-
+/**
+ * Obtém os itens do carrinho de uma mesa
+ */
 export const getCarrinho = (mesa: string): ItemCarrinho[] => {
   if (typeof window === "undefined") return [];
 
-  const stored = localStorage.getItem(`${STORAGE_PREFIX}carrinho:${mesa}`);
+  const stored = localStorage.getItem(`${STORAGE_KEYS.CARRINHO_PREFIX}${mesa}`);
   if (!stored) return [];
 
   try {
@@ -17,13 +21,16 @@ export const getCarrinho = (mesa: string): ItemCarrinho[] => {
   }
 };
 
+/**
+ * Salva os itens do carrinho de uma mesa
+ */
 export const salvarCarrinho = (mesa: string, items: ItemCarrinho[]): void => {
   if (typeof window === "undefined") return;
   if (!mesa || !Array.isArray(items)) return;
 
   try {
     localStorage.setItem(
-      `${STORAGE_PREFIX}carrinho:${mesa}`,
+      `${STORAGE_KEYS.CARRINHO_PREFIX}${mesa}`,
       JSON.stringify(items)
     );
   } catch (error) {
@@ -31,11 +38,17 @@ export const salvarCarrinho = (mesa: string, items: ItemCarrinho[]): void => {
   }
 };
 
+/**
+ * Limpa o carrinho de uma mesa
+ */
 export const limparCarrinho = (mesa: string): void => {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(`${STORAGE_PREFIX}carrinho:${mesa}`);
+  localStorage.removeItem(`${STORAGE_KEYS.CARRINHO_PREFIX}${mesa}`);
 };
 
+/**
+ * Adiciona um item ao carrinho
+ */
 export const adicionarItem = (mesa: string, item: ItemCarrinho): void => {
   const carrinho = getCarrinho(mesa);
   const itemExistente = carrinho.findIndex((i) => i.id === item.id);
@@ -54,12 +67,18 @@ export const adicionarItem = (mesa: string, item: ItemCarrinho): void => {
   salvarCarrinho(mesa, carrinho);
 };
 
+/**
+ * Remove um item do carrinho
+ */
 export const removerItem = (mesa: string, itemId: string): void => {
   const carrinho = getCarrinho(mesa);
   const novosItens = carrinho.filter((item) => item.id !== itemId);
   salvarCarrinho(mesa, novosItens);
 };
 
+/**
+ * Atualiza a quantidade de um item no carrinho
+ */
 export const atualizarQuantidade = (
   mesa: string,
   itemId: string,
@@ -76,7 +95,9 @@ export const atualizarQuantidade = (
   }
 };
 
-// Novas funções para sincronização com a API (opcional, depende da necessidade)
+/**
+ * Envia o carrinho como um pedido para a API
+ */
 export const enviarCarrinhoParaPedido = async (
   mesa: string,
   observacoesGerais?: string
@@ -84,16 +105,9 @@ export const enviarCarrinhoParaPedido = async (
   const carrinho = getCarrinho(mesa);
   if (carrinho.length === 0) return null;
 
-  // Chama o serviço de pedidos para enviar o pedido
   try {
-    const response = await api.post("/pedidos", {
-      itens: carrinho.map((item) => ({
-        produtoId: parseInt(item.id),
-        quantidade: item.quantidade,
-        observacoes: item.observacoes || null,
-      })),
-      observacoesGerais: observacoesGerais || null,
-    });
+    const payload = formatarPedidoParaAPI(mesa, carrinho, observacoesGerais);
+    const response = await api.post(API_ENDPOINTS.PEDIDOS, payload);
 
     // Limpa o carrinho após enviar o pedido
     limparCarrinho(mesa);

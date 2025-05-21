@@ -1,4 +1,6 @@
 import axios from "axios";
+import { TokenManager } from "./tokenManager";
+import { API_ENDPOINTS } from "../constants";
 
 const baseURL =
   process.env.NEXT_PUBLIC_API_URL || "https://comandinha.onrender.com";
@@ -10,16 +12,26 @@ const api = axios.create({
   },
 });
 
-// Interceptor para adicionar o token de autenticação
+// Interceptor aprimorado para autenticação
 api.interceptors.request.use((config) => {
-  // Verifica se estamos no navegador e se há um token salvo
   if (typeof window !== "undefined") {
-    const mesa = config.url?.includes("/mesas/")
-      ? config.url.split("/mesas/")[1]?.split("/")[0]
-      : null;
+    // Extrair ID da mesa da URL de forma mais robusta
+    const urlParts = config.url?.split("/") || [];
+    let mesaId = null;
+    
+    // Verificar padrão /mesas/{id}
+    for (let i = 0; i < urlParts.length; i++) {
+      if (urlParts[i] === "mesas" && i + 1 < urlParts.length) {
+        const potentialId = urlParts[i + 1].split("?")[0];
+        if (potentialId) {
+          mesaId = potentialId;
+          break;
+        }
+      }
+    }
 
-    if (mesa) {
-      const token = localStorage.getItem(`@comandinha:token:${mesa}`);
+    if (mesaId) {
+      const token = TokenManager.getToken(mesaId);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

@@ -1,14 +1,20 @@
 import api from "./api";
+import { TokenManager } from "./tokenManager";
+import { mapearPedidoAPI, formatarPedidoParaAPI } from "@/src/adapters/pedidoAdapter";
+import { API_ENDPOINTS } from "@/src/constants";
 import type {
   Pedido,
   PedidoProducao,
   StatusPedido,
   ItemCarrinho,
-} from "../types";
+} from "@/src/types";
 
+/**
+ * Busca os pedidos de uma mesa específica
+ */
 export const getPedidosPorMesa = async (mesa: string): Promise<Pedido[]> => {
   try {
-    const response = await api.get(`/mesas/${mesa}/pedidos`);
+    const response = await api.get(`${API_ENDPOINTS.MESAS}/${mesa}/pedidos`);
 
     if (!Array.isArray(response.data.pedidos)) {
       return [];
@@ -23,31 +29,22 @@ export const getPedidosPorMesa = async (mesa: string): Promise<Pedido[]> => {
   }
 };
 
+/**
+ * Adiciona um novo pedido para uma mesa
+ */
 export const adicionarPedido = async (pedido: {
   mesa: string;
   itens: ItemCarrinho[];
   observacoesGerais?: string;
 }): Promise<Pedido> => {
   try {
-    // Transforma os itens no formato esperado pela API
-    const itensFormato = pedido.itens.map((item) => ({
-      produtoId: parseInt(item.id),
-      quantidade: item.quantidade,
-      observacoes: item.observacoes || null,
-    }));
+    const payload = formatarPedidoParaAPI(
+      pedido.mesa,
+      pedido.itens,
+      pedido.observacoesGerais
+    );
 
-    const payload = {
-      itens: itensFormato,
-      observacoesGerais: pedido.observacoesGerais || null,
-    };
-
-    const response = await api.post("/pedidos", payload, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem(
-          `@comandinha:token:${pedido.mesa}`
-        )}`,
-      },
-    });
+    const response = await api.post(API_ENDPOINTS.PEDIDOS, payload);
 
     return mapearPedidoAPI(response.data, pedido.mesa);
   } catch (error) {
@@ -56,9 +53,12 @@ export const adicionarPedido = async (pedido: {
   }
 };
 
+/**
+ * Busca todos os pedidos em produção (para admin)
+ */
 export const getPedidosProducao = async (): Promise<PedidoProducao[]> => {
   try {
-    const response = await api.get("/pedidos/producao");
+    const response = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
     return response.data;
   } catch (error) {
     console.error("Erro ao buscar pedidos em produção:", error);
@@ -66,12 +66,15 @@ export const getPedidosProducao = async (): Promise<PedidoProducao[]> => {
   }
 };
 
+/**
+ * Atualiza status de um pedido (versão para admins)
+ */
 export const atualizarStatusPedidoProducao = async (
   pedidoId: string,
   novoStatus: StatusPedido
 ): Promise<boolean> => {
   try {
-    await api.patch(`/pedidos/${pedidoId}/status`, { status: novoStatus });
+    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { status: novoStatus });
     return true;
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);
@@ -79,45 +82,19 @@ export const atualizarStatusPedidoProducao = async (
   }
 };
 
+/**
+ * Atualiza status de um pedido (versão para clientes)
+ */
 export const atualizarStatusPedido = async (
   pedidoId: string,
   novoStatus: Pedido["status"],
   mesaId: string
 ): Promise<boolean> => {
   try {
-    await api.patch(
-      `/pedidos/${pedidoId}/status`,
-      { status: novoStatus },
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem(
-            `@comandinha:token:${mesaId}`
-          )}`,
-        },
-      }
-    );
+    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { status: novoStatus });
     return true;
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);
     return false;
   }
 };
-
-function mapearPedidoAPI(pedidoAPI: any, mesaId: string): Pedido {
-  return {
-    id: pedidoAPI.pedidoId.toString(),
-    itens: pedidoAPI.itens.map((item: any) => ({
-      id: item.produtoId.toString(),
-      nome: item.nome,
-      descricao: "", // A API não retorna descrição no pedido
-      preco: item.precoUnitario,
-      categoria: "", // A API não retorna categoria no pedido
-      imagem: "/placeholder.svg", // A API não retorna imagem no pedido
-      quantidade: item.quantidade,
-      observacoes: item.observacoes || undefined,
-    })),
-    timestamp: new Date(pedidoAPI.timestamp).getTime(),
-    status: pedidoAPI.status,
-    mesa: mesaId,
-  };
-}
