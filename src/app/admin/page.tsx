@@ -1,7 +1,7 @@
 // src/app/admin/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   listarPedidosProducao,
@@ -11,11 +11,9 @@ import {
   marcarPedidoEntregue,
 } from "@/src/services/admin";
 import { PedidoProducao } from "@/src/types";
-import {
-  formatarDataHora,
-  getStatusBadge,
-  getStatusIcon,
-} from "@/src/utils/formatters";
+import { formatarDataHora } from "@/src/utils/formatters";
+import { StatusBadge } from "@/src/components/status/StatusBadge";
+import { StatusIcon } from "@/src/components/status/StatusIcon";
 import {
   Card,
   CardContent,
@@ -58,17 +56,8 @@ export default function AdminPage() {
     null
   );
 
-  // Carregar pedidos em produção
-  useEffect(() => {
-    fetchPedidos();
-
-    // Atualização periódica dos pedidos
-    const intervalId = setInterval(fetchPedidos, 30000);
-    return () => clearInterval(intervalId);
-  }, []);
-
   // Função para buscar pedidos
-  const fetchPedidos = async () => {
+  const fetchPedidos = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -85,7 +74,16 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  // Carregar pedidos em produção
+  useEffect(() => {
+    fetchPedidos();
+
+    // Atualização periódica dos pedidos
+    const intervalId = setInterval(fetchPedidos, 30000);
+    return () => clearInterval(intervalId);
+  }, [fetchPedidos]);
 
   // Função para atualizar status de um pedido
   const handleUpdateStatus = async (pedidoId: string, novoStatus: string) => {
@@ -262,19 +260,7 @@ export default function AdminPage() {
               key={pedido.id || pedido.timestamp}
               className="overflow-hidden"
             >
-              <CardHeader className="bg-muted/50">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">
-                       {pedido.mesaNome}
-                    </CardTitle>
-                    <CardDescription>
-                      Pedido feito às {formatarDataHora(pedido.timestamp)}
-                    </CardDescription>
-                  </div>
-                  {getStatusBadge(pedido.status)}
-                </div>
-              </CardHeader>
+                          <CardHeader className="bg-muted/50">                <div className="flex justify-between items-start">                  <div>                    <CardTitle className="text-lg">                      {pedido.mesaNome}                    </CardTitle>                    <CardDescription>                      Pedido feito às {formatarDataHora(pedido.timestamp)}                    </CardDescription>                  </div>                  <StatusBadge status={pedido.status} />                </div>              </CardHeader>
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -332,11 +318,7 @@ export default function AdminPage() {
                       }
                       disabled={atualizandoStatus === pedido.id}
                     >
-                      {atualizandoStatus === pedido.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                      )}
+                                          {atualizandoStatus === pedido.id ? (                        <Loader2 className="h-4 w-4 animate-spin mr-1" />                      ) : (                        <StatusIcon status="confirmado" />                      )}
                       Confirmar
                     </Button>
                     <Button
