@@ -71,7 +71,7 @@ export const filtrarProdutos = async ({
       if (vegetariano && (!produto.restricoes || !produto.restricoes.includes("vegetariano"))) {
         return false;
       }
-      if (semGluten && (!produto.restricoes || !produto.restricoes.includes("sem-gluten"))) {
+      if (semGluten && (!produto.restricoes || !produto.restricoes.includes("sem gluten"))) {
         return false;
       }
       return true;

@@ -9,11 +9,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
-import { ativarMesa, validarToken } from "@/src/services/mesa";
+import {  validarToken } from "@/src/services/mesa";
 import {
   filtrarProdutos,
-  getProdutosPorCategoria,
-  getProdutosRecomendados,
+  getProdutosPorCategoria
 } from "@/src/services/produtos";
 import type { ItemCarrinho, Produto } from "@/src/types";
 import {
@@ -61,27 +60,18 @@ export default function MenuPage() {
         try {
           console.log("Verificando mesa:", token);
 
-          // Forçar ativação da mesa para obter token válido
-          try {
-            const ativacaoResponse = await ativarMesa(token);
-            console.log("Mesa ativada:", ativacaoResponse);
-            setIsValidMesa(true);
-          } catch (ativacaoError) {
-            console.log("Falha na ativação, tentando validação simples");
+          // Verificar se a mesa é válida
+          const isValid = await validarToken(token);
+          console.log("Resultado validação:", isValid);
+          setIsValidMesa(isValid);
 
-            // Se ativação falhar, tentar validação simples
-            const isValid = await validarToken(token);
-            console.log("Resultado validação:", isValid);
-            setIsValidMesa(isValid);
-
-            if (!isValid) {
-              toast({
-                title: "Mesa inválida",
-                description: "Esta mesa não está disponível",
-                variant: "destructive",
-              });
-              setTimeout(() => router.push("/"), 3000);
-            }
+          if (!isValid) {
+            toast({
+              title: "Mesa inválida",
+              description: "Esta mesa não está disponível",
+              variant: "destructive",
+            });
+            setTimeout(() => router.push("/"), 3000);
           }
         } catch (error) {
           console.error("Erro ao verificar mesa:", error);
@@ -378,7 +368,7 @@ export default function MenuPage() {
                             Veg
                           </Badge>
                         )}
-                        {produto.restricoes.includes("sem-gluten") && (
+                        {produto.restricoes.includes("sem gluten") && (
                           <Badge variant="outline" className="text-xs px-1 h-5">
                             S/G
                           </Badge>
