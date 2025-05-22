@@ -1,6 +1,6 @@
 {
   "name": "comandinha",
-  "version": "0.0.5-rc",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
