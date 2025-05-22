@@ -35,6 +35,7 @@ export function mapearItensPedidoAPI(itens: ItemPedidoAPI[]) {
  */
 export function formatarPedidoParaAPI(mesa: string, itens: any[], observacoesGerais?: string) {
   return {
+    mesaId: parseInt(mesa),
     itens: itens.map(item => ({
       produtoId: parseInt(item.id),
       quantidade: item.quantidade,
