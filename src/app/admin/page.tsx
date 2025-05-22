@@ -86,7 +86,7 @@ export default function AdminPage() {
   }, [fetchPedidos]);
 
   // Função para atualizar status de um pedido
-  const handleUpdateStatus = async (pedidoId: string, novoStatus: string) => {
+  const handleUpdateStatus = async (pedidoId: number, novoStatus: string) => {
     if (!pedidoId) {
       toast({
         title: "Erro",
@@ -97,22 +97,22 @@ export default function AdminPage() {
     }
 
     try {
-      setAtualizandoStatus(pedidoId);
+      setAtualizandoStatus(pedidoId.toString());
       let sucesso = false;
 
       // Usar as funções específicas para cada status
       switch (novoStatus) {
         case "confirmado":
-          sucesso = await confirmarPedido(pedidoId);
+          sucesso = await confirmarPedido(pedidoId.toString());
           break;
         case "preparando":
-          sucesso = await iniciarPreparacaoPedido(pedidoId);
+          sucesso = await iniciarPreparacaoPedido(pedidoId.toString());
           break;
         case "pronto":
-          sucesso = await marcarPedidoPronto(pedidoId);
+          sucesso = await marcarPedidoPronto(pedidoId.toString());
           break;
         case "entregue":
-          sucesso = await marcarPedidoEntregue(pedidoId);
+          sucesso = await marcarPedidoEntregue(pedidoId.toString());
           break;
         default:
           throw new Error(`Status não reconhecido: ${novoStatus}`);
@@ -122,14 +122,14 @@ export default function AdminPage() {
         // Atualizar lista local
         setPedidos((prevPedidos) =>
           prevPedidos.map((p) =>
-            p.id === pedidoId ? { ...p, status: novoStatus } : p
+            p.pedidoId === pedidoId ? { ...p, status: novoStatus } : p
           )
         );
 
         toast({
           title: "Status atualizado",
-          description: `Pedido da Mesa ${
-            pedidos.find((p) => p.id === pedidoId)?.mesaNome
+          description: `Pedido da  ${
+            pedidos.find((p) => p.pedidoId === pedidoId)?.mesaNome
           } atualizado para ${novoStatus}`,
         });
       }
@@ -257,7 +257,7 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pedidosFiltrados.map((pedido) => (
             <Card
-              key={pedido.id || pedido.timestamp}
+              key={pedido.pedidoId}
               className="overflow-hidden"
             >
                           <CardHeader className="bg-muted/50">                <div className="flex justify-between items-start">                  <div>                    <CardTitle className="text-lg">                      {pedido.mesaNome}                    </CardTitle>                    <CardDescription>                      Pedido feito às {formatarDataHora(pedido.timestamp)}                    </CardDescription>                  </div>                  <StatusBadge status={pedido.status} />                </div>              </CardHeader>
@@ -314,11 +314,11 @@ export default function AdminPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() =>
-                        handleUpdateStatus(pedido.id!, "confirmado")
+                        handleUpdateStatus(pedido.pedidoId!, "confirmado")
                       }
-                      disabled={atualizandoStatus === pedido.id}
+                      disabled={atualizandoStatus === pedido.pedidoId.toString()}
                     >
-                                          {atualizandoStatus === pedido.id ? (                        <Loader2 className="h-4 w-4 animate-spin mr-1" />                      ) : (                        <StatusIcon status="confirmado" />                      )}
+                                          {atualizandoStatus === pedido.pedidoId.toString() ? (                        <Loader2 className="h-4 w-4 animate-spin mr-1" />                      ) : (                        <StatusIcon status="confirmado" />                      )}
                       Confirmar
                     </Button>
                     <Button
@@ -328,9 +328,9 @@ export default function AdminPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() =>
-                        handleUpdateStatus(pedido.id!, "preparando")
+                        handleUpdateStatus(pedido.pedidoId!, "preparando")
                       }
-                      disabled={atualizandoStatus === pedido.id}
+                      disabled={atualizandoStatus === pedido.pedidoId.toString()}
                     >
                       <Coffee className="h-4 w-4 mr-1" />
                       Preparar
@@ -341,8 +341,8 @@ export default function AdminPage() {
                       }
                       size="sm"
                       className="flex-1"
-                      onClick={() => handleUpdateStatus(pedido.id!, "pronto")}
-                      disabled={atualizandoStatus === pedido.id}
+                      onClick={() => handleUpdateStatus(pedido.pedidoId!, "pronto")}
+                      disabled={atualizandoStatus === pedido.pedidoId.toString()}
                     >
                       <Send className="h-4 w-4 mr-1" />
                       Pronto

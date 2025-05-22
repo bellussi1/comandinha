@@ -10,14 +10,8 @@ import { PedidoProducao, StatusPedido } from "@/src/types";
 export const listarPedidosProducao = async (): Promise<PedidoProducao[]> => {
   try {
     const response = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
-
-    // Garantir que cada pedido tenha um ID
-    const pedidosComId = response.data.map((pedido: any, index: number) => ({
-      ...pedido,
-      id: pedido.id || `temp-${index}-${new Date().getTime()}`,
-    }));
-
-    return pedidosComId;
+    // Não precisamos mais adicionar um ID, pois agora temos pedidoId na resposta
+    return response.data;
   } catch (error) {
     console.error("Erro ao buscar pedidos em produção:", error);
     throw new Error("Falha ao carregar pedidos em produção");
