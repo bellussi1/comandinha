@@ -67,6 +67,72 @@ export const getPedidosProducao = async (): Promise<PedidoProducao[]> => {
 };
 
 /**
+ * Busca os pedidos de uma mesa específica por ID da mesa
+ */
+export const getPedidosPorMesaId = async (mesaId: string): Promise<Pedido[]> => {
+  try {
+    // Buscar todos os produtos para ter acesso aos preços
+    const produtosResponse = await api.get(`${API_ENDPOINTS.PRODUTOS}`);
+    const produtos = produtosResponse.data;
+    
+    // Criar um mapa de nome do produto para seu preço
+    const mapaProdutoPreco: Record<string, number> = {};
+    produtos.forEach((produto: any) => {
+      mapaProdutoPreco[produto.nome] = produto.preco;
+    });
+    
+    console.log("Mapa de produtos e preços:", mapaProdutoPreco);
+    
+    // Buscar pedidos em produção
+    const response = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
+    const todosOsPedidos = response.data;
+    
+    // Filtrar apenas os pedidos da mesa especificada
+    const pedidosDaMesa = todosOsPedidos.filter(
+      (pedido: PedidoProducao) => pedido.mesaId.toString() === mesaId
+    );
+    
+    // Log para debug - verificar estrutura completa
+    console.log("Pedidos da mesa:", pedidosDaMesa);
+    
+    // Calcular valor total e mapear para o formato usado pela aplicação
+    return pedidosDaMesa.map((pedido: PedidoProducao) => {
+      // Mapear itens e calcular valores
+      const itensComPreco = pedido.itens.map(item => {
+        // Encontrar preço do produto no mapa
+        const precoUnitario = mapaProdutoPreco[item.produtoNome] || 0;
+        const subtotal = precoUnitario * item.quantidade;
+        
+        return {
+          produtoId: 0,
+          nome: item.produtoNome,
+          quantidade: item.quantidade,
+          precoUnitario: precoUnitario,
+          observacoes: item.observacoes,
+          subtotal: subtotal
+        };
+      });
+      
+      // Calcular valor total do pedido
+      const valorTotal = itensComPreco.reduce((total, item) => total + item.subtotal, 0);
+      
+      return mapearPedidoAPI({
+        pedidoId: pedido.pedidoId,
+        timestamp: pedido.timestamp,
+        status: pedido.status,
+        itens: itensComPreco,
+        valorTotal: valorTotal,
+        estimativaEntrega: pedido.estimativaEntrega,
+        observacoesGerais: pedido.observacoesGerais
+      }, mesaId);
+    });
+  } catch (error) {
+    console.error("Erro ao buscar pedidos da mesa:", error);
+    return [];
+  }
+};
+
+/**
  * Atualiza status de um pedido (versão para admins)
  */
 export const atualizarStatusPedidoProducao = async (

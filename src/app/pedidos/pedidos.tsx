@@ -26,7 +26,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import api from "@/src/services/api";
-import { atualizarStatusPedido } from "@/src/services/pedidos";
+import { atualizarStatusPedido, getPedidosPorMesaId } from "@/src/services/pedidos";
 import type { Pedido } from "@/src/types";
 import {
   ArrowLeft,
@@ -66,36 +66,13 @@ export default function PedidosGlobalPage() {
 
         const allPedidos: Pedido[] = [];
 
-        // Para cada mesa, buscar os pedidos
+        // Para cada mesa, buscar os pedidos usando a função que filtra pelo ID da mesa
         for (const mesa of mesas) {
           try {
-            const pedidosResponse = await api.get(`/mesas/${mesa.id}/pedidos`);
-
-            // Verificar a estrutura da resposta
-            if (
-              pedidosResponse.data &&
-              Array.isArray(pedidosResponse.data.pedidos)
-            ) {
-              // Mapear os pedidos para o formato esperado pelo componente
-              const pedidosDaMesa = pedidosResponse.data.pedidos.map(
-                (pedido: any) => ({
-                  id: pedido.pedidoId.toString(),
-                  mesa: mesa.id.toString(),
-                  itens: pedido.itens.map((item: any) => ({
-                    id: item.produtoId.toString(),
-                    nome: item.nome,
-                    preco: item.precoUnitario,
-                    quantidade: item.quantidade,
-                    observacoes: item.observacoes,
-                    categoria: "",
-                    descricao: "",
-                    imagem: "/placeholder.svg",
-                  })),
-                  timestamp: new Date(pedido.timestamp).getTime(),
-                  status: pedido.status,
-                })
-              );
-
+            const pedidosDaMesa = await getPedidosPorMesaId(mesa.id.toString());
+            
+            // Adicionar os pedidos encontrados ao array geral
+            if (pedidosDaMesa.length > 0) {
               allPedidos.push(...pedidosDaMesa);
             }
           } catch (error) {
@@ -189,14 +166,20 @@ export default function PedidosGlobalPage() {
   // Nova função para atualizar status de pedidos
   const handleUpdateStatus = async (
     pedidoId: string,
-    mesaId: string,
     novoStatus: string
   ) => {
     try {
+      // Encontrar o pedido correspondente para obter a mesa
+      const pedido = pedidos.find(p => p.id === pedidoId);
+      if (!pedido) {
+        throw new Error("Pedido não encontrado");
+      }
+
       const success = await atualizarStatusPedido(
         pedidoId,
         novoStatus as "confirmado" | "preparando" | "entregue",
-        mesaId
+        pedido.mesa,
+        "Status atualizado pelo cliente"
       );
 
       if (success) {
@@ -209,7 +192,7 @@ export default function PedidosGlobalPage() {
 
         toast({
           title: "Status atualizado",
-          description: `Pedido #${pedidoId} atualizado para ${novoStatus}`,
+          description: `Pedido #${pedidoId.slice(-4)} atualizado para ${novoStatus}`,
         });
       } else {
         throw new Error("Falha ao atualizar status");
@@ -347,7 +330,7 @@ export default function PedidosGlobalPage() {
                       <SelectContent>
                         <SelectItem value="todos">Todos os status</SelectItem>
                         <SelectItem value="confirmado">Confirmado</SelectItem>
-                        <SelectItem value="em-preparo">Em preparo</SelectItem>
+                        <SelectItem value="preparando">Em preparo</SelectItem>
                         <SelectItem value="entregue">Entregue</SelectItem>
                       </SelectContent>
                     </Select>
@@ -398,7 +381,7 @@ export default function PedidosGlobalPage() {
                 <TabsTrigger value="confirmado" className="px-3 py-1.5">
                   Confirmados
                 </TabsTrigger>
-                <TabsTrigger value="em-preparo" className="px-3 py-1.5">
+                <TabsTrigger value="preparando" className="px-3 py-1.5">
                   Em preparo
                 </TabsTrigger>
                 <TabsTrigger value="entregue" className="px-3 py-1.5">
@@ -494,11 +477,7 @@ export default function PedidosGlobalPage() {
                           pedido.status === "confirmado" ? "default" : "outline"
                         }
                         onClick={() =>
-                          handleUpdateStatus(
-                            pedido.id,
-                            pedido.mesa,
-                            "confirmado"
-                          )
+                          handleUpdateStatus(pedido.id, "confirmado")
                         }
                         disabled={pedido.status === "entregue"}
                       >
@@ -510,11 +489,7 @@ export default function PedidosGlobalPage() {
                           pedido.status === "preparando" ? "default" : "outline"
                         }
                         onClick={() =>
-                          handleUpdateStatus(
-                            pedido.id,
-                            pedido.mesa,
-                            "preparando"
-                          )
+                          handleUpdateStatus(pedido.id, "preparando")
                         }
                         disabled={pedido.status === "entregue"}
                       >
@@ -526,7 +501,7 @@ export default function PedidosGlobalPage() {
                           pedido.status === "entregue" ? "default" : "outline"
                         }
                         onClick={() =>
-                          handleUpdateStatus(pedido.id, pedido.mesa, "entregue")
+                          handleUpdateStatus(pedido.id, "entregue")
                         }
                       >
                         Entregue

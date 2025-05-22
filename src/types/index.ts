@@ -98,7 +98,8 @@ export interface ItemPedidoProducao {
 
 // Pedido em produção
 export interface PedidoProducao {
-  id?: string;
+  pedidoId: number;
+  mesaId: number;
   mesaNome: string;
   timestamp: string;
   status: string;
