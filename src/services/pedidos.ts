@@ -71,10 +71,14 @@ export const getPedidosProducao = async (): Promise<PedidoProducao[]> => {
  */
 export const atualizarStatusPedidoProducao = async (
   pedidoId: string,
-  novoStatus: StatusPedido
+  novoStatus: StatusPedido,
+  mensagem?: string
 ): Promise<boolean> => {
   try {
-    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { status: novoStatus });
+    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { 
+      status: novoStatus,
+      mensagem: mensagem || ""
+    });
     return true;
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);
@@ -88,13 +92,30 @@ export const atualizarStatusPedidoProducao = async (
 export const atualizarStatusPedido = async (
   pedidoId: string,
   novoStatus: Pedido["status"],
-  mesaId: string
+  mesaId: string,
+  mensagem?: string
 ): Promise<boolean> => {
   try {
-    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { status: novoStatus });
+    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { 
+      status: novoStatus,
+      mensagem: mensagem || ""
+    });
     return true;
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);
     return false;
+  }
+};
+
+/**
+ * Exclui um pedido
+ */
+export const excluirPedido = async (pedidoId: string): Promise<boolean> => {
+  try {
+    await api.delete(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}`);
+    return true;
+  } catch (error) {
+    console.error("Erro ao excluir pedido:", error);
+    throw new Error("Não foi possível excluir o pedido");
   }
 };

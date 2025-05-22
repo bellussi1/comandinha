@@ -10,26 +10,6 @@ interface MesaAtivacaoResponse {
 }
 
 /**
- * Ativa uma mesa e obtém token de autenticação
- */
-export const ativarMesa = async (
-  mesaId: string
-): Promise<MesaAtivacaoResponse> => {
-  try {
-    const response = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, { mesaId });
-    const data = response.data;
-
-    // Salvar token usando TokenManager
-    TokenManager.setToken(mesaId, data.token);
-
-    return data;
-  } catch (error) {
-    console.error("Erro ao ativar mesa:", error);
-    throw new Error("Não foi possível ativar a mesa");
-  }
-};
-
-/**
  * Valida se uma mesa está ativa com um token válido
  */
 export const validarToken = async (mesaId: string): Promise<boolean> => {
