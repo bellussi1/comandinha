@@ -11,7 +11,7 @@ import { ArrowLeft, Clock, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getPedidosPorMesa } from "@/src/services/pedidos";
+import { getPedidosPorMesaId } from "@/src/services/pedidos";
 import { Pedido } from "@/src/types";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
@@ -33,7 +33,10 @@ export default function PedidosPage() {
       try {
         setLoading(true);
         setError(null);
-        const pedidosData = await getPedidosPorMesa(token);
+        
+        // Usar o token como mesaId para filtrar os pedidos
+        const pedidosData = await getPedidosPorMesaId(token);
+        console.log(`Pedidos carregados para mesa ${token}:`, pedidosData);
         setPedidos(pedidosData);
       } catch (error) {
         console.error("Erro ao carregar pedidos:", error);
@@ -155,18 +158,26 @@ export default function PedidosPage() {
                               </p>
                             )}
                           </div>
-                          <span>
-                            R$ {formatarValor(item.preco * item.quantidade)}
-                          </span>
+                          {item.preco > 0 ? (
+                            <span>
+                              R$ {formatarValor(item.preco * item.quantidade)}
+                            </span>
+                          ) : (
+                            <span>Preço indisponível</span>
+                          )}
                         </div>
                       ))}
                     </div>
 
                     <div className="border-t pt-3 flex justify-between items-center font-medium">
                       <span>Total</span>
-                      <span>
-                        R$ {formatarValor(calcularTotalPedido(pedido))}
-                      </span>
+                      {calcularTotalPedido(pedido) > 0 ? (
+                        <span>
+                          R$ {formatarValor(calcularTotalPedido(pedido))}
+                        </span>
+                      ) : (
+                        <span>Preço indisponível</span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
