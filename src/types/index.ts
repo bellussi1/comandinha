@@ -10,6 +10,14 @@ export interface Produto {
   restricoes?: string[];
 }
 
+export interface Categoria {
+  id: number;
+  nome: string;
+  descricao?: string;
+  imagemUrl?: string;
+  ordem: number;
+}
+
 export interface ItemCarrinho extends Produto {
   quantidade: number;
   observacoes?: string;
@@ -28,13 +36,6 @@ export interface Pedido {
 export interface ItemDivisao extends ItemCarrinho {
   pessoas: number[];
 }
-
-export type CategoriaProduto =
-  | "todos"
-  | "entradas"
-  | "principais"
-  | "bebidas"
-  | "sobremesas";
 
 export interface Mesa {
   id: number;
