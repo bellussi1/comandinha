@@ -136,14 +136,14 @@ export default function CarrinhoPage() {
             </Button>
             <h1 className="font-bold text-lg">Seu pedido</h1>
           </div>
-          {carrinho.length > 0 && (
+          {/* {carrinho.length > 0 && (
             <Button variant="ghost" size="sm" asChild>
               <Link href={`/mesa/${token}/dividir-conta`}>
                 <Users className="h-4 w-4 mr-2" />
                 Dividir conta
               </Link>
             </Button>
-          )}
+          )} */}
         </div>
       </header>
 
