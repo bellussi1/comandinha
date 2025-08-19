@@ -1,10 +1,23 @@
-import api from "./api";
-import { API_ENDPOINTS } from "@/src/constants";
-import type { Produto } from "@/src/types";
 import {
   mapearProdutoAPI,
   mapearProdutosAPI,
 } from "@/src/adapters/produtoAdapter";
+import { API_ENDPOINTS } from "@/src/constants";
+import type { Produto } from "@/src/types";
+import api from "./api";
+
+/**
+ * Busca produtos
+ */
+export const getProdutos = async (): Promise<Produto[]> => {
+  try {
+    const response = await api.get(`${API_ENDPOINTS.PRODUTOS}`);
+    return mapearProdutosAPI(response.data);
+  } catch (error) {
+    console.error("Erro ao buscar produtos:", error);
+    return [];
+  }
+};
 
 /**
  * Busca produtos de uma categoria específica
@@ -44,16 +57,17 @@ export const filtrarProdutos = async ({
   vegetariano,
   semGluten,
 }: {
-  categoriaId: number | 0; // agora aceita ID ou "todos"
+  categoriaId: number;
   vegetariano: boolean;
   semGluten: boolean;
 }): Promise<Produto[]> => {
   try {
-    let produtos: Produto[] = [];
+    // Se categoria = 0, pega todos os produtos
+    let produtos: Produto[] =
+      categoriaId === 0
+        ? await getProdutos()
+        : await getProdutosPorCategoria(categoriaId);
 
-    produtos = await getProdutosPorCategoria(categoriaId);
-
-    // Aplicar filtros no client-side (a API não tem endpoint específico para isso)
     return produtos.filter((produto) => {
       if (
         vegetariano &&

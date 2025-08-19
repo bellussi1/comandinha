@@ -1,5 +1,6 @@
 "use client";
 
+import { ModalFiltros, ModalProduto, ProdutoCard } from "@/src/components/menu";
 import { ThemeToggle } from "@/src/components/theme-toggle";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -7,13 +8,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
-import { validarToken } from "@/src/services/mesa";
-import {
-  getProdutosPorCategoria,
-  filtrarProdutos,
-} from "@/src/services/produtos";
 import { getCategorias } from "@/src/services/categoria";
-import { ProdutoCard, ModalFiltros, ModalProduto } from "@/src/components/menu";
+import {
+  filtrarProdutos,
+  getProdutos,
+  getProdutosPorCategoria,
+} from "@/src/services/produtos";
 import type { Categoria, ItemCarrinho, Produto } from "@/src/types";
 import {
   ChevronRight,
@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function MenuPage() {
   const params = useParams();
@@ -37,7 +37,7 @@ export default function MenuPage() {
     null
   );
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [categoriaAtiva, setCategoriaAtiva] = useState<number>(1);
+  const [categoriaAtiva, setCategoriaAtiva] = useState<number>(0);
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
   const [modalFiltrosAberto, setModalFiltrosAberto] = useState(false);
   const [filtroVegetariano, setFiltroVegetariano] = useState(false);
@@ -66,27 +66,45 @@ export default function MenuPage() {
     carregarCategorias();
   }, []);
 
-  // Buscar e filtrar produtos
   useEffect(() => {
-    async function carregarProdutos() {
-      if (categoriaAtiva !== null) {
-        setLoading(true);
-        try {
-          const produtosFiltrados = await filtrarProdutos({
-            categoriaId: categoriaAtiva,
-            vegetariano: filtroVegetariano,
-            semGluten: filtroSemGluten,
-          });
-          setProdutos(produtosFiltrados);
-        } catch (error) {
-          console.error("Erro ao carregar produtos:", error);
-          setProdutos([]);
-        }
+    const carregarProdutos = async () => {
+      setLoading(true);
+
+      try {
+        // Buscar produtos: se categoriaAtiva === 0 pega todos, senão apenas da categoria
+        const produtosCarregados: Produto[] =
+          categoriaAtiva === 0
+            ? await getProdutos()
+            : await getProdutosPorCategoria(categoriaAtiva);
+
+        // Aplicar filtros no client-side
+        const produtosFiltrados = produtosCarregados.filter((produto) => {
+          if (
+            filtroVegetariano &&
+            (!produto.restricoes || !produto.restricoes.includes("vegetariano"))
+          ) {
+            return false;
+          }
+          if (
+            filtroSemGluten &&
+            (!produto.restricoes || !produto.restricoes.includes("sem gluten"))
+          ) {
+            return false;
+          }
+          return true;
+        });
+
+        setProdutos(produtosFiltrados);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+        setProdutos([]);
+      } finally {
         setLoading(false);
       }
-    }
+    };
+
     carregarProdutos();
-  }, [categoriaAtiva, filtroVegetariano, filtroSemGluten]); // Só recarrega quando os filtros aplicados mudarem
+  }, [categoriaAtiva, filtroVegetariano, filtroSemGluten]);
 
   // Handlers
   const abrirModalProduto = (produto: Produto) => {
@@ -203,10 +221,15 @@ export default function MenuPage() {
       <div className="sticky top-[57px] z-10 bg-background border-b">
         <div className="container mx-auto px-4 py-2">
           <Tabs
-            value={categoriaAtiva?.toString()}
-            onValueChange={(val) => setCategoriaAtiva(Number(val))}
+            value={categoriaAtiva === 0 ? "todos" : categoriaAtiva.toString()}
+            onValueChange={(val) =>
+              setCategoriaAtiva(val === "todos" ? 0 : Number(val))
+            }
           >
             <TabsList className="w-full overflow-x-auto flex justify-start p-1 h-auto">
+              <TabsTrigger value="todos" className="px-3 py-1.5">
+                Todos
+              </TabsTrigger>
               {categorias.map((categoria) => (
                 <TabsTrigger
                   key={categoria.id}
