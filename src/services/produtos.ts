@@ -19,13 +19,41 @@ export interface ProdutoCreate {
 }
 
 /**
- * Converte File para base64 blob string
+ * Converte File para base64 string completa (com prefixo data:)
  */
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
+    console.log("Iniciando conversão de arquivo:", file.name, "Tamanho:", file.size);
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
+    reader.onload = () => {
+      try {
+        const result = reader.result as string;
+        console.log("FileReader result recebido, tamanho:", result?.length || 0);
+        if (!result || typeof result !== 'string') {
+          console.error("Resultado do FileReader inválido");
+          reject(new Error("Falha ao ler arquivo"));
+          return;
+        }
+        
+        // Manter o prefixo data:image/*;base64, completo
+        console.log("Base64 completo gerado, tamanho:", result.length);
+        
+        if (!result || result.length === 0) {
+          console.error("Base64 vazio");
+          reject(new Error("Base64 vazio"));
+          return;
+        }
+        
+        resolve(result);
+      } catch (error) {
+        console.error("Erro ao processar resultado do FileReader:", error);
+        reject(error);
+      }
+    };
+    reader.onerror = (error) => {
+      console.error("Erro no FileReader:", error);
+      reject(error);
+    };
     reader.readAsDataURL(file);
   });
 };
@@ -78,22 +106,37 @@ export const getProdutoById = async (id: string): Promise<Produto | null> => {
  */
 export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | null> => {
   try {
-    let imagemBlob = produto.imagem;
+    let imagemBase64 = produto.imagem;
 
-    // Se imagem é um arquivo, converter para blob base64
+    // Se imagem é um arquivo, converter para base64 string
     if (produto.imagem instanceof File) {
-      imagemBlob = await fileToBase64(produto.imagem);
+      console.log("Convertendo arquivo para base64:", produto.imagem.name);
+      imagemBase64 = await fileToBase64(produto.imagem);
+      console.log("Base64 gerado, tamanho:", imagemBase64?.length || 0);
     }
 
-    const produtoData = {
-      ...produto,
-      imagemURL: imagemBlob
+    // Se não há imagem, não incluir o campo
+    const produtoData: any = {
+      nome: produto.nome,
+      descricao: produto.descricao,
+      preco: produto.preco,
+      categoriaId: produto.categoriaId,
+      popular: produto.popular,
+      tempoPreparo: produto.tempoPreparo,
+      restricoes: produto.restricoes,
     };
 
-    // Remove a propriedade imagem antiga para enviar imagemURL
-    const { imagem, ...finalData } = produtoData;
+    // Só incluir imagem se ela existir e for válida
+    if (imagemBase64 && typeof imagemBase64 === 'string' && imagemBase64.length > 0) {
+      produtoData.imagemUrl = imagemBase64;
+      console.log("Incluindo imagem na requisição");
+    } else {
+      console.log("Nenhuma imagem válida para enviar");
+    }
 
-    const response = await api.post(API_ENDPOINTS.PRODUTOS, finalData);
+    console.log("Dados que serão enviados:", { ...produtoData, imagemUrl: produtoData.imagemUrl ? '[BASE64_DATA]' : undefined });
+
+    const response = await api.post(API_ENDPOINTS.PRODUTOS, produtoData);
     return mapearProdutoAPI(response.data);
   } catch (error) {
     console.error("Erro ao criar produto:", error);
@@ -106,22 +149,19 @@ export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | nu
  */
 export const atualizarProduto = async (id: string, produto: ProdutoCreate): Promise<Produto | null> => {
   try {
-    let imagemBlob = produto.imagem;
+    let imagemBase64 = produto.imagem;
 
-    // Se imagem é um arquivo, converter para blob base64
+    // Se imagem é um arquivo, converter para base64 string
     if (produto.imagem instanceof File) {
-      imagemBlob = await fileToBase64(produto.imagem);
+      imagemBase64 = await fileToBase64(produto.imagem);
     }
 
     const produtoData = {
       ...produto,
-      imagemURL: imagemBlob
+      imagemUrl: imagemBase64 // Enviar como string base64 no campo imagem
     };
 
-    // Remove a propriedade imagem antiga para enviar imagemURL
-    const { imagem, ...finalData } = produtoData;
-
-    const response = await api.put(`${API_ENDPOINTS.PRODUTOS}/${id}`, finalData);
+    const response = await api.put(`${API_ENDPOINTS.PRODUTOS}/${id}`, produtoData);
     return mapearProdutoAPI(response.data);
   } catch (error) {
     console.error("Erro ao atualizar produto:", error);
