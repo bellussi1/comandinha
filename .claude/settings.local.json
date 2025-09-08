@@ -3,7 +3,9 @@
     "allow": [
       "Bash(npx tsc:*)",
       "WebFetch(domain:comandinha.onrender.com)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest add:*)"
     ],
     "deny": [],
     "ask": []

@@ -108,3 +108,6 @@ export interface PedidoProducao {
   estimativaEntrega: string;
   itens: ItemPedidoProducao[];
 }
+
+// Re-export auth types
+export * from "./auth";

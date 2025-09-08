@@ -3,6 +3,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { AuthGuard } from "@/src/components/auth/AuthGuard";
+import { useAuth } from "@/src/services/auth";
 import {
   listarPedidosProducao,
   confirmarPedido,
@@ -41,11 +43,13 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  LogOut,
 } from "lucide-react";
 
 export default function AdminPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const { user, logout } = useAuth();
 
   const [pedidos, setPedidos] = useState<PedidoProducao[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,15 +174,21 @@ export default function AdminPage() {
       return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
     });
 
+  const handleLogout = () => {
+    logout();
+    router.push("/admin/login");
+  };
+
   return (
-    <div className="container mx-auto py-8 px-4">
+    <AuthGuard>
+      <div className="container mx-auto py-8 px-4">
       <CardHeader className="flex flex-row items-center justify-between px-0">
         <div>
           <CardTitle className="text-2xl font-bold">
             Painel Administrativo
           </CardTitle>
           <CardDescription>
-            Gerencie os pedidos em produção de todas as mesas
+            Bem-vindo, {user?.nome || 'Admin'} • Gerencie os pedidos em produção de todas as mesas
           </CardDescription>
         </div>
         <div className="flex items-center space-x-2">
@@ -189,6 +199,10 @@ export default function AdminPage() {
               <RefreshCw className="h-4 w-4 mr-2" />
             )}
             Atualizar
+          </Button>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sair
           </Button>
         </div>
       </CardHeader>
@@ -355,7 +369,8 @@ export default function AdminPage() {
         </div>
       )}
 
-      <Toaster />
-    </div>
+        <Toaster />
+      </div>
+    </AuthGuard>
   );
 }
