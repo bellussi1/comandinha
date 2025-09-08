@@ -183,7 +183,7 @@ export default function ProdutosPage() {
         categoriaId: formData.categoriaId,
         imagem: formData.imagem instanceof File 
           ? formData.imagem 
-          : (typeof formData.imagem === 'string' && formData.imagem.trim()) || undefined,
+          : (typeof formData.imagem === 'string' && formData.imagem.trimEnd()) || undefined,
         popular: formData.popular,
         tempoPreparo: formData.tempoPreparo > 0 ? formData.tempoPreparo : undefined,
         restricoes: formData.restricoes.length > 0 ? formData.restricoes : undefined,
@@ -228,7 +228,7 @@ export default function ProdutosPage() {
       descricao: produto.descricao || "",
       preco: produto.preco,
       categoriaId: Number(produto.categoria),
-      imagem: produto.imagem || "",
+      imagem: produto.imagem ? produto.imagem.trimEnd() : "",
       popular: produto.popular || false,
       tempoPreparo: produto.tempoPreparo || 0,
       restricoes: produto.restricoes || [],

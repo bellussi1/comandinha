@@ -47,12 +47,25 @@ export function ModalProduto({
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
       <div className="bg-background w-full max-w-md rounded-t-lg sm:rounded-lg shadow-lg overflow-hidden max-h-[90vh] flex flex-col">
         <div className="relative h-64">
-          <Image
-            src={(produto.imagem?.trimEnd()) || "/placeholder.svg"}
-            alt={produto.nome}
-            fill
-            className="object-cover"
-          />
+          {produto.imagem && produto.imagem.trimEnd().startsWith('http') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={produto.imagem.trimEnd()}
+              alt={produto.nome}
+              className="absolute inset-0 w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder.svg';
+                e.currentTarget.onerror = null;
+              }}
+            />
+          ) : (
+            <Image
+              src={produto.imagem?.trimEnd() || "/placeholder.svg"}
+              alt={produto.nome}
+              fill
+              className="object-cover"
+            />
+          )}
           <Button
             variant="ghost"
             size="icon"

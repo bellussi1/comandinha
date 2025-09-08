@@ -39,7 +39,9 @@ export function ImageUpload({
       setPreviewUrl(url);
       return () => URL.revokeObjectURL(url);
     } else if (typeof value === 'string' && value) {
-      setPreviewUrl(value);
+      // Clean the URL from any trailing whitespace or control characters
+      const cleanUrl = value.trimEnd();
+      setPreviewUrl(cleanUrl);
     } else {
       setPreviewUrl("");
     }
@@ -137,13 +139,28 @@ export function ImageUpload({
           ) : previewUrl ? (
             <div className="space-y-2">
               <div className="relative inline-block">
-                <Image
-                  src={previewUrl}
-                  alt="Preview"
-                  width={200}
-                  height={128}
-                  className="max-w-full h-32 object-cover rounded-md"
-                />
+                {/* Use regular img tag for external URLs to avoid Next.js domain restrictions */}
+                {previewUrl.startsWith('http') ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="max-w-full w-[200px] h-32 object-cover rounded-md"
+                    onError={(e) => {
+                      console.error('Failed to load image:', previewUrl);
+                      e.currentTarget.src = '/placeholder-image.png'; // Fallback to placeholder
+                      e.currentTarget.onerror = null; // Prevent infinite loop
+                    }}
+                  />
+                ) : (
+                  <Image
+                    src={previewUrl}
+                    alt="Preview"
+                    width={200}
+                    height={128}
+                    className="max-w-full h-32 object-cover rounded-md"
+                  />
+                )}
                 <Button
                   type="button"
                   variant="destructive"
