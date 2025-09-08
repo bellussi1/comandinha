@@ -217,7 +217,7 @@ export default function CategoriasPage() {
   return (
     <AuthGuard>
       <div className="container mx-auto py-8 px-4">
-        <div className="flex flex-row items-center justify-between mb-6">
+        <div className="flex flex-row flex-wrap items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Gerenciar Categorias</h1>
             <p className="text-muted-foreground">

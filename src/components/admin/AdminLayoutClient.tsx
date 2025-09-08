@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAuth } from "@/src/services/auth";
+import { Button } from "@/src/components/ui/button";
+import { Menu } from "lucide-react";
 
 interface AdminLayoutClientProps {
   children: React.ReactNode;
@@ -11,6 +13,7 @@ interface AdminLayoutClientProps {
 export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
   const { isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -40,9 +43,36 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
 
   // When authenticated, render with sidebar
   return (
-    <div className="flex h-screen bg-background">
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto">
+    <div className="flex h-screen bg-background relative">
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setSidebarOpen(true)}
+          className="bg-background shadow-md"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Sidebar */}
+      <AdminSidebar 
+        isOpen={sidebarOpen} 
+        onClose={() => setSidebarOpen(false)} 
+      />
+      
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Main content */}
+      <main className="flex-1 overflow-auto lg:ml-0">
+        <div className="lg:hidden h-16" /> {/* Space for mobile menu button */}
         {children}
       </main>
     </div>

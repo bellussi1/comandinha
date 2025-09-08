@@ -9,7 +9,8 @@ import {
   Package, 
   Tag, 
   LogOut,
-  Settings
+  Settings,
+  X
 } from "lucide-react";
 import { useAuth } from "@/src/services/auth";
 import { useRouter } from "next/navigation";
@@ -33,7 +34,12 @@ const navigation = [
   },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps = {}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, isAuthenticated } = useAuth();
@@ -49,9 +55,23 @@ export function AdminSidebar() {
   }
 
   return (
-    <div className="flex flex-col h-full w-64 bg-background border-r">
+    <div className={cn(
+      "flex flex-col h-full w-64 bg-background border-r transition-transform duration-300 ease-in-out",
+      "lg:translate-x-0 lg:static lg:z-auto",
+      "fixed top-0 left-0 z-50",
+      isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+    )}>
       {/* Header */}
-      <div className="flex flex-col items-center justify-center p-6 border-b">
+      <div className="flex flex-col items-center justify-center p-6 border-b relative">
+        {/* Close button for mobile */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden absolute top-2 right-2"
+          onClick={onClose}
+        >
+          <X className="h-4 w-4" />
+        </Button>
         <div className="w-12 h-12 bg-primary rounded-lg flex items-center justify-center mb-3">
           <Settings className="h-6 w-6 text-primary-foreground" />
         </div>
