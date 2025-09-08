@@ -91,13 +91,24 @@ export function ModalProduto({
             <Clock className="h-4 w-4 mr-1" />
             {produto.tempoPreparo} min
             {produto.restricoes && produto.restricoes.length > 0 && (
-              <div className="flex ml-3 gap-1">
-                {produto.restricoes.includes("vegetariano") && (
-                  <Badge variant="outline">Vegetariano</Badge>
-                )}
-                {produto.restricoes.includes("sem-gluten") && (
-                  <Badge variant="outline">Sem Glúten</Badge>
-                )}
+              <div className="flex ml-3 gap-1 flex-wrap">
+                {produto.restricoes.map((restricao) => {
+                  const restricaoConfig = {
+                    "vegetariano": { emoji: "🥬", nome: "Vegetariano" },
+                    "vegano": { emoji: "🌱", nome: "Vegano" },
+                    "sem glúten": { emoji: "🌾", nome: "Sem Glúten" },
+                    "sem lactose": { emoji: "🥛", nome: "Sem Lactose" },
+                    "apimentado": { emoji: "🌶️", nome: "Apimentado" },
+                    "orgânico": { emoji: "🌿", nome: "Orgânico" },
+                  }[restricao];
+                  
+                  return restricaoConfig ? (
+                    <Badge key={restricao} variant="outline" className="flex items-center gap-1">
+                      <span>{restricaoConfig.emoji}</span>
+                      {restricaoConfig.nome}
+                    </Badge>
+                  ) : null;
+                })}
               </div>
             )}
           </div>

@@ -6,43 +6,53 @@ import { useEffect, useState } from "react";
 interface ModalFiltrosProps {
   isOpen: boolean;
   onClose: () => void;
-  filtroVegetariano: boolean;
-  filtroSemGluten: boolean;
-  onAplicarFiltros: (vegetariano: boolean, semGluten: boolean) => void;
+  filtrosAtivos: string[];
+  onAplicarFiltros: (filtros: string[]) => void;
 }
+
+const restricoesDisponiveis = [
+  { id: "vegetariano", nome: "Vegetariano", emoji: "🥬" },
+  { id: "vegano", nome: "Vegano", emoji: "🌱" },
+  { id: "sem glúten", nome: "Sem Glúten", emoji: "🌾" },
+  { id: "sem lactose", nome: "Sem Lactose", emoji: "🥛" },
+  { id: "apimentado", nome: "Apimentado", emoji: "🌶️" },
+  { id: "orgânico", nome: "Orgânico", emoji: "🌿" },
+];
 
 export function ModalFiltros({
   isOpen,
   onClose,
-  filtroVegetariano,
-  filtroSemGluten,
+  filtrosAtivos,
   onAplicarFiltros,
 }: ModalFiltrosProps) {
-  const [filtroVegetarianoTemp, setFiltroVegetarianoTemp] =
-    useState(filtroVegetariano);
-  const [filtroSemGlutenTemp, setFiltroSemGlutenTemp] =
-    useState(filtroSemGluten);
+  const [filtrosTemp, setFiltrosTemp] = useState<string[]>(filtrosAtivos);
 
   // Sincronizar com os filtros externos quando o modal abrir
   useEffect(() => {
     if (isOpen) {
-      setFiltroVegetarianoTemp(filtroVegetariano);
-      setFiltroSemGlutenTemp(filtroSemGluten);
+      setFiltrosTemp(filtrosAtivos);
     }
-  }, [isOpen, filtroVegetariano, filtroSemGluten]);
+  }, [isOpen, filtrosAtivos]);
 
   if (!isOpen) return null;
 
   const limparFiltros = () => {
-    setFiltroVegetarianoTemp(false);
-    setFiltroSemGlutenTemp(false);
-    onAplicarFiltros(false, false);
+    setFiltrosTemp([]);
+    onAplicarFiltros([]);
     onClose();
   };
 
   const aplicarFiltros = () => {
-    onAplicarFiltros(filtroVegetarianoTemp, filtroSemGlutenTemp);
+    onAplicarFiltros(filtrosTemp);
     onClose();
+  };
+
+  const toggleFiltro = (restricaoId: string) => {
+    setFiltrosTemp(prev => 
+      prev.includes(restricaoId)
+        ? prev.filter(id => id !== restricaoId)
+        : [...prev, restricaoId]
+    );
   };
 
   return (
@@ -59,37 +69,46 @@ export function ModalFiltros({
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="vegetariano"
-              checked={filtroVegetarianoTemp}
-              onCheckedChange={(checked) =>
-                setFiltroVegetarianoTemp(checked === true)
-              }
-            />
-            <label
-              htmlFor="vegetariano"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Vegetariano
-            </label>
+          <p className="text-sm text-muted-foreground mb-4">
+            Selecione as restrições alimentares que deseja filtrar:
+          </p>
+          
+          <div className="grid grid-cols-1 gap-3">
+            {restricoesDisponiveis.map((restricao) => (
+              <div key={restricao.id} className="flex items-center space-x-3">
+                <Checkbox
+                  id={restricao.id}
+                  checked={filtrosTemp.includes(restricao.id)}
+                  onCheckedChange={() => toggleFiltro(restricao.id)}
+                />
+                <label
+                  htmlFor={restricao.id}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="text-lg">{restricao.emoji}</span>
+                  {restricao.nome}
+                </label>
+              </div>
+            ))}
           </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="sem-gluten"
-              checked={filtroSemGlutenTemp}
-              onCheckedChange={(checked) =>
-                setFiltroSemGlutenTemp(checked === true)
-              }
-            />
-            <label
-              htmlFor="sem-gluten"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Sem Glúten
-            </label>
-          </div>
+          
+          {filtrosTemp.length > 0 && (
+            <div className="mt-4 p-3 bg-muted/50 rounded-md">
+              <p className="text-xs text-muted-foreground mb-2">
+                Filtros ativos ({filtrosTemp.length}):
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {filtrosTemp.map(filtroId => {
+                  const restricao = restricoesDisponiveis.find(r => r.id === filtroId);
+                  return restricao ? (
+                    <span key={filtroId} className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-full text-xs">
+                      {restricao.emoji} {restricao.nome}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="p-4 border-t flex justify-end gap-2">

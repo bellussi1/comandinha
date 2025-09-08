@@ -42,8 +42,7 @@ export default function MenuPage() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<number>(0);
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
   const [modalFiltrosAberto, setModalFiltrosAberto] = useState(false);
-  const [filtroVegetariano, setFiltroVegetariano] = useState(false);
-  const [filtroSemGluten, setFiltroSemGluten] = useState(false);
+  const [filtrosAtivos, setFiltrosAtivos] = useState<string[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -96,19 +95,15 @@ export default function MenuPage() {
 
         // Aplicar filtros no client-side
         const produtosFiltrados = produtosCarregados.filter((produto) => {
-          if (
-            filtroVegetariano &&
-            (!produto.restricoes || !produto.restricoes.includes("vegetariano"))
-          ) {
-            return false;
+          // Se não há filtros ativos, mostrar todos os produtos
+          if (filtrosAtivos.length === 0) {
+            return true;
           }
-          if (
-            filtroSemGluten &&
-            (!produto.restricoes || !produto.restricoes.includes("sem gluten"))
-          ) {
-            return false;
-          }
-          return true;
+          
+          // Verificar se o produto tem pelo menos uma das restrições filtradas
+          return filtrosAtivos.every(filtro => 
+            produto.restricoes && produto.restricoes.includes(filtro)
+          );
         });
 
         setProdutos(produtosFiltrados);
@@ -121,7 +116,7 @@ export default function MenuPage() {
     };
 
     carregarProdutos();
-  }, [categoriaAtiva, filtroVegetariano, filtroSemGluten]);
+  }, [categoriaAtiva, filtrosAtivos]);
 
   // Handlers
   const abrirModalProduto = (produto: Produto) => {
@@ -157,14 +152,12 @@ export default function MenuPage() {
   };
 
   const limparFiltros = () => {
-    setFiltroVegetariano(false);
-    setFiltroSemGluten(false);
-    setCategoriaAtiva(1);
+    setFiltrosAtivos([]);
+    setCategoriaAtiva(0);
   };
 
-  const aplicarFiltros = (vegetariano: boolean, semGluten: boolean) => {
-    setFiltroVegetariano(vegetariano);
-    setFiltroSemGluten(semGluten);
+  const aplicarFiltros = (filtros: string[]) => {
+    setFiltrosAtivos(filtros);
   };
 
   // Cálculos do carrinho
@@ -179,9 +172,8 @@ export default function MenuPage() {
     [carrinho]
   );
 
-  const filtrosAtivos = filtroVegetariano || filtroSemGluten;
-  const quantidadeFiltros =
-    (filtroVegetariano ? 1 : 0) + (filtroSemGluten ? 1 : 0);
+  const temFiltrosAtivos = filtrosAtivos.length > 0;
+  const quantidadeFiltros = filtrosAtivos.length;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -274,7 +266,7 @@ export default function MenuPage() {
           >
             <Filter className="h-4 w-4" />
             Filtros
-            {filtrosAtivos && (
+            {temFiltrosAtivos && (
               <Badge className="ml-1 h-5 w-5 flex items-center justify-center p-0">
                 {quantidadeFiltros}
               </Badge>
@@ -317,8 +309,7 @@ export default function MenuPage() {
       <ModalFiltros
         isOpen={modalFiltrosAberto}
         onClose={() => setModalFiltrosAberto(false)}
-        filtroVegetariano={filtroVegetariano}
-        filtroSemGluten={filtroSemGluten}
+        filtrosAtivos={filtrosAtivos}
         onAplicarFiltros={aplicarFiltros}
       />
 

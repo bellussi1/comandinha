@@ -55,17 +55,24 @@ export function ProdutoCard({ produto, onSelect }: ProdutoCardProps) {
           <Clock className="h-3 w-3 mr-1" />
           {produto.tempoPreparo} min
           {produto.restricoes && produto.restricoes.length > 0 && (
-            <div className="flex ml-3 gap-1">
-              {produto.restricoes.includes("vegetariano") && (
-                <Badge variant="outline" className="text-xs px-1 h-5">
-                  Veg
-                </Badge>
-              )}
-              {produto.restricoes.includes("sem gluten") && (
-                <Badge variant="outline" className="text-xs px-1 h-5">
-                  S/G
-                </Badge>
-              )}
+            <div className="flex ml-3 gap-1 flex-wrap">
+              {produto.restricoes.map((restricao) => {
+                const restricaoConfig = {
+                  "vegetariano": { emoji: "🥬", label: "Veg" },
+                  "vegano": { emoji: "🌱", label: "Vegano" },
+                  "sem glúten": { emoji: "🌾", label: "S/G" },
+                  "sem lactose": { emoji: "🥛", label: "S/L" },
+                  "apimentado": { emoji: "🌶️", label: "Apim" },
+                  "orgânico": { emoji: "🌿", label: "Org" },
+                }[restricao];
+                
+                return restricaoConfig ? (
+                  <Badge key={restricao} variant="outline" className="text-xs px-1 h-5 flex items-center gap-1">
+                    <span className="text-[10px]">{restricaoConfig.emoji}</span>
+                    {restricaoConfig.label}
+                  </Badge>
+                ) : null;
+              })}
             </div>
           )}
         </div>

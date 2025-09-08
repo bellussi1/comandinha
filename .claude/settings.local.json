@@ -9,7 +9,8 @@
       "Bash(npm run build:*)",
       "Bash(npm run dev:*)",
       "Bash(taskkill:*)",
-      "Bash(powershell:*)"
+      "Bash(powershell:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
