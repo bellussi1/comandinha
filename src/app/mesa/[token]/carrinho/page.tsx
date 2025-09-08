@@ -178,7 +178,7 @@ export default function CarrinhoPage() {
                     <div className="flex gap-4">
                       <div className="relative h-20 w-20 flex-shrink-0">
                         <Image
-                          src={item.imagem || "/placeholder.svg"}
+                          src={(item.imagem?.trimEnd()) || "/placeholder.svg"}
                           alt={item.nome}
                           fill
                           className="object-cover rounded-md"

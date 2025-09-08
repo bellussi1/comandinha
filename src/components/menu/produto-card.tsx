@@ -17,7 +17,7 @@ export function ProdutoCard({ produto, onSelect }: ProdutoCardProps) {
     >
       <div className="relative h-48">
         <Image
-          src={produto.imagem || "/placeholder.svg"}
+          src={(produto.imagem?.trimEnd()) || "/placeholder.svg"}
           alt={produto.nome}
           fill
           className="object-cover"

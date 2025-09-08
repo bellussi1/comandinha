@@ -189,7 +189,8 @@ export default function MenuPage() {
       <header className="sticky top-0 z-10 bg-background border-b">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="font-bold text-lg">
+            <h1 className="font-bold text-2xl">
+          
               {mesa ? mesa.nome : "Carregando..."}
             </h1>
           </div>

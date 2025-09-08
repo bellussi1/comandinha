@@ -182,16 +182,13 @@ export default function AdminPage() {
   return (
     <AuthGuard>
       <div className="container mx-auto py-8 px-4">
-      <CardHeader className="flex flex-row items-center justify-between px-0">
-        <div>
-          <CardTitle className="text-2xl font-bold">
-            Painel Administrativo
-          </CardTitle>
-          <CardDescription>
-            Bem-vindo, {user?.nome || 'Admin'} • Gerencie os pedidos em produção de todas as mesas
-          </CardDescription>
-        </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-row items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Painel Administrativo</h1>
+            <p className="text-muted-foreground">
+              Gerencie os pedidos em produção de todas as mesas
+            </p>
+          </div>
           <Button variant="outline" onClick={fetchPedidos} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -200,12 +197,7 @@ export default function AdminPage() {
             )}
             Atualizar
           </Button>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
         </div>
-      </CardHeader>
 
       {/* Filtros */}
       <div className="flex flex-col md:flex-row gap-4 my-6">

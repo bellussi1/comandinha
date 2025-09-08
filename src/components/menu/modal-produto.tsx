@@ -48,7 +48,7 @@ export function ModalProduto({
       <div className="bg-background w-full max-w-md rounded-t-lg sm:rounded-lg shadow-lg overflow-hidden max-h-[90vh] flex flex-col">
         <div className="relative h-64">
           <Image
-            src={produto.imagem || "/placeholder.svg"}
+            src={(produto.imagem?.trimEnd()) || "/placeholder.svg"}
             alt={produto.nome}
             fill
             className="object-cover"
