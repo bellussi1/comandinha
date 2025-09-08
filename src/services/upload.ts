@@ -1,9 +1,5 @@
 import api from "./api";
-
-export interface UploadResponse {
-  url: string;
-  filename: string;
-}
+import type { UploadResponse } from "@/src/types/services";
 
 /**
  * Upload de imagem usando multipart/form-data

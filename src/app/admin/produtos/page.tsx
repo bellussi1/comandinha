@@ -6,11 +6,11 @@ import {
   getProdutos, 
   criarProduto, 
   atualizarProduto, 
-  deletarProduto,
-  type ProdutoCreate 
+  deletarProduto
 } from "@/src/services/produtos";
 import { getCategorias } from "@/src/services/categoria";
 import type { Produto, Categoria } from "@/src/types";
+import type { ProdutoCreate } from "@/src/types/services";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";

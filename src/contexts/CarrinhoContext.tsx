@@ -1,18 +1,9 @@
 // src/contexts/CarrinhoContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { ItemCarrinho } from "@/src/types";
+import type { CarrinhoContextType } from "@/src/types/services";
 import * as carrinhoService from "@/src/services/carrinho";
 import { calcularTotalItems } from "@/src/utils/calculadores";
-
-type CarrinhoContextType = {
-  items: ItemCarrinho[];
-  totalItems: number;
-  totalValor: number;
-  adicionarItem: (item: ItemCarrinho) => void;
-  removerItem: (id: string) => void;
-  atualizarQuantidade: (id: string, quantidade: number) => void;
-  limparCarrinho: () => void;
-};
 
 const CarrinhoContext = createContext<CarrinhoContextType | null>(null);
 

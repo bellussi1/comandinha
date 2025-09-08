@@ -22,6 +22,7 @@ import {
 import { getMesaPorUuid, Mesa } from "@/src/services/mesa";
 import { adicionarPedido } from "@/src/services/pedidos";
 import type { ItemCarrinho } from "@/src/types";
+import { formatarMoeda } from "@/src/utils/formatters";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -256,7 +257,7 @@ export default function CarrinhoPage() {
             <div className="border-t pt-4">
               <div className="flex justify-between items-center font-medium text-lg mb-6">
                 <span>Total</span>
-                <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
+                <span>{formatarMoeda(totalCarrinho)}</span>
               </div>
 
               <Button
@@ -305,7 +306,7 @@ export default function CarrinhoPage() {
 
             <div className="border-t pt-4 flex justify-between items-center font-medium">
               <span>Total</span>
-              <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
+              <span>{formatarMoeda(totalCarrinho)}</span>
             </div>
           </div>
 

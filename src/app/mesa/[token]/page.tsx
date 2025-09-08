@@ -16,6 +16,7 @@ import {
   getProdutosPorCategoria,
 } from "@/src/services/produtos";
 import type { Categoria, ItemCarrinho, Produto } from "@/src/types";
+import { formatarMoeda } from "@/src/utils/formatters";
 import {
   ChevronRight,
   Filter,
@@ -338,7 +339,7 @@ export default function MenuPage() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span>R$ {totalCarrinho.toFixed(2).replace(".", ",")}</span>
+                <span>{formatarMoeda(totalCarrinho)}</span>
                 <ChevronRight className="h-5 w-5" />
               </div>
             </Link>

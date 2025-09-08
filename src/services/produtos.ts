@@ -4,59 +4,10 @@ import {
 } from "@/src/adapters/produtoAdapter";
 import { API_ENDPOINTS } from "@/src/constants";
 import type { Produto } from "@/src/types";
+import type { ProdutoCreate } from "@/src/types/services";
+import { processImageFile } from "@/src/utils/fileUtils";
 import api from "./api";
 
-// Tipos para as operações de produto
-export interface ProdutoCreate {
-  nome: string;
-  descricao?: string;
-  preco: number;
-  categoriaId: number;
-  imagem?: string | File;
-  popular?: boolean;
-  tempoPreparo?: number;
-  restricoes?: string[];
-}
-
-/**
- * Converte File para base64 string completa (com prefixo data:)
- */
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    console.log("Iniciando conversão de arquivo:", file.name, "Tamanho:", file.size);
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const result = reader.result as string;
-        console.log("FileReader result recebido, tamanho:", result?.length || 0);
-        if (!result || typeof result !== 'string') {
-          console.error("Resultado do FileReader inválido");
-          reject(new Error("Falha ao ler arquivo"));
-          return;
-        }
-        
-        // Manter o prefixo data:image/*;base64, completo
-        console.log("Base64 completo gerado, tamanho:", result.length);
-        
-        if (!result || result.length === 0) {
-          console.error("Base64 vazio");
-          reject(new Error("Base64 vazio"));
-          return;
-        }
-        
-        resolve(result);
-      } catch (error) {
-        console.error("Erro ao processar resultado do FileReader:", error);
-        reject(error);
-      }
-    };
-    reader.onerror = (error) => {
-      console.error("Erro no FileReader:", error);
-      reject(error);
-    };
-    reader.readAsDataURL(file);
-  });
-};
 
 /**
  * Busca produtos
@@ -110,9 +61,7 @@ export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | nu
 
     // Se imagem é um arquivo, converter para base64 string
     if (produto.imagem instanceof File) {
-      console.log("Convertendo arquivo para base64:", produto.imagem.name);
-      imagemBase64 = await fileToBase64(produto.imagem);
-      console.log("Base64 gerado, tamanho:", imagemBase64?.length || 0);
+      imagemBase64 = await processImageFile(produto.imagem, { convertToBase64: true });
     }
 
     // Se não há imagem, não incluir o campo
@@ -153,7 +102,7 @@ export const atualizarProduto = async (id: string, produto: ProdutoCreate): Prom
 
     // Se imagem é um arquivo, converter para base64 string
     if (produto.imagem instanceof File) {
-      imagemBase64 = await fileToBase64(produto.imagem);
+      imagemBase64 = await processImageFile(produto.imagem, { convertToBase64: true });
     }
 
     const produtoData = {

@@ -1,9 +1,11 @@
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Clock, Minus, Plus, X } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Produto } from "@/src/types";
+import { ProductImage } from "@/src/utils/imageUtils";
+import { formatarMoeda } from "@/src/utils/formatters";
+import { DIETARY_RESTRICTIONS_CONFIG } from "@/src/constants/dietaryRestrictions";
 
 interface ModalProdutoProps {
   produto: Produto | null;
@@ -47,25 +49,12 @@ export function ModalProduto({
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center">
       <div className="bg-background w-full max-w-md rounded-t-lg sm:rounded-lg shadow-lg overflow-hidden max-h-[90vh] flex flex-col">
         <div className="relative h-64">
-          {produto.imagem && produto.imagem.trimEnd().startsWith('http') ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={produto.imagem.trimEnd()}
-              alt={produto.nome}
-              className="absolute inset-0 w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.src = '/placeholder.svg';
-                e.currentTarget.onerror = null;
-              }}
-            />
-          ) : (
-            <Image
-              src={produto.imagem?.trimEnd() || "/placeholder.svg"}
-              alt={produto.nome}
-              fill
-              className="object-cover"
-            />
-          )}
+          <ProductImage
+            src={produto.imagem}
+            alt={produto.nome}
+            className="absolute inset-0 w-full h-full object-cover"
+            fill
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -81,7 +70,7 @@ export function ModalProduto({
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-xl font-bold">{produto.nome}</h3>
             <span className="font-bold text-primary text-lg">
-              R$ {produto.preco.toFixed(2).replace(".", ",")}
+              {formatarMoeda(produto.preco)}
             </span>
           </div>
 
@@ -93,14 +82,7 @@ export function ModalProduto({
             {produto.restricoes && produto.restricoes.length > 0 && (
               <div className="flex ml-3 gap-1 flex-wrap">
                 {produto.restricoes.map((restricao) => {
-                  const restricaoConfig = {
-                    "vegetariano": { emoji: "🥬", nome: "Vegetariano" },
-                    "vegano": { emoji: "🌱", nome: "Vegano" },
-                    "sem glúten": { emoji: "🌾", nome: "Sem Glúten" },
-                    "sem lactose": { emoji: "🥛", nome: "Sem Lactose" },
-                    "apimentado": { emoji: "🌶️", nome: "Apimentado" },
-                    "orgânico": { emoji: "🌿", nome: "Orgânico" },
-                  }[restricao];
+                  const restricaoConfig = DIETARY_RESTRICTIONS_CONFIG[restricao as keyof typeof DIETARY_RESTRICTIONS_CONFIG];
                   
                   return restricaoConfig ? (
                     <Badge key={restricao} variant="outline" className="flex items-center gap-1">
@@ -154,7 +136,7 @@ export function ModalProduto({
           <div className="flex justify-between items-center font-bold text-lg mb-4">
             <span>Total</span>
             <span className="text-primary">
-              R$ {(produto.preco * quantidade).toFixed(2).replace(".", ",")}
+              {formatarMoeda(produto.preco * quantidade)}
             </span>
           </div>
         </div>

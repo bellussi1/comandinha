@@ -1,22 +1,8 @@
 import api from "./api";
 import { API_ENDPOINTS } from "@/src/constants";
 import type { Categoria } from "@/src/types";
+import type { CategoriaCreate, CategoriaUpdate } from "@/src/types/services";
 import { uploadImage } from "./upload";
-
-// Tipos para as operações de categoria
-export interface CategoriaCreate {
-  nome: string;
-  descricao?: string;
-  imagemUrl?: string | File;
-  ordem?: number;
-}
-
-export interface CategoriaUpdate {
-  nome?: string;
-  descricao?: string;
-  imagemUrl?: string | File;
-  ordem?: number;
-}
 
 // Listar todas as categorias
 export const getCategorias = async (): Promise<Categoria[]> => {

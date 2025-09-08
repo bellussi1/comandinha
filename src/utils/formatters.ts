@@ -34,10 +34,10 @@ export const formatarHora = (dataISO: string): string => {
 };
 
 /**
- * Formata um valor monetário
+ * Formata um valor monetário com prefixo R$
  */
 export const formatarMoeda = (valor: number): string => {
-  return valor.toFixed(2).replace(".", ",");
+  return `R$ ${valor.toFixed(2).replace(".", ",")}`;
 };
 
 /**

@@ -7,10 +7,10 @@ import {
   criarCategoria, 
   atualizarCategoria, 
   deletarCategoria,
-  categoriaTemProdutos,
-  type CategoriaCreate 
+  categoriaTemProdutos
 } from "@/src/services/categoria";
 import type { Categoria } from "@/src/types";
+import type { CategoriaCreate } from "@/src/types/services";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
