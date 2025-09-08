@@ -19,6 +19,7 @@ import {
   limparCarrinho,
   removerItem,
 } from "@/src/services/carrinho";
+import { getMesaPorUuid, Mesa } from "@/src/services/mesa";
 import { adicionarPedido } from "@/src/services/pedidos";
 import type { ItemCarrinho } from "@/src/types";
 import {
@@ -43,10 +44,24 @@ export default function CarrinhoPage() {
   const { token } = params as { token: string };
   const { toast } = useToast();
 
+  const [mesa, setMesa] = useState<Mesa | null>(null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [observacoesGerais, setObservacoesGerais] = useState("");
   const [confirmacaoAberta, setConfirmacaoAberta] = useState(false);
   const [enviandoPedido, setEnviandoPedido] = useState(false);
+
+  // Carregar dados da mesa
+  useEffect(() => {
+    const carregarMesa = async () => {
+      try {
+        const dadosMesa = await getMesaPorUuid(token);
+        setMesa(dadosMesa);
+      } catch (error) {
+        console.error("Erro ao carregar dados da mesa:", error);
+      }
+    };
+    carregarMesa();
+  }, [token]);
 
   // Carregar carrinho
   useEffect(() => {
@@ -83,14 +98,14 @@ export default function CarrinhoPage() {
   };
 
   const enviarPedido = async () => {
-    if (carrinho.length === 0) return;
+    if (carrinho.length === 0 || !mesa) return;
 
     try {
       setEnviandoPedido(true);
 
       // Transformar carrinho para formato esperado pela API
       const novoPedido = await adicionarPedido({
-        mesa: token,
+        mesa: mesa.id.toString(), // Usar o ID numérico da mesa
         itens: [...carrinho],
         observacoesGerais: observacoesGerais || undefined,
       });

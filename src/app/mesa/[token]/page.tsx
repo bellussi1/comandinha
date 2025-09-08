@@ -9,6 +9,7 @@ import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
 import { getCategorias } from "@/src/services/categoria";
+import { getMesaPorUuid, Mesa } from "@/src/services/mesa";
 import {
   filtrarProdutos,
   getProdutos,
@@ -32,6 +33,7 @@ export default function MenuPage() {
   const { token } = params;
   const { toast } = useToast();
 
+  const [mesa, setMesa] = useState<Mesa | null>(null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(
     null
@@ -44,6 +46,21 @@ export default function MenuPage() {
   const [filtroSemGluten, setFiltroSemGluten] = useState(false);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Carregar dados da mesa
+  useEffect(() => {
+    const carregarMesa = async () => {
+      if (typeof token === "string") {
+        try {
+          const dadosMesa = await getMesaPorUuid(token);
+          setMesa(dadosMesa);
+        } catch (error) {
+          console.error("Erro ao carregar dados da mesa:", error);
+        }
+      }
+    };
+    carregarMesa();
+  }, [token]);
 
   // Carregar carrinho do localStorage
   useEffect(() => {
@@ -173,7 +190,7 @@ export default function MenuPage() {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="font-bold text-lg">
-              Mesa {typeof token === "string" ? token : ""}
+              {mesa ? mesa.nome : "Carregando..."}
             </h1>
           </div>
           <div className="flex items-center gap-3">

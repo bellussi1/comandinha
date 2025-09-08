@@ -11,6 +11,7 @@ import { ArrowLeft, Clock, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getMesaPorUuid, Mesa } from "@/src/services/mesa";
 import { getPedidosPorMesaId } from "@/src/services/pedidos";
 import { Pedido } from "@/src/types";
 import { Toaster } from "@/src/components/ui/toaster";
@@ -22,24 +23,33 @@ export default function PedidosPage() {
   const { token } = params as { token: string };
   const { toast } = useToast();
 
+  const [mesa, setMesa] = useState<Mesa | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function carregarPedidos() {
+    async function carregarDados() {
       if (!token) return;
 
       try {
         setLoading(true);
         setError(null);
         
-        // Usar o token como mesaId para filtrar os pedidos
-        const pedidosData = await getPedidosPorMesaId(token);
-        console.log(`Pedidos carregados para mesa ${token}:`, pedidosData);
+        // Primeiro buscar dados da mesa pelo UUID
+        const dadosMesa = await getMesaPorUuid(token);
+        if (!dadosMesa) {
+          throw new Error("Mesa não encontrada");
+        }
+        
+        setMesa(dadosMesa);
+        
+        // Depois buscar pedidos usando o ID numérico da mesa
+        const pedidosData = await getPedidosPorMesaId(dadosMesa.id.toString());
+        console.log(`Pedidos carregados para mesa ${dadosMesa.nome} (ID: ${dadosMesa.id}):`, pedidosData);
         setPedidos(pedidosData);
       } catch (error) {
-        console.error("Erro ao carregar pedidos:", error);
+        console.error("Erro ao carregar dados:", error);
         setError("Não foi possível carregar os pedidos. Tente novamente.");
         toast({
           title: "Erro",
@@ -51,10 +61,10 @@ export default function PedidosPage() {
       }
     }
 
-    carregarPedidos();
+    carregarDados();
 
-    // Atualizar pedidos periodicamente
-    const intervalId = setInterval(carregarPedidos, 30000); // Atualiza a cada 30s
+    // Atualizar dados periodicamente
+    const intervalId = setInterval(carregarDados, 30000); // Atualiza a cada 30s
     return () => clearInterval(intervalId);
   }, [token, toast]);
 

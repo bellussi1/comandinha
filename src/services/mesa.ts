@@ -2,6 +2,13 @@ import api from "./api";
 import { TokenManager } from "./tokenManager";
 import { API_ENDPOINTS } from "@/src/constants";
 
+export interface Mesa {
+  id: number;
+  uuid: string;
+  nome: string;
+  status: string;
+}
+
 interface MesaAtivacaoResponse {
   token: string;
   expiraEm: string;
@@ -112,5 +119,31 @@ export const fecharConta = async (mesaId: string, formaPagamento: string) => {
   } catch (error) {
     console.error("Erro ao fechar conta:", error);
     throw new Error("Não foi possível fechar a conta");
+  }
+};
+
+/**
+ * Busca todas as mesas disponíveis
+ */
+export const getMesas = async (): Promise<Mesa[]> => {
+  try {
+    const response = await api.get(API_ENDPOINTS.MESAS);
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao buscar mesas:", error);
+    return [];
+  }
+};
+
+/**
+ * Busca uma mesa específica pelo UUID
+ */
+export const getMesaPorUuid = async (uuid: string): Promise<Mesa | null> => {
+  try {
+    const response = await api.get(`${API_ENDPOINTS.MESAS}/uuid/${uuid}`);
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao buscar mesa por UUID:", error);
+    return null;
   }
 };
