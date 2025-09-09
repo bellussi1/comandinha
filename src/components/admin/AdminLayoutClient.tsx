@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAuth } from "@/src/services/auth";
 import { Button } from "@/src/components/ui/button";
@@ -11,13 +12,30 @@ interface AdminLayoutClientProps {
 }
 
 export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, refreshAuthState } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Force refresh auth state when component mounts
+    refreshAuthState();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also refresh auth state when navigation occurs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshAuthState();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Avoid hydration mismatch by not rendering auth-dependent content until mounted
   if (!mounted) {

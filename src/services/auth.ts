@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import api from "./api";
 import { API_ENDPOINTS, STORAGE_KEYS } from "@/src/constants";
 import type { 
@@ -16,6 +19,7 @@ export class AuthService {
    */
 static async login(credentials: LoginCredentials): Promise<AuthResponse> {
   try {
+    // Backend faz hash internamente - enviar senha via HTTPS seguro
     const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
       email: credentials.email,
       senha: credentials.senha,
@@ -42,14 +46,14 @@ static async login(credentials: LoginCredentials): Promise<AuthResponse> {
 
 static async register(data: RegisterData): Promise<AuthResponse> {
   try {
-    // 1. Criar usuário
+    // Backend faz hash internamente - enviar senha via HTTPS seguro
     await api.post(API_ENDPOINTS.AUTH.REGISTER, {
       nome: data.nome,
       email: data.email,
       senha: data.senha,
     });
 
-    // 2. Depois do registro, fazer login automático
+    // Depois do registro, fazer login automático
     return await this.login({
       email: data.email,
       senha: data.senha,
@@ -69,6 +73,9 @@ static async register(data: RegisterData): Promise<AuthResponse> {
     
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+    
+    // Dispatch custom event to notify components of auth change
+    window.dispatchEvent(new CustomEvent('auth-state-changed'));
   }
 
   /**
@@ -129,6 +136,9 @@ static async register(data: RegisterData): Promise<AuthResponse> {
     
     localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
     localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+    
+    // Dispatch custom event to notify components of auth change
+    window.dispatchEvent(new CustomEvent('auth-state-changed'));
   }
 }
 
@@ -136,17 +146,83 @@ static async register(data: RegisterData): Promise<AuthResponse> {
  * Hook personalizado para autenticação
  */
 export const useAuth = () => {
-  const isAuthenticated = AuthService.isAuthenticated();
-  const user = AuthService.getCurrentUser();
-  const token = AuthService.getToken();
+  const [authState, setAuthState] = useState({
+    isAuthenticated: false,
+    user: null as User | null,
+    token: null as string | null,
+  });
+  const [mounted, setMounted] = useState(false);
+
+  const refreshAuthState = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    
+    setAuthState({
+      isAuthenticated: AuthService.isAuthenticated(),
+      user: AuthService.getCurrentUser(),
+      token: AuthService.getToken(),
+    });
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+    refreshAuthState();
+    
+    // Listen for storage changes to keep auth state in sync
+    const handleStorageChange = () => {
+      refreshAuthState();
+    };
+    
+    // Custom event for same-tab auth changes
+    const handleAuthChange = () => {
+      refreshAuthState();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-state-changed', handleAuthChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-state-changed', handleAuthChange);
+    };
+  }, []);
+
+  const login = async (credentials: LoginCredentials) => {
+    const result = await AuthService.login(credentials);
+    refreshAuthState(); // Refresh state after login
+    return result;
+  };
+
+  const register = async (data: RegisterData) => {
+    const result = await AuthService.register(data);
+    refreshAuthState(); // Refresh state after register
+    return result;
+  };
+
+  const logout = () => {
+    AuthService.logout();
+    refreshAuthState(); // Refresh state after logout
+  };
+
+  // Don't return auth state until component is mounted to avoid hydration issues
+  if (!mounted) {
+    return {
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      login,
+      register,
+      logout,
+      validateToken: AuthService.validateToken,
+      refreshAuthState,
+    };
+  }
 
   return {
-    user,
-    token,
-    isAuthenticated,
-    login: AuthService.login,
-    register: AuthService.register,
-    logout: AuthService.logout,
+    ...authState,
+    login,
+    register,
+    logout,
     validateToken: AuthService.validateToken,
+    refreshAuthState,
   };
 };

@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AuthService } from "@/src/services/auth";
+import { useAuth } from "@/src/services/auth";
 import { useFormSubmit } from "@/src/hooks/useFormSubmit";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { Alert, AlertDescription } from "@/src/components/ui/alert";
-import { Loader2, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
+import { Loader2, LogIn, UserPlus } from "lucide-react";
 
 const loginSchema = z.object({
   email: z
@@ -35,20 +35,27 @@ interface LoginFormProps {
  * Formulário de login para admin
  */
 export function LoginForm({ onToggleMode, isRegisterMode }: LoginFormProps) {
-  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    watch,
+    formState: { errors, isValid },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
   });
+
+  const watchEmail = watch('email');
+  const watchSenha = watch('senha');
+  
+  const isFormValid = isValid && watchEmail && watchSenha;
 
   const { isLoading, error, handleSubmit: handleFormSubmit } = useFormSubmit({
     onSubmit: async (data: LoginFormData) => {
-      await AuthService.login(data);
+      await login(data);
     },
     onSuccess: () => {
       router.push("/admin");
@@ -92,17 +99,14 @@ export function LoginForm({ onToggleMode, isRegisterMode }: LoginFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="senha">Senha</Label>
-            <div className="relative">
-              <Input
-                id="senha"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                {...register("senha")}
-                disabled={isLoading}
-                className={` ${errors.senha ? "border-destructive" : ""}`}
-              />
-            
-            </div>
+            <Input
+              id="senha"
+              type="password"
+              placeholder="••••••••"
+              {...register("senha")}
+              disabled={isLoading}
+              className={errors.senha ? "border-destructive" : ""}
+            />
             {errors.senha && (
               <p className="text-sm text-destructive">
                 {errors.senha.message}
@@ -113,7 +117,7 @@ export function LoginForm({ onToggleMode, isRegisterMode }: LoginFormProps) {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading}
+            disabled={isLoading || !isFormValid}
           >
             {isLoading ? (
               <>

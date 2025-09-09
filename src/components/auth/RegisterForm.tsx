@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { AuthService } from "@/src/services/auth";
+import { useAuth } from "@/src/services/auth";
 import { PasswordUtils } from "@/src/utils/password";
 import { useFormSubmit } from "@/src/hooks/useFormSubmit";
 import { Button } from "@/src/components/ui/button";
@@ -59,27 +59,35 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
     errors: string[];
   }>({ isValid: false, errors: [] });
   const router = useRouter();
+  const { register: registerUser } = useAuth();
 
   const {
     register,
     handleSubmit,
     watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
+    mode: 'onChange',
   });
 
   const watchPassword = watch("senha");
+  const watchNome = watch("nome");
+  const watchEmail = watch("email");
+  const watchConfirmEmail = watch("confirmEmail");
+  const watchConfirmSenha = watch("confirmSenha");
+  
+  const isFormValid = isValid && 
+    watchNome && 
+    watchEmail && 
+    watchConfirmEmail && 
+    watchPassword && 
+    watchConfirmSenha && 
+    passwordStrength.isValid;
 
   const { isLoading, error, handleSubmit: handleFormSubmit } = useFormSubmit({
     onSubmit: async (data: RegisterFormData) => {
-      // Validar força da senha antes de enviar
-      const passwordValidation = PasswordUtils.validateStrength(data.senha);
-      if (!passwordValidation.isValid) {
-        throw new Error(passwordValidation.errors.join(", "));
-      }
-
-      await AuthService.register(data);
+      await registerUser(data);
     },
     onSuccess: () => {
       router.push("/admin");
@@ -190,9 +198,22 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 placeholder="••••••••"
                 {...register("senha")}
                 disabled={isLoading}
-                className={` ${errors.senha ? "border-destructive" : ""}`}
+                className={`pr-10 ${errors.senha ? "border-destructive" : ""}`}
               />
-      
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
             </div>
             <div className="space-y-3">
               <div className="text-xs font-medium text-muted-foreground">
@@ -284,9 +305,22 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
                 placeholder="••••••••"
                 {...register("confirmSenha")}
                 disabled={isLoading}
-                className={` ${errors.confirmSenha ? "border-destructive" : ""}`}
+                className={`pr-10 ${errors.confirmSenha ? "border-destructive" : ""}`}
               />
-          
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                disabled={isLoading}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </Button>
             </div>
             {errors.confirmSenha && (
               <p className="text-sm text-destructive">
@@ -298,7 +332,7 @@ export function RegisterForm({ onToggleMode }: RegisterFormProps) {
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !passwordStrength.isValid}
+            disabled={isLoading || !isFormValid}
           >
             {isLoading ? (
               <>
