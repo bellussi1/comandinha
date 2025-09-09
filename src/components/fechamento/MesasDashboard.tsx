@@ -206,7 +206,11 @@ export function MesasDashboard() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {mesasFiltradas.map((mesa) => (
-                <MesaCard key={mesa.id} mesa={mesa} />
+                <MesaCard 
+                  key={mesa.id} 
+                  mesa={mesa} 
+                  onMesaFechada={carregarMesas}
+                />
               ))}
             </div>
           )}

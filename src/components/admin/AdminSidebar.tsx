@@ -11,7 +11,8 @@ import {
   LogOut,
   Settings,
   Calculator,
-  X
+  X,
+  Table
 } from "lucide-react";
 import { useAuth } from "@/src/services/auth";
 import { useRouter } from "next/navigation";
@@ -22,6 +23,11 @@ const navigation = [
     name: "Painel",
     href: "/admin",
     icon: LayoutDashboard,
+  },
+  {
+    name: "Mesas",
+    href: "/admin/mesas",
+    icon: Table,
   },
   {
     name: "Produtos",

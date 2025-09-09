@@ -44,6 +44,29 @@ export interface Mesa {
   status: "livre" | "ocupada" | "reservada" | "manutencao";
 }
 
+export interface MesaAdmin {
+  id: number;
+  uuid: string;
+  nome: string;
+  status: "disponivel" | "expirada" | "em_uso";
+  criadaEm?: string;
+  atualizadaEm?: string;
+}
+
+export interface MesaCriacaoRequest {
+  nome: string;
+}
+
+export interface MesaCriacaoResponse {
+  id: number;
+  uuid: string;
+  nome: string;
+}
+
+export interface MesaStatusUpdate {
+  status: "disponivel" | "expirada" | "em_uso";
+}
+
 export interface Admin {
   id: string;
   nome: string;

@@ -3,28 +3,42 @@
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/src/components/ui/alert-dialog";
+import { useToast } from "@/src/components/ui/use-toast";
+import { fecharContaMesa } from "@/src/services/fechamento";
 import { formatarMoeda } from "@/src/utils/formatters";
-import { Clock, Receipt, Users, AlertTriangle } from "lucide-react";
+import { Clock, Receipt, Users, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import type { MesaFechamento, StatusMesa } from "@/src/types";
 
 interface MesaCardProps {
   mesa: MesaFechamento;
+  onMesaFechada?: () => void;
 }
 
 const getStatusConfig = (status: StatusMesa) => {
-  const configs = {
-    ocupada: {
-      label: "Ocupada",
+  const configs: Record<StatusMesa, {
+    label: string;
+    variant: "default" | "destructive" | "secondary" | "outline";
+    color: string;
+    icon: any;
+  }> = {
+    "em uso": {
+      label: "Em Uso",
       variant: "default" as const,
       color: "bg-blue-500",
       icon: Users
-    },
-    fechando: {
-      label: "Fechando",
-      variant: "destructive" as const,
-      color: "bg-orange-500",
-      icon: AlertTriangle
     },
     livre: {
       label: "Livre",
@@ -32,21 +46,15 @@ const getStatusConfig = (status: StatusMesa) => {
       color: "bg-gray-500",
       icon: Users
     },
-    reservada: {
-      label: "Reservada",
-      variant: "outline" as const,
-      color: "bg-purple-500",
-      icon: Users
-    },
-    manutencao: {
-      label: "Manutenção",
-      variant: "outline" as const,
+    expirada: {
+      label: "Expirada",
+      variant: "destructive" as const,
       color: "bg-red-500",
       icon: AlertTriangle
     }
   };
   
-  return configs[status] || configs.ocupada;
+  return configs[status] || configs["em uso"];
 };
 
 const formatarTempo = (minutos: number): string => {
@@ -64,9 +72,39 @@ const formatarTempo = (minutos: number): string => {
   return `${horas}h ${mins}min`;
 };
 
-export function MesaCard({ mesa }: MesaCardProps) {
+export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
   const statusConfig = getStatusConfig(mesa.status);
   const StatusIcon = statusConfig.icon;
+  const { toast } = useToast();
+  const [fechandoMesa, setFechandoMesa] = useState(false);
+
+  const handleFecharMesa = async () => {
+    try {
+      setFechandoMesa(true);
+      
+      await fecharContaMesa(mesa.id, {
+        formaPagamento: 'dinheiro'
+      });
+
+      toast({
+        title: "Mesa fechada com sucesso!",
+        description: `A conta da ${mesa.nome} foi fechada. Valor total: ${formatarMoeda(mesa.valorTotal)}`,
+      });
+
+      // Callback para atualizar a lista
+      onMesaFechada?.();
+      
+    } catch (error) {
+      console.error("Erro ao fechar mesa:", error);
+      toast({
+        title: "Erro ao fechar mesa",
+        description: "Não foi possível fechar a conta da mesa. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setFechandoMesa(false);
+    }
+  };
   
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -137,15 +175,66 @@ export function MesaCard({ mesa }: MesaCardProps) {
           </Button>
           
           {mesa.valorTotal > 0 && mesa.pedidosAtivos === 0 && (
-            <Button 
-              asChild 
-              size="sm" 
-              className="flex-1"
-            >
-              <Link href={`/admin/fechamento/mesa/${mesa.id}?action=fechar`}>
-                Fechar Conta
-              </Link>
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  size="sm" 
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={fechandoMesa}
+                >
+                  {fechandoMesa ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Fechar Conta
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirmar Fechamento</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tem certeza de que deseja fechar a conta da <strong>{mesa.nome}</strong>?
+                    <br />
+                    <br />
+                    <div className="bg-muted p-3 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span>Valor Total:</span>
+                        <span className="font-bold text-lg text-primary">
+                          {formatarMoeda(mesa.valorTotal)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <span>Total de Pedidos:</span>
+                        <span className="font-medium">{mesa.totalPedidos}</span>
+                      </div>
+                    </div>
+                    <br />
+                    Esta ação não pode ser desfeita e a mesa será liberada para nova ocupação.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleFecharMesa}
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={fechandoMesa}
+                  >
+                    {fechandoMesa ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Fechando...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Confirmar Fechamento
+                      </>
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
         </div>
       </CardContent>

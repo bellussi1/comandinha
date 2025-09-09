@@ -60,6 +60,7 @@ export interface ResumoFinanceiroMesa {
 
 // Request para fechar mesa
 export interface FecharMesaRequest {
+  formaPagamento?: string;
   desconto?: number;
   taxaServico?: number;
   observacoes?: string;
@@ -71,6 +72,9 @@ export interface FecharMesaResponse {
   valorTotal: number;
   status: string;
   timestamp: string;
+  formaPagamento?: string;
+  desconto?: number;
+  taxaServico?: number;
 }
 
 // Status dos pedidos para filtros
