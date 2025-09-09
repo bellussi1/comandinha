@@ -7,6 +7,7 @@ export interface ProdutoCreate {
   preco: number;
   categoriaId: number;
   imagem?: string | File;
+  disponivel?: boolean;
   popular?: boolean;
   tempoPreparo?: number;
   restricoes?: string[];

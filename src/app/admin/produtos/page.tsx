@@ -6,7 +6,8 @@ import {
   getProdutos, 
   criarProduto, 
   atualizarProduto, 
-  deletarProduto
+  deletarProduto,
+  atualizarDisponibilidadeProduto
 } from "@/src/services/produtos";
 import { getCategorias } from "@/src/services/categoria";
 import type { Produto, Categoria } from "@/src/types";
@@ -15,6 +16,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { Checkbox } from "@/src/components/ui/checkbox";
+import { Switch } from "@/src/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -76,6 +78,7 @@ interface ProdutoFormData {
   preco: number;
   categoriaId: number;
   imagem: string | File;
+  disponivel: boolean;
   popular: boolean;
   tempoPreparo: number;
   restricoes: string[];
@@ -87,6 +90,7 @@ const defaultFormData: ProdutoFormData = {
   preco: 0,
   categoriaId: 0,
   imagem: "",
+  disponivel: true,
   popular: false,
   tempoPreparo: 0,
   restricoes: [],
@@ -184,6 +188,7 @@ export default function ProdutosPage() {
         imagem: formData.imagem instanceof File 
           ? formData.imagem 
           : (typeof formData.imagem === 'string' && formData.imagem.trimEnd()) || undefined,
+        disponivel: formData.disponivel,
         popular: formData.popular,
         tempoPreparo: formData.tempoPreparo > 0 ? formData.tempoPreparo : undefined,
         restricoes: formData.restricoes.length > 0 ? formData.restricoes : undefined,
@@ -229,6 +234,7 @@ export default function ProdutosPage() {
       preco: produto.preco,
       categoriaId: Number(produto.categoria),
       imagem: produto.imagem ? produto.imagem.trimEnd() : "",
+      disponivel: produto.disponivel,
       popular: produto.popular || false,
       tempoPreparo: produto.tempoPreparo || 0,
       restricoes: produto.restricoes || [],
@@ -279,6 +285,24 @@ export default function ProdutosPage() {
         ? prev.restricoes.filter(r => r !== restricao)
         : [...prev.restricoes, restricao]
     }));
+  };
+
+  // Handle availability toggle
+  const toggleDisponibilidade = async (produto: Produto) => {
+    try {
+      await atualizarDisponibilidadeProduto(produto.id, !produto.disponivel);
+      toast({
+        title: "Sucesso",
+        description: `Produto ${!produto.disponivel ? 'disponibilizado' : 'indisponibilizado'} com sucesso!`,
+      });
+      fetchData();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a disponibilidade do produto.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -365,6 +389,7 @@ export default function ProdutosPage() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>Preço</TableHead>
+                      <TableHead>Disponível</TableHead>
                       <TableHead>Popular</TableHead>
                       <TableHead>Restrições</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
@@ -404,6 +429,17 @@ export default function ProdutosPage() {
                         <TableCell>{getCategoriaNome(produto.categoria)}</TableCell>
                         <TableCell className="font-medium">
                           R$ {produto.preco.toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={produto.disponivel}
+                              onCheckedChange={() => toggleDisponibilidade(produto)}
+                            />
+                            <span className="text-sm text-muted-foreground">
+                              {produto.disponivel ? 'Disponível' : 'Indisponível'}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           {produto.popular ? (
@@ -547,16 +583,29 @@ export default function ProdutosPage() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="popular"
-                  checked={formData.popular}
-                  onCheckedChange={(checked) => setFormData({ ...formData, popular: checked as boolean })}
-                />
-                <Label htmlFor="popular" className="flex items-center">
-                  <Star className="h-4 w-4 mr-1" />
-                  Produto Popular
-                </Label>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="disponivel"
+                    checked={formData.disponivel}
+                    onCheckedChange={(checked) => setFormData({ ...formData, disponivel: checked })}
+                  />
+                  <Label htmlFor="disponivel">
+                    Produto Disponível
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="popular"
+                    checked={formData.popular}
+                    onCheckedChange={(checked) => setFormData({ ...formData, popular: checked as boolean })}
+                  />
+                  <Label htmlFor="popular" className="flex items-center">
+                    <Star className="h-4 w-4 mr-1" />
+                    Produto Popular
+                  </Label>
+                </div>
               </div>
 
               <div>

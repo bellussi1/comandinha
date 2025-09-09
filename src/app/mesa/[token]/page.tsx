@@ -96,7 +96,12 @@ export default function MenuPage() {
 
         // Aplicar filtros no client-side
         const produtosFiltrados = produtosCarregados.filter((produto) => {
-          // Se não há filtros ativos, mostrar todos os produtos
+          // Primeiro filtrar por disponibilidade
+          if (!produto.disponivel) {
+            return false;
+          }
+
+          // Se não há filtros ativos, mostrar todos os produtos disponíveis
           if (filtrosAtivos.length === 0) {
             return true;
           }
@@ -175,6 +180,36 @@ export default function MenuPage() {
 
   const temFiltrosAtivos = filtrosAtivos.length > 0;
   const quantidadeFiltros = filtrosAtivos.length;
+
+  // Organizar produtos por categoria quando "Todos" está selecionado
+  const produtosOrganizados = useMemo(() => {
+    if (categoriaAtiva !== 0) {
+      // Quando uma categoria específica está selecionada, apenas retornar os produtos
+      return [{ categoria: null, produtos }];
+    }
+
+    // Quando "Todos" está selecionado, agrupar por categoria na ordem das categorias
+    const produtosPorCategoria = new Map<string, Produto[]>();
+    
+    produtos.forEach((produto) => {
+      // produto.categoria é o ID da categoria como string
+      if (!produtosPorCategoria.has(produto.categoria)) {
+        produtosPorCategoria.set(produto.categoria, []);
+      }
+      produtosPorCategoria.get(produto.categoria)!.push(produto);
+    });
+
+    // Ordenar conforme a ordem das categorias, usando o ID da categoria
+    const categoriasOrdenadas = categorias
+      .sort((a, b) => a.ordem - b.ordem);
+
+    return categoriasOrdenadas
+      .filter(categoria => produtosPorCategoria.has(categoria.id.toString()))
+      .map(categoria => ({
+        categoria,
+        produtos: produtosPorCategoria.get(categoria.id.toString()) || []
+      }));
+  }, [produtos, categoriaAtiva, categorias]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -294,13 +329,24 @@ export default function MenuPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {produtos.map((produto) => (
-              <ProdutoCard
-                key={produto.id}
-                produto={produto}
-                onSelect={abrirModalProduto}
-              />
+          <div className="space-y-8">
+            {produtosOrganizados.map((grupo, index) => (
+              <div key={index}>
+                {grupo.categoria && categoriaAtiva === 0 && (
+                  <h3 className="text-lg font-semibold mb-4 text-primary">
+                    {grupo.categoria.nome}
+                  </h3>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {grupo.produtos.map((produto) => (
+                    <ProdutoCard
+                      key={produto.id}
+                      produto={produto}
+                      onSelect={abrirModalProduto}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}

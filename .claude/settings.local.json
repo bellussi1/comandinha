@@ -14,7 +14,8 @@
       "Bash(tree:*)",
       "Bash(rm:*)",
       "Bash(mkdir:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(FORCE=true npx shadcn@latest add switch)"
     ],
     "deny": [],
     "ask": []

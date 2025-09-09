@@ -23,7 +23,10 @@ export function ProductImage({
 }: ProductImageProps) {
   const imageSrc = src?.trimEnd();
   
-  if (imageSrc?.startsWith('http')) {
+  // Check if it's a valid HTTP/HTTPS URL
+  const isValidHttpUrl = imageSrc && (imageSrc.startsWith('http://') || imageSrc.startsWith('https://'));
+  
+  if (isValidHttpUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img

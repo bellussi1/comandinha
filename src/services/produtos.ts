@@ -70,6 +70,7 @@ export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | nu
       descricao: produto.descricao,
       preco: produto.preco,
       categoriaId: produto.categoriaId,
+      disponivel: produto.disponivel,
       popular: produto.popular,
       tempoPreparo: produto.tempoPreparo,
       restricoes: produto.restricoes,
@@ -168,6 +169,24 @@ export const filtrarProdutos = async ({
   } catch (error) {
     console.error("Erro ao filtrar produtos:", error);
     return [];
+  }
+};
+
+/**
+ * Atualizar disponibilidade de um produto
+ */
+export const atualizarDisponibilidadeProduto = async (
+  id: string, 
+  disponivel: boolean
+): Promise<Produto | null> => {
+  try {
+    const response = await api.patch(`${API_ENDPOINTS.PRODUTOS}/${id}`, {
+      disponivel
+    });
+    return mapearProdutoAPI(response.data);
+  } catch (error) {
+    console.error("Erro ao atualizar disponibilidade do produto:", error);
+    throw error;
   }
 };
 

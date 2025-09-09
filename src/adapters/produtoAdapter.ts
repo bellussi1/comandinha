@@ -14,6 +14,7 @@ export function mapearProdutoAPI(produtoAPI: any): Produto {
       : "outros",
     // O campo imagemUrl da API é mapeado para o campo imagem usado na aplicação
     imagem: produtoAPI.imagemUrl || "/placeholder.svg",
+    disponivel: produtoAPI.disponivel !== undefined ? produtoAPI.disponivel : true,
     popular: produtoAPI.popular || false,
     tempoPreparo: produtoAPI.tempoPreparoMinutos || 15,
     restricoes: produtoAPI.restricoes || [],

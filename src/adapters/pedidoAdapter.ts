@@ -25,6 +25,7 @@ export function mapearItensPedidoAPI(itens: ItemPedidoAPI[]) {
     preco: item.precoUnitario,
     categoria: "", // A API não retorna categoria no pedido
     imagem: "/placeholder.svg", // A API não retorna imagem no pedido
+    disponivel: true, // Assumir que produtos em pedidos estão disponíveis
     quantidade: item.quantidade,
     observacoes: item.observacoes || undefined,
   }));
