@@ -112,3 +112,6 @@ export interface PedidoProducao {
 
 // Re-export auth types
 export * from "./auth";
+
+// Re-export fechamento types  
+export * from "./fechamento";
