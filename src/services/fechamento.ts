@@ -19,46 +19,47 @@ export const getMesasAtivas = async (): Promise<MesaFechamento[]> => {
     const response = await api.get(`${API_ENDPOINTS.MESAS}`);
     const todasMesas = response.data;
     
-    // Busca todos os pedidos em produção para identificar mesas com pedidos
-    const pedidosResponse = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
-    const pedidosProducao = pedidosResponse.data;
+    // Para cada mesa, verifica se tem pedidos
+    const mesasComPedidos: MesaFechamento[] = [];
     
-    // Agrupa pedidos por mesa
-    const pedidosPorMesa = new Map<number, any[]>();
-    pedidosProducao.forEach((pedido: any) => {
-      if (!pedidosPorMesa.has(pedido.mesa_id)) {
-        pedidosPorMesa.set(pedido.mesa_id, []);
-      }
-      pedidosPorMesa.get(pedido.mesa_id)!.push(pedido);
-    });
-    
-    // Filtra mesas que têm pedidos ou estão ocupadas
-    const mesasAtivas = todasMesas
-      .filter((mesa: any) => {
-        const temPedidos = pedidosPorMesa.has(mesa.id);
-        const estaOcupada = mesa.status === 'ocupada';
-        return temPedidos || estaOcupada;
+    await Promise.all(
+      todasMesas.map(async (mesa: any) => {
+        try {
+          // Tenta buscar pedidos da mesa
+          const pedidosResponse = await api.get(`${API_ENDPOINTS.MESAS}/${mesa.id}/pedidos`);
+          const pedidos = pedidosResponse.data;
+          
+          if (pedidos && pedidos.length > 0) {
+            // Calcula valores totais
+            const valorTotal = pedidos.reduce((total: number, pedido: any) => {
+              return total + (pedido.valor_total || 0);
+            }, 0);
+            
+            const pedidosAtivos = pedidos.filter((p: any) => 
+              p.status === 'confirmado' || p.status === 'preparando' || p.status === 'pronto'
+            ).length;
+            
+            mesasComPedidos.push({
+              id: mesa.id,
+              nome: mesa.nome,
+              status: 'em uso' as const,
+              tempoOcupacao: 0,
+              totalPedidos: pedidos.length,
+              valorTotal,
+              ultimaAtividade: new Date().toISOString(),
+              pedidosAtivos
+            });
+          }
+        } catch (error) {
+          // Se der erro 404, a mesa não tem pedidos, ignora
+          if ((error as any).response?.status !== 404) {
+            console.error(`Erro ao verificar pedidos da mesa ${mesa.id}:`, error);
+          }
+        }
       })
-      .map((mesa: any) => {
-        const pedidosDaMesa = pedidosPorMesa.get(mesa.id) || [];
-        const valorTotal = pedidosDaMesa.reduce((total, pedido) => total + (pedido.valor_total || 0), 0);
-        const pedidosAtivos = pedidosDaMesa.filter(p => 
-          p.status === 'confirmado' || p.status === 'preparando'
-        ).length;
-        
-        return {
-          id: mesa.id,
-          nome: mesa.nome,
-          status: mesa.status || 'ocupada',
-          tempoOcupacao: 0, // API não retorna tempo de ocupação
-          totalPedidos: pedidosDaMesa.length,
-          valorTotal,
-          ultimaAtividade: new Date().toISOString(),
-          pedidosAtivos
-        };
-      });
+    );
 
-    return mesasAtivas;
+    return mesasComPedidos.sort((a, b) => a.id - b.id);
   } catch (error) {
     console.error("Erro ao buscar mesas ativas:", error);
     throw error;
@@ -212,31 +213,29 @@ export const removerPedido = async (pedidoId: number): Promise<boolean> => {
 };
 
 /**
- * Fecha a conta de uma mesa (finaliza pedidos para controle gerencial)
+ * Fecha a conta de uma mesa usando o endpoint correto da API
  */
 export const fecharContaMesa = async (
   mesaId: number,
   dadosFechamento: FecharMesaRequest = {}
 ): Promise<FecharMesaResponse> => {
   try {
-    // Como não há endpoint específico para fechar mesa na API,
-    // vamos marcar todos os pedidos da mesa como "entregue"
-    const pedidos = await getPedidosMesa(mesaId);
-    
-    // Atualiza status de todos os pedidos pendentes para "entregue"
-    await Promise.all(
-      pedidos
-        .filter(p => p.status !== 'entregue' && p.status !== 'cancelado')
-        .map(pedido => atualizarStatusPedido(pedido.pedidoId, 'entregue'))
-    );
-    
-    const valorTotal = pedidos.reduce((total, pedido) => total + pedido.valorTotal, 0);
+    // Usa o endpoint de fechamento da API
+    const response = await api.post(`${API_ENDPOINTS.MESAS}/${mesaId}/fechar`, {
+      formaPagamento: dadosFechamento.formaPagamento || 'dinheiro',
+      desconto: dadosFechamento.desconto || 0,
+      taxaServico: dadosFechamento.taxaServico || 0,
+      observacoes: dadosFechamento.observacoes || ''
+    });
     
     return {
       mesaId,
-      valorTotal,
+      valorTotal: response.data.valorTotal || 0,
       status: 'fechada',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      formaPagamento: dadosFechamento.formaPagamento,
+      desconto: dadosFechamento.desconto,
+      taxaServico: dadosFechamento.taxaServico
     };
   } catch (error) {
     console.error(`Erro ao fechar conta da mesa ${mesaId}:`, error);

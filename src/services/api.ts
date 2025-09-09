@@ -20,7 +20,8 @@ api.interceptors.request.use((config) => {
     const isAdminRoute = config.url?.includes("admin") || 
                         config.url?.includes("/pedidos/producao") ||
                         config.url?.includes("/categorias") ||
-                        config.url?.includes("/produtos");
+                        config.url?.includes("/produtos") ||
+                        config.url?.includes("/mesas/") && (config.url?.includes("/desativar") || config.url?.includes("/refresh") || config.url?.includes("/fechar") || config.url?.includes("/pedidos"));
     
     if (isAdminRoute && !isAuthRoute) {
       // Para rotas admin, usar token de admin
