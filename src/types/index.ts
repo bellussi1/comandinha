@@ -110,5 +110,46 @@ export interface PedidoProducao {
   itens: ItemPedidoProducao[];
 }
 
+// Theme customization types
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+  destructive: string;
+  background: string;
+  foreground: string;
+  card: string;
+  cardForeground: string;
+  popover: string;
+  popoverForeground: string;
+  muted: string;
+  mutedForeground: string;
+  border: string;
+  input: string;
+  ring: string;
+  radius: string;
+}
+
+export interface CustomTheme {
+  id?: string;
+  name: string;
+  light: ThemeColors;
+  dark: ThemeColors;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ThemePreset {
+  name: string;
+  description: string;
+  preview: {
+    primary: string;
+    secondary: string;
+    background: string;
+  };
+  theme: Omit<CustomTheme, 'id' | 'isActive' | 'createdAt' | 'updatedAt'>;
+}
+
 // Re-export auth types
 export * from "./auth";

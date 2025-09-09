@@ -15,7 +15,8 @@
       "Bash(rm:*)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(FORCE=true npx shadcn@latest add switch)"
+      "Bash(FORCE=true npx shadcn@latest add switch)",
+      "Bash(FORCE=true npx shadcn@latest add popover)"
     ],
     "deny": [],
     "ask": []

@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
   PEDIDOS: "/pedidos",
   PRODUTOS: "/produtos",
   CATEGORIAS: "/categorias",
+  ADMIN: "/admin",
   AUTH: {
     LOGIN: "/auth/login",
     REGISTER: "/auth/register",
