@@ -9,6 +9,7 @@ import {
   deletarCategoria,
   categoriaTemProdutos
 } from "@/src/services/categoria";
+import { getProdutosPorCategoria, deletarProduto } from "@/src/services/produtos";
 import type { Categoria } from "@/src/types";
 import type { CategoriaCreate } from "@/src/types/services";
 import { Button } from "@/src/components/ui/button";
@@ -188,16 +189,33 @@ export default function CategoriasPage() {
     if (!categoriaToDelete) return;
 
     try {
+      // Primeiro, buscar e deletar todos os produtos da categoria
+      const produtosDaCategoria = await getProdutosPorCategoria(categoriaToDelete.id);
+      
+      if (produtosDaCategoria.length > 0) {
+        toast({
+          title: "Excluindo produtos",
+          description: `Excluindo ${produtosDaCategoria.length} produto(s) da categoria...`,
+        });
+
+        // Deletar todos os produtos da categoria
+        await Promise.all(
+          produtosDaCategoria.map(produto => deletarProduto(produto.id))
+        );
+      }
+
+      // Depois deletar a categoria
       await deletarCategoria(categoriaToDelete.id);
+      
       toast({
         title: "Sucesso",
-        description: "Categoria deletada com sucesso!",
+        description: `Categoria deletada com sucesso! ${produtosDaCategoria.length > 0 ? `${produtosDaCategoria.length} produto(s) também foram removidos.` : ''}`,
       });
       fetchCategorias();
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Não foi possível deletar a categoria.",
+        description: "Não foi possível deletar a categoria e seus produtos.",
         variant: "destructive",
       });
     } finally {
