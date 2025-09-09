@@ -28,8 +28,8 @@ export function ThemeCustomizer() {
         </Button>
       </SheetTrigger>
       
-      <SheetContent side="right" className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col">
+        <SheetHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
             <SheetTitle>🎨 Personalizar Tema</SheetTitle>
             <Button
@@ -43,24 +43,26 @@ export function ThemeCustomizer() {
           </div>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          {/* Preview do tema atual */}
-          <ThemePreview theme={currentTheme} />
+        <div className="flex-1 overflow-y-auto mt-6">
+          <div className="space-y-6 pr-2">
+            {/* Preview do tema atual */}
+            <ThemePreview theme={currentTheme} />
 
-          <Tabs defaultValue="presets" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="presets">Presets</TabsTrigger>
-              <TabsTrigger value="custom">Personalizar</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="presets" className="space-y-4">
-              <ThemePresets />
-            </TabsContent>
-            
-            <TabsContent value="custom" className="space-y-4">
-              <ColorPickers />
-            </TabsContent>
-          </Tabs>
+            <Tabs defaultValue="presets" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="presets">Presets</TabsTrigger>
+                <TabsTrigger value="custom">Personalizar</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="presets" className="space-y-4 overflow-y-auto max-h-none">
+                <ThemePresets />
+              </TabsContent>
+              
+              <TabsContent value="custom" className="space-y-4 overflow-y-auto max-h-none">
+                <ColorPickers />
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </SheetContent>
     </Sheet>
