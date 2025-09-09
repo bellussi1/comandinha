@@ -10,6 +10,7 @@ import {
   Tag, 
   LogOut,
   Settings,
+  Calculator,
   X
 } from "lucide-react";
 import { useAuth } from "@/src/services/auth";
@@ -31,6 +32,11 @@ const navigation = [
     name: "Categorias", 
     href: "/admin/categorias",
     icon: Tag,
+  },
+  {
+    name: "Fechamento", 
+    href: "/admin/fechamento",
+    icon: Calculator,
   },
 ];
 
