@@ -73,12 +73,14 @@ export const mesaAdminService = {
   },
 
   /**
-   * Ativa uma mesa usando o UUID (permite fazer pedidos)
+   * Ativa uma mesa usando o endpoint correto da API
    */
   async ativarMesa(mesa: MesaAdmin): Promise<void> {
     try {
-      // Usar o endpoint por UUID que não requer autenticação
-      const response = await api.post(`${API_ENDPOINTS.MESAS}/uuid/${mesa.uuid}/ativar`);
+      // Usar o endpoint correto: POST /mesas/ativar com mesaId no corpo
+      const response = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, {
+        mesaId: mesa.id.toString()
+      });
       console.log("Mesa ativada com sucesso:", response.data);
     } catch (error: any) {
       console.error("Erro ao ativar mesa:", error);
@@ -98,6 +100,18 @@ export const mesaAdminService = {
     } catch (error) {
       console.error("Erro ao atualizar mesa:", error);
       throw new Error("Não foi possível atualizar a mesa");
+    }
+  },
+
+  /**
+   * Encerra sessão da mesa (endpoint admin protegido)
+   */
+  async encerrarSessaoMesa(mesaId: number): Promise<void> {
+    try {
+      await api.post(`${API_ENDPOINTS.MESAS}/${mesaId}/encerrar`);
+    } catch (error) {
+      console.error("Erro ao encerrar sessão da mesa:", error);
+      throw new Error("Não foi possível encerrar a sessão da mesa");
     }
   },
 
@@ -142,7 +156,7 @@ export const mesaAdminService = {
   },
 
   /**
-   * Verifica o status de uma mesa
+   * Verifica o status de uma mesa usando o endpoint correto da API
    */
   async verificarStatusMesa(mesa: MesaAdmin): Promise<{ status: string; temPedidos: boolean }> {
     try {
@@ -152,12 +166,23 @@ export const mesaAdminService = {
         return { status: "em_uso", temPedidos: true };
       }
       
-      // Se não tem pedidos, verificar o status atual da mesa
-      const response = await api.get(`${API_ENDPOINTS.MESAS}/${mesa.id}/status`);
-      return {
-        status: this.mapearStatusMesa(response.data.status),
-        temPedidos: false
-      };
+      // Verificar o status atual da mesa usando o endpoint correto
+      try {
+        const response = await api.get(`${API_ENDPOINTS.MESAS}/${mesa.id}/status`);
+        return {
+          status: this.mapearStatusMesa(response.data.status),
+          temPedidos: false
+        };
+      } catch (statusError) {
+        // Se o endpoint de status não existir, usar a listagem geral
+        console.warn("Endpoint de status não disponível, usando listagem geral");
+        const listResponse = await api.get(API_ENDPOINTS.MESAS);
+        const mesaAtual = listResponse.data.find((m: any) => m.id === mesa.id);
+        return {
+          status: mesaAtual ? this.mapearStatusMesa(mesaAtual.status) : "disponivel",
+          temPedidos: false
+        };
+      }
     } catch (error) {
       console.error("Erro ao verificar status da mesa:", error);
       return { status: "disponivel", temPedidos: false };

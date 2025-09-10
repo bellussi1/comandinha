@@ -17,6 +17,22 @@ interface MesaAtivacaoResponse {
 }
 
 /**
+ * Valida o token atual da mesa (endpoint protegido com token da mesa)
+ */
+export const validarTokenMesa = async (mesaId: string): Promise<boolean> => {
+  try {
+    // Passar o mesaId no contexto para que o interceptor use o token correto
+    const response = await api.get(`${API_ENDPOINTS.MESAS}/validar`, {
+      __mesaId: mesaId
+    } as any);
+    return response.data.valido || false;
+  } catch (error) {
+    console.error("Erro ao validar token da mesa:", error);
+    return false;
+  }
+};
+
+/**
  * Valida se uma mesa está ativa com um token válido
  */
 export const validarToken = async (mesaId: string): Promise<boolean> => {
@@ -29,13 +45,12 @@ export const validarToken = async (mesaId: string): Promise<boolean> => {
     if (tokenSalvo) {
       console.log("Token encontrado no localStorage");
       try {
-        // Tentar validar usando o endpoint de validação real
-        const validacaoResponse = await api.get(`${API_ENDPOINTS.MESAS}/validar`, {
-          headers: { Authorization: `Bearer ${tokenSalvo}` },
-        });
-
-        console.log("Resposta de validação:", validacaoResponse.data);
-        return validacaoResponse.data.valido;
+        // Tentar validar usando a função específica
+        const isValid = await validarTokenMesa(mesaId);
+        console.log("Resposta de validação:", isValid);
+        if (isValid) {
+          return true;
+        }
       } catch (validacaoError) {
         console.log("Erro na validação com token salvo:", validacaoError);
         // Se falhar, prosseguimos para tentar ativar
@@ -45,7 +60,9 @@ export const validarToken = async (mesaId: string): Promise<boolean> => {
     // Se não temos token ou validação falhou, tentar ativar a mesa
     try {
       console.log("Tentando ativar a mesa");
-      const ativacaoResponse = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, { mesaId });
+      const ativacaoResponse = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, { 
+        mesaId: mesaId 
+      });
 
       // Se a ativação for bem-sucedida, salvar o token e retornar válido
       if (ativacaoResponse.data && ativacaoResponse.data.token) {
@@ -147,3 +164,50 @@ export const getMesaPorUuid = async (uuid: string): Promise<Mesa | null> => {
     return null;
   }
 };
+
+/**
+ * Obtém o status atual de uma mesa
+ */
+export const getStatusMesa = async (mesaId: string): Promise<any | null> => {
+  try {
+    const response = await api.get(`${API_ENDPOINTS.MESAS}/${mesaId}/status`);
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao buscar status da mesa:", error);
+    return null;
+  }
+};
+
+/**
+ * Ativa uma mesa pelo UUID (endpoint público)
+ */
+export const ativarMesaPorUuid = async (uuid: string): Promise<MesaAtivacaoResponse | null> => {
+  try {
+    const response = await api.post(`${API_ENDPOINTS.MESAS}/uuid/${uuid}/ativar`);
+    const data = response.data;
+
+    // Salvar token se retornado
+    if (data.token && data.mesaId) {
+      TokenManager.setToken(data.mesaId, data.token);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Erro ao ativar mesa por UUID:", error);
+    return null;
+  }
+};
+
+/**
+ * Valida se a sessão da mesa ainda é válida pelo UUID (endpoint público)
+ */
+export const validarMesaPorUuid = async (uuid: string): Promise<boolean> => {
+  try {
+    const response = await api.get(`${API_ENDPOINTS.MESAS}/uuid/${uuid}/validar`);
+    return response.data.valido || false;
+  } catch (error) {
+    console.error("Erro ao validar mesa por UUID:", error);
+    return false;
+  }
+};
+
