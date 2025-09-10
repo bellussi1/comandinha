@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAuth } from "@/src/services/auth";
@@ -11,7 +11,7 @@ interface AdminLayoutClientProps {
   children: React.ReactNode;
 }
 
-export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
+function AdminLayoutClientComponent({ children }: AdminLayoutClientProps) {
   const { isAuthenticated, refreshAuthState } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -96,3 +96,7 @@ export function AdminLayoutClient({ children }: AdminLayoutClientProps) {
     </div>
   );
 }
+
+// Memoize AdminLayoutClient to prevent unnecessary re-renders
+// Only re-render when children change (which is expected behavior for layouts)
+export const AdminLayoutClient = React.memo(AdminLayoutClientComponent);

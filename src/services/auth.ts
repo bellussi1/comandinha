@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import api from "./api";
 import { API_ENDPOINTS, STORAGE_KEYS } from "@/src/constants";
+import { ErrorHandler } from "./errorHandler";
 import type { 
   LoginCredentials, 
   RegisterData, 
   AuthResponse, 
   User 
 } from "@/src/types/auth";
+import type { AppError, ServiceResponse } from "@/src/types/errors";
 
 /**
  * Classe para gerenciar autenticação de admin
@@ -17,7 +19,7 @@ export class AuthService {
   /**
    * Faz login de admin
    */
-static async login(credentials: LoginCredentials): Promise<AuthResponse> {
+static async login(credentials: LoginCredentials): Promise<ServiceResponse<AuthResponse>> {
   try {
     // Backend faz hash internamente - enviar senha via HTTPS seguro
     const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, {
@@ -37,14 +39,19 @@ static async login(credentials: LoginCredentials): Promise<AuthResponse> {
 
     this.setAuthData(token, user);
 
-    return { token, user };
+    return ErrorHandler.createSuccessResponse(
+      { token, user }, 
+      'Login realizado com sucesso'
+    );
   } catch (error) {
-    console.error("Erro no login:", error);
-    throw new Error("Credenciais inválidas");
+    // Error é automaticamente tratado pelo interceptor
+    // Aqui só precisamos converter para ServiceResponse
+    const appError = error as AppError;
+    return ErrorHandler.createServiceResponse<AuthResponse>(appError);
   }
 }
 
-static async register(data: RegisterData): Promise<AuthResponse> {
+static async register(data: RegisterData): Promise<ServiceResponse<AuthResponse>> {
   try {
     // Backend faz hash internamente - enviar senha via HTTPS seguro
     await api.post(API_ENDPOINTS.AUTH.REGISTER, {
@@ -59,8 +66,9 @@ static async register(data: RegisterData): Promise<AuthResponse> {
       senha: data.senha,
     });
   } catch (error) {
-    console.error("Erro no registro:", error);
-    throw new Error("Falha ao criar conta");
+    // Error é automaticamente tratado pelo interceptor
+    const appError = error as AppError;
+    return ErrorHandler.createServiceResponse<AuthResponse>(appError);
   }
 }
 
@@ -156,10 +164,20 @@ export const useAuth = () => {
   const refreshAuthState = useCallback(() => {
     if (typeof window === 'undefined') return;
     
-    setAuthState({
+    const newAuthState = {
       isAuthenticated: AuthService.isAuthenticated(),
       user: AuthService.getCurrentUser(),
       token: AuthService.getToken(),
+    };
+
+    // Only update if state actually changed (prevents unnecessary re-renders)
+    setAuthState(prevState => {
+      if (prevState.isAuthenticated !== newAuthState.isAuthenticated ||
+          prevState.token !== newAuthState.token ||
+          JSON.stringify(prevState.user) !== JSON.stringify(newAuthState.user)) {
+        return newAuthState;
+      }
+      return prevState;
     });
   }, []);
 
@@ -186,43 +204,63 @@ export const useAuth = () => {
     };
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = useCallback(async (credentials: LoginCredentials) => {
     const result = await AuthService.login(credentials);
-    refreshAuthState(); // Refresh state after login
-    return result;
-  };
+    
+    if (result.success && result.data) {
+      refreshAuthState(); // Refresh state after successful login
+      return result.data; // Return the AuthResponse for backward compatibility
+    } else {
+      // Throw user-friendly error message
+      throw new Error(result.error?.userMessage || 'Erro no login');
+    }
+  }, [refreshAuthState]);
 
-  const register = async (data: RegisterData) => {
+  const register = useCallback(async (data: RegisterData) => {
     const result = await AuthService.register(data);
-    refreshAuthState(); // Refresh state after register
-    return result;
-  };
+    
+    if (result.success && result.data) {
+      refreshAuthState(); // Refresh state after successful register
+      return result.data; // Return the AuthResponse for backward compatibility
+    } else {
+      // Throw user-friendly error message
+      throw new Error(result.error?.userMessage || 'Erro no registro');
+    }
+  }, [refreshAuthState]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     AuthService.logout();
     refreshAuthState(); // Refresh state after logout
-  };
+  }, [refreshAuthState]);
 
-  // Don't return auth state until component is mounted to avoid hydration issues
-  if (!mounted) {
-    return {
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      login,
-      register,
-      logout,
-      validateToken: AuthService.validateToken,
-      refreshAuthState,
-    };
-  }
+  // Memoize static methods to prevent re-creation
+  const validateToken = useCallback(AuthService.validateToken, []);
 
-  return {
+  // Memoize return objects to prevent unnecessary re-renders
+  const unmountedValue = useMemo(() => ({
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    login,
+    register,
+    logout,
+    validateToken,
+    refreshAuthState,
+  }), [login, register, logout, validateToken, refreshAuthState]);
+
+  const mountedValue = useMemo(() => ({
     ...authState,
     login,
     register,
     logout,
-    validateToken: AuthService.validateToken,
+    validateToken,
     refreshAuthState,
-  };
+  }), [authState, login, register, logout, validateToken, refreshAuthState]);
+
+  // Don't return auth state until component is mounted to avoid hydration issues
+  if (!mounted) {
+    return unmountedValue;
+  }
+
+  return mountedValue;
 };

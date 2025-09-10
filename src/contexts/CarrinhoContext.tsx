@@ -1,5 +1,5 @@
 // src/contexts/CarrinhoContext.tsx
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { ItemCarrinho } from "@/src/types";
 import type { CarrinhoContextType } from "@/src/types/services";
 import * as carrinhoService from "@/src/services/carrinho";
@@ -20,41 +20,54 @@ export function CarrinhoProvider({
     setItems(carrinhoService.getCarrinho(mesa));
   }, [mesa]);
 
-  const totalItems = items.reduce((total, item) => total + item.quantidade, 0);
-  const totalValor = calcularTotalItems(items);
+  // Memoize expensive calculations to prevent recalculation on every render
+  const totalItems = useMemo(
+    () => items.reduce((total, item) => total + item.quantidade, 0),
+    [items]
+  );
+  
+  const totalValor = useMemo(
+    () => calcularTotalItems(items),
+    [items]
+  );
 
-  const adicionarItem = (item: ItemCarrinho) => {
+  // Memoize callback functions to prevent unnecessary re-renders in consuming components
+  const adicionarItem = useCallback((item: ItemCarrinho) => {
     carrinhoService.adicionarItem(mesa, item);
     setItems(carrinhoService.getCarrinho(mesa));
-  };
+  }, [mesa]);
 
-  const removerItem = (id: string) => {
+  const removerItem = useCallback((id: string) => {
     carrinhoService.removerItem(mesa, id);
     setItems(carrinhoService.getCarrinho(mesa));
-  };
+  }, [mesa]);
 
-  const atualizarQuantidade = (id: string, quantidade: number) => {
+  const atualizarQuantidade = useCallback((id: string, quantidade: number) => {
     carrinhoService.atualizarQuantidade(mesa, id, quantidade);
     setItems(carrinhoService.getCarrinho(mesa));
-  };
+  }, [mesa]);
 
-  const limparCarrinho = () => {
+  const limparCarrinho = useCallback(() => {
     carrinhoService.limparCarrinho(mesa);
     setItems([]);
-  };
+  }, [mesa]);
+
+  // Memoize context value to prevent unnecessary re-renders in all consuming components
+  const contextValue = useMemo(
+    () => ({
+      items,
+      totalItems,
+      totalValor,
+      adicionarItem,
+      removerItem,
+      atualizarQuantidade,
+      limparCarrinho,
+    }),
+    [items, totalItems, totalValor, adicionarItem, removerItem, atualizarQuantidade, limparCarrinho]
+  );
 
   return (
-    <CarrinhoContext.Provider
-      value={{
-        items,
-        totalItems,
-        totalValor,
-        adicionarItem,
-        removerItem,
-        atualizarQuantidade,
-        limparCarrinho,
-      }}
-    >
+    <CarrinhoContext.Provider value={contextValue}>
       {children}
     </CarrinhoContext.Provider>
   );

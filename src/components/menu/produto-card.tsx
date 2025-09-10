@@ -1,3 +1,4 @@
+import React from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Clock, Star } from "lucide-react";
@@ -11,7 +12,7 @@ interface ProdutoCardProps {
   onSelect: (produto: Produto) => void;
 }
 
-export function ProdutoCard({ produto, onSelect }: ProdutoCardProps) {
+function ProdutoCardComponent({ produto, onSelect }: ProdutoCardProps) {
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -62,3 +63,15 @@ export function ProdutoCard({ produto, onSelect }: ProdutoCardProps) {
     </Card>
   );
 }
+
+// Memoize component to prevent unnecessary re-renders when props haven't changed
+export const ProdutoCard = React.memo(ProdutoCardComponent, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  return (
+    prevProps.produto.id === nextProps.produto.id &&
+    prevProps.produto.nome === nextProps.produto.nome &&
+    prevProps.produto.preco === nextProps.produto.preco &&
+    prevProps.produto.disponivel === nextProps.produto.disponivel &&
+    prevProps.onSelect === nextProps.onSelect
+  );
+});

@@ -1,6 +1,7 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { TokenManager } from "./tokenManager";
 import { STORAGE_KEYS, API_ENDPOINTS } from "../constants";
+import { ErrorHandler } from "./errorHandler";
 
 const baseURL =
   process.env.NEXT_PUBLIC_API_URL || "https://comandinha.onrender.com";
@@ -54,5 +55,40 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Interceptor de resposta para tratamento padronizado de erros
+api.interceptors.response.use(
+  (response) => {
+    // Resposta bem-sucedida - retornar dados diretamente
+    return response;
+  },
+  (error: AxiosError) => {
+    // Criar contexto do erro
+    const context = {
+      url: error.config?.url,
+      method: error.config?.method,
+    };
+    
+    // Processar erro com handler padronizado
+    const appError = ErrorHandler.handleAxiosError(error, context);
+    
+    // Log do erro
+    ErrorHandler.logError(appError, { 
+      logError: true,
+      showToast: false // Componentes decidem se mostram toast
+    });
+    
+    // Para erros de autenticação, limpar tokens inválidos
+    if (appError.type === 'AUTHENTICATION' && typeof window !== 'undefined') {
+      if (error.config?.url?.includes('admin')) {
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER_DATA);
+      }
+    }
+    
+    // Rejeitar com erro padronizado
+    return Promise.reject(appError);
+  }
+);
 
 export default api;

@@ -1,35 +1,8 @@
-import bcrypt from "bcryptjs";
-
 /**
- * Utilitários para hash e validação de senhas
+ * Utilitários para validação de senhas no cliente
+ * NOTA: Hash de senhas deve ser feito apenas no servidor por segurança
  */
 export class PasswordUtils {
-  private static readonly SALT_ROUNDS = 12;
-
-  /**
-   * Cria hash da senha
-   */
-  static async hash(password: string): Promise<string> {
-    try {
-      const salt = await bcrypt.genSalt(this.SALT_ROUNDS);
-      return await bcrypt.hash(password, salt);
-    } catch (error) {
-      console.error("Erro ao criar hash da senha:", error);
-      throw new Error("Erro interno do servidor");
-    }
-  }
-
-  /**
-   * Verifica se a senha corresponde ao hash
-   */
-  static async verify(password: string, hash: string): Promise<boolean> {
-    try {
-      return await bcrypt.compare(password, hash);
-    } catch (error) {
-      console.error("Erro ao verificar senha:", error);
-      return false;
-    }
-  }
 
   /**
    * Valida força da senha
