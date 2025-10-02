@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getMesaPorUuid, Mesa } from "@/src/services/mesa";
-import { getPedidosPorMesaId } from "@/src/services/pedidos";
+import { getPedidosPorMesaUuid } from "@/src/services/pedidos";
 import { Pedido } from "@/src/types";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
@@ -44,10 +44,9 @@ export default function PedidosPage() {
         
         setMesa(dadosMesa);
         
-        // Depois buscar pedidos usando o ID numérico da mesa
-        const pedidosData = await getPedidosPorMesaId(dadosMesa.id.toString());
-        console.log(`Pedidos carregados para mesa ${dadosMesa.nome} (ID: ${dadosMesa.id}):`, pedidosData);
-        setPedidos(pedidosData);
+        // Agora buscar pedidos usando o UUID da mesa diretamente
+        const pedidosData = await getPedidosPorMesaUuid(token);
+          setPedidos(pedidosData);
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
         setError("Não foi possível carregar os pedidos. Tente novamente.");

@@ -3,13 +3,13 @@ import type { Pedido, PedidoAPI, ItemPedidoAPI } from "@/src/types";
 /**
  * Mapeia um pedido da API para o formato usado na aplicação
  */
-export function mapearPedidoAPI(pedidoAPI: PedidoAPI, mesaId: string): Pedido {
+export function mapearPedidoAPI(pedidoAPI: PedidoAPI, mesaUuid: string): Pedido {
   return {
     id: pedidoAPI.pedidoId.toString(),
     itens: mapearItensPedidoAPI(pedidoAPI.itens),
     timestamp: new Date(pedidoAPI.timestamp).getTime(),
     status: pedidoAPI.status as any,
-    mesa: mesaId,
+    mesa: mesaUuid,
     observacoesGerais: pedidoAPI.observacoesGerais || undefined,
   };
 }
@@ -34,9 +34,9 @@ export function mapearItensPedidoAPI(itens: ItemPedidoAPI[]) {
 /**
  * Formata um pedido para envio à API
  */
-export function formatarPedidoParaAPI(mesa: string, itens: any[], observacoesGerais?: string) {
+export function formatarPedidoParaAPI(mesaUuid: string, itens: any[], observacoesGerais?: string) {
   return {
-    mesaId: parseInt(mesa),
+    uuid: mesaUuid, // A API espera o campo 'uuid'
     itens: itens.map(item => ({
       produtoId: parseInt(item.id),
       quantidade: item.quantidade,

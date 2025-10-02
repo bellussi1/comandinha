@@ -66,7 +66,7 @@ export default function CarrinhoPage() {
 
   // Carregar carrinho
   useEffect(() => {
-    const carrinhoSalvo = getCarrinho(token);
+    const carrinhoSalvo = getCarrinho(token); // token é o UUID da mesa
     setCarrinho(carrinhoSalvo);
   }, [token]);
 
@@ -76,7 +76,7 @@ export default function CarrinhoPage() {
     const item = carrinho.find((i) => i.id === id);
     if (item) {
       atualizarQuantidade(token, id, item.quantidade + 1);
-      setCarrinho(getCarrinho(token));
+      setCarrinho(getCarrinho(token)); // token é o UUID da mesa
     }
   };
 
@@ -84,7 +84,7 @@ export default function CarrinhoPage() {
     const item = carrinho.find((i) => i.id === id);
     if (item && item.quantidade > 1) {
       atualizarQuantidade(token, id, item.quantidade - 1);
-      setCarrinho(getCarrinho(token));
+      setCarrinho(getCarrinho(token)); // token é o UUID da mesa
     }
   };
 
@@ -106,7 +106,7 @@ export default function CarrinhoPage() {
 
       // Transformar carrinho para formato esperado pela API
       const novoPedido = await adicionarPedido({
-        mesa: mesa.id.toString(), // Usar o ID numérico da mesa
+        mesaUuid: token, // Usar o UUID da mesa (token)
         itens: [...carrinho],
         observacoesGerais: observacoesGerais || undefined,
       });

@@ -83,7 +83,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
       setFechandoMesa(true);
       
       await fecharContaMesa(mesa.id, {
-        formaPagamento: 'dinheiro'
+        metodo_pagamento: 'dinheiro'
       });
 
       toast({
@@ -96,9 +96,10 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
       
     } catch (error) {
       console.error("Erro ao fechar mesa:", error);
+      const errorMessage = (error as Error).message || "Não foi possível fechar a conta da mesa. Tente novamente.";
       toast({
         title: "Erro ao fechar mesa",
-        description: "Não foi possível fechar a conta da mesa. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

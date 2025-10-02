@@ -6,10 +6,33 @@ export const STORAGE_KEYS = {
 };
 
 export const STATUS = {
-  CONFIRMADO: "confirmado",
-  PREPARANDO: "preparando", 
-  PRONTO: "pronto",
+  PENDENTE: "pendente",
+  EM_PREPARO: "em preparo",
   ENTREGUE: "entregue",
+  CONCLUIDO: "concluido", // Sem acento, como na API
+};
+
+// IDs dos status para a nova API
+export const STATUS_IDS = {
+  PENDENTE: 1,
+  EM_PREPARO: 2,
+  ENTREGUE: 3,
+  CONCLUIDO: 4,
+};
+
+// Mapeamento bidirecional para facilitar conversões
+export const STATUS_ID_TO_STRING: Record<number, string> = {
+  1: "pendente",
+  2: "em preparo",
+  3: "entregue",
+  4: "concluido",
+};
+
+export const STATUS_STRING_TO_ID: Record<string, number> = {
+  "pendente": 1,
+  "em preparo": 2,
+  "entregue": 3,
+  "concluido": 4,
 };
 
 export const API_ENDPOINTS = {
@@ -26,8 +49,16 @@ export const API_ENDPOINTS = {
 };
 
 export const STATUS_COLORS = {
-  CONFIRMADO: "bg-blue-500",
-  PREPARANDO: "bg-orange-500",
-  PRONTO: "bg-green-500",
-  ENTREGUE: "bg-slate-500",
+  PENDENTE: "bg-blue-500",
+  EM_PREPARO: "bg-orange-500",
+  ENTREGUE: "bg-green-500",
+  CONCLUIDO: "bg-slate-500",
+};
+
+// Cores por string de status para facilitar uso
+export const STATUS_COLORS_BY_STRING: Record<string, string> = {
+  "pendente": "bg-blue-500 text-white",
+  "em preparo": "bg-orange-500 text-white",
+  "entregue": "bg-green-500 text-white",
+  "concluido": "bg-slate-500 text-white",
 }; 

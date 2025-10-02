@@ -28,9 +28,10 @@ export function MesasDashboard() {
       setMesas(mesasAtivas);
     } catch (error) {
       console.error('Erro ao carregar mesas:', error);
+      const errorMessage = (error as Error).message || "Não foi possível carregar as mesas ativas.";
       toast({
         title: "Erro",
-        description: "Não foi possível carregar as mesas ativas.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

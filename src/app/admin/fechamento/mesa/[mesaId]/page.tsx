@@ -10,11 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/src/components/ui/separator";
 import { useToast } from "@/src/components/ui/use-toast";
 import { Toaster } from "@/src/components/ui/toaster";
-import { 
-  gerarResumoFinanceiro, 
-  fecharContaMesa, 
-  validarFechamentoMesa,
-  desativarMesa 
+import {
+  gerarResumoFinanceiro,
+  fecharContaMesa,
+  validarFechamentoMesa
 } from "@/src/services/fechamento";
 import { formatarMoeda } from "@/src/utils/formatters";
 import { 
@@ -57,9 +56,10 @@ export default function MesaDetalhesPage() {
       setMotivoBloqueio(validacao.motivo || '');
     } catch (error) {
       console.error('Erro ao carregar resumo:', error);
+      const errorMessage = (error as Error).message || "Não foi possível carregar os detalhes da mesa.";
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os detalhes da mesa.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -69,24 +69,30 @@ export default function MesaDetalhesPage() {
 
   const handleFecharConta = useCallback(async () => {
     if (!resumo || !podeFechar) return;
-    
+
     try {
       setFechando(true);
-      
-      await fecharContaMesa(mesaId);
-      
+
+      // Usa a nova estrutura de dados da API
+      await fecharContaMesa(mesaId, {
+        metodo_pagamento: 'dinheiro', // Default, pode ser expandido para incluir seleção
+        desconto: resumo.desconto,
+        taxaServico: resumo.taxaServico
+      });
+
       toast({
         title: "Conta Fechada!",
         description: `Mesa ${resumo.mesaNome} foi fechada com sucesso. Total: ${formatarMoeda(resumo.totalFinal)}`,
       });
-      
+
       // Volta para o dashboard
       router.push('/admin/fechamento');
     } catch (error) {
       console.error('Erro ao fechar conta:', error);
+      const errorMessage = (error as Error).message || "Não foi possível fechar a conta da mesa.";
       toast({
         title: "Erro",
-        description: "Não foi possível fechar a conta da mesa.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

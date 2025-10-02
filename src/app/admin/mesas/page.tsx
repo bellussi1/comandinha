@@ -44,8 +44,6 @@ import {
   Table,
   Trash2,
   Power,
-  PowerOff,
-  Clock,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -68,10 +66,11 @@ export default function MesasAdminPage() {
       setMesas(mesasData);
     } catch (error) {
       console.error("Erro ao carregar mesas:", error);
-      setError("Falha ao carregar mesas. Verifique sua conexão.");
+      const errorMessage = (error as Error).message || "Falha ao carregar mesas. Verifique sua conexão.";
+      setError(errorMessage);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar as mesas.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -107,9 +106,10 @@ export default function MesasAdminPage() {
       await fetchMesas();
     } catch (error) {
       console.error("Erro ao criar mesa:", error);
+      const errorMessage = (error as Error).message || "Não foi possível criar a mesa.";
       toast({
         title: "Erro",
-        description: "Não foi possível criar a mesa.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -130,9 +130,10 @@ export default function MesasAdminPage() {
       await fetchMesas();
     } catch (error) {
       console.error("Erro ao deletar mesa:", error);
+      const errorMessage = (error as Error).message || "Não foi possível deletar a mesa.";
       toast({
         title: "Erro",
-        description: "Não foi possível deletar a mesa.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -140,38 +141,11 @@ export default function MesasAdminPage() {
     }
   };
 
-  const handleAlterarStatusMesa = async (mesa: MesaAdmin, novoStatus: "disponivel" | "expirada") => {
-    try {
-      setAtualizandoMesa(`status_${mesa.id}`);
-      
-      if (novoStatus === "expirada") {
-        await mesaAdminService.desativarMesa(mesa);
-      } else {
-        await mesaAdminService.ativarMesa(mesa);
-      }
-      
-      toast({
-        title: "Status atualizado",
-        description: `Mesa "${mesa.nome}" agora está ${mesaAdminService.getStatusText(novoStatus).toLowerCase()}.`,
-      });
-      
-      await fetchMesas();
-    } catch (error) {
-      console.error("Erro ao alterar status da mesa:", error);
-      toast({
-        title: "Erro",
-        description: (error as Error).message || "Não foi possível alterar o status da mesa.",
-        variant: "destructive",
-      });
-    } finally {
-      setAtualizandoMesa(null);
-    }
-  };
 
-  const getStatusBadge = (status: "disponivel" | "expirada" | "em_uso") => {
+  const getStatusBadge = (status: "disponivel" | "em_uso") => {
     const colorClass = mesaAdminService.getStatusColor(status);
     const text = mesaAdminService.getStatusText(status);
-    
+
     return (
       <Badge className={colorClass}>
         {text}
@@ -179,14 +153,12 @@ export default function MesasAdminPage() {
     );
   };
 
-  const getStatusIcon = (status: "disponivel" | "expirada" | "em_uso") => {
+  const getStatusIcon = (status: "disponivel" | "em_uso") => {
     switch (status) {
       case "disponivel":
         return <Power className="h-4 w-4 text-green-600" />;
       case "em_uso":
         return <Table className="h-4 w-4 text-blue-600" />;
-      case "expirada":
-        return <Clock className="h-4 w-4 text-red-600" />;
       default:
         return <AlertCircle className="h-4 w-4 text-gray-600" />;
     }
@@ -290,17 +262,17 @@ export default function MesasAdminPage() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Expiradas</p>
-                    <p className="text-2xl font-bold text-red-600">
-                      {mesas.filter(m => m.status === "expirada").length}
+                    <p className="text-sm text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold text-gray-600">
+                      {mesas.length}
                     </p>
                   </div>
-                  <Clock className="h-8 w-8 text-red-600" />
+                  <AlertCircle className="h-8 w-8 text-gray-600" />
                 </div>
               </CardContent>
             </Card>
@@ -407,51 +379,18 @@ export default function MesasAdminPage() {
                     </div>
                     
                     <div className="flex flex-col gap-2">
-                      {mesa.status === "disponivel" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAlterarStatusMesa(mesa, "expirada")}
-                          disabled={atualizandoMesa === `status_${mesa.id}`}
-                        >
-                          {atualizandoMesa === `status_${mesa.id}` ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <PowerOff className="h-4 w-4 mr-2" />
-                          )}
-                          Desativar
-                        </Button>
-                      )}
-                      
-                      {mesa.status === "expirada" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleAlterarStatusMesa(mesa, "disponivel")}
-                          disabled={atualizandoMesa === `status_${mesa.id}`}
-                        >
-                          {atualizandoMesa === `status_${mesa.id}` ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <Power className="h-4 w-4 mr-2" />
-                          )}
-                          Ativar
-                        </Button>
-                      )}
-
                       {mesa.status === "em_uso" && (
                         <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                          Esta mesa possui pedidos ativos e não pode ser alterada.
+                          Esta mesa possui pedidos ativos. Use o fechamento de contas para liberar a mesa.
                         </div>
                       )}
-                      
+
                       {mesa.status !== "em_uso" && (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
                               variant="destructive"
                               size="sm"
-                              className="bg-red-600 hover:bg-red-700 text-white"
                               disabled={atualizandoMesa === `delete_${mesa.id}`}
                             >
                               {atualizandoMesa === `delete_${mesa.id}` ? (
@@ -474,7 +413,6 @@ export default function MesasAdminPage() {
                               <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeletarMesa(mesa)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
                               >
                                 Deletar
                               </AlertDialogAction>

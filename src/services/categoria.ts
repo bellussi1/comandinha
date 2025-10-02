@@ -8,7 +8,7 @@ import { uploadImage } from "./upload";
 export const getCategorias = async (): Promise<Categoria[]> => {
   try {
     const response = await api.get(API_ENDPOINTS.CATEGORIAS);
-    console.log("Categorias recebidas:", response.data);
+
     return response.data.map((categoria: any) => ({
       id: categoria.id,
       nome: categoria.nome,
@@ -23,7 +23,9 @@ export const getCategorias = async (): Promise<Categoria[]> => {
 };
 
 // Buscar categoria por ID
-export const getCategoriaById = async (id: number): Promise<Categoria | null> => {
+export const getCategoriaById = async (
+  id: number
+): Promise<Categoria | null> => {
   try {
     const response = await api.get(`${API_ENDPOINTS.CATEGORIAS}/${id}`);
     return {
@@ -40,7 +42,9 @@ export const getCategoriaById = async (id: number): Promise<Categoria | null> =>
 };
 
 // Criar nova categoria
-export const criarCategoria = async (categoria: CategoriaCreate): Promise<Categoria | null> => {
+export const criarCategoria = async (
+  categoria: CategoriaCreate
+): Promise<Categoria | null> => {
   try {
     let imagemUrl = categoria.imagemUrl;
 
@@ -52,7 +56,7 @@ export const criarCategoria = async (categoria: CategoriaCreate): Promise<Catego
 
     const categoriaData = {
       ...categoria,
-      imagemUrl: imagemUrl
+      imagemUrl: imagemUrl,
     };
 
     const response = await api.post(API_ENDPOINTS.CATEGORIAS, categoriaData);
@@ -70,7 +74,10 @@ export const criarCategoria = async (categoria: CategoriaCreate): Promise<Catego
 };
 
 // Atualizar categoria completa (PUT)
-export const atualizarCategoria = async (id: number, categoria: CategoriaCreate): Promise<Categoria | null> => {
+export const atualizarCategoria = async (
+  id: number,
+  categoria: CategoriaCreate
+): Promise<Categoria | null> => {
   try {
     let imagemUrl = categoria.imagemUrl;
 
@@ -82,10 +89,13 @@ export const atualizarCategoria = async (id: number, categoria: CategoriaCreate)
 
     const categoriaData = {
       ...categoria,
-      imagemUrl: imagemUrl
+      imagemUrl: imagemUrl,
     };
 
-    const response = await api.put(`${API_ENDPOINTS.CATEGORIAS}/${id}`, categoriaData);
+    const response = await api.put(
+      `${API_ENDPOINTS.CATEGORIAS}/${id}`,
+      categoriaData
+    );
     return {
       id: response.data.id,
       nome: response.data.nome,
@@ -100,7 +110,10 @@ export const atualizarCategoria = async (id: number, categoria: CategoriaCreate)
 };
 
 // Atualizar categoria parcial (PATCH)
-export const atualizarCategoriaParcial = async (id: number, categoria: CategoriaUpdate): Promise<Categoria | null> => {
+export const atualizarCategoriaParcial = async (
+  id: number,
+  categoria: CategoriaUpdate
+): Promise<Categoria | null> => {
   try {
     let imagemUrl = categoria.imagemUrl;
 
@@ -112,10 +125,13 @@ export const atualizarCategoriaParcial = async (id: number, categoria: Categoria
 
     const categoriaData = {
       ...categoria,
-      imagemUrl: imagemUrl
+      imagemUrl: imagemUrl,
     };
 
-    const response = await api.patch(`${API_ENDPOINTS.CATEGORIAS}/${id}`, categoriaData);
+    const response = await api.patch(
+      `${API_ENDPOINTS.CATEGORIAS}/${id}`,
+      categoriaData
+    );
     return {
       id: response.data.id,
       nome: response.data.nome,
@@ -141,9 +157,13 @@ export const deletarCategoria = async (id: number): Promise<boolean> => {
 };
 
 // Verificar se categoria tem produtos
-export const categoriaTemProdutos = async (categoriaId: number): Promise<boolean> => {
+export const categoriaTemProdutos = async (
+  categoriaId: number
+): Promise<boolean> => {
   try {
-    const response = await api.get(`${API_ENDPOINTS.CATEGORIAS}/${categoriaId}/produtos`);
+    const response = await api.get(
+      `${API_ENDPOINTS.CATEGORIAS}/${categoriaId}/produtos`
+    );
     return response.data && response.data.length > 0;
   } catch (error) {
     console.error("Erro ao verificar produtos da categoria:", error);
