@@ -1,7 +1,11 @@
 import api from "./api";
 import { TokenManager } from "./tokenManager";
-import { mapearPedidoAPI, formatarPedidoParaAPI } from "@/src/adapters/pedidoAdapter";
-import { API_ENDPOINTS } from "@/src/constants";
+import {
+  mapearPedidoAPI,
+  formatarPedidoParaAPI,
+} from "@/src/adapters/pedidoAdapter";
+import { API_ENDPOINTS, STATUS_STRING_TO_ID } from "@/src/constants";
+import { atualizarStatusPedido as atualizarStatusFechamento } from "./fechamento";
 import type {
   Pedido,
   PedidoProducao,
@@ -10,18 +14,23 @@ import type {
 } from "@/src/types";
 
 /**
- * Busca os pedidos de uma mesa específica
+ * Busca os pedidos de uma mesa específica usando UUID
  */
-export const getPedidosPorMesa = async (mesa: string): Promise<Pedido[]> => {
+export const getPedidosPorMesa = async (
+  mesaUuid: string
+): Promise<Pedido[]> => {
   try {
-    const response = await api.get(`${API_ENDPOINTS.MESAS}/${mesa}/pedidos`);
+    // Agora usa UUID da mesa ao invés de ID
+    const response = await api.get(
+      `${API_ENDPOINTS.MESAS}/uuid/${mesaUuid}/pedidos`
+    );
 
     if (!Array.isArray(response.data.pedidos)) {
       return [];
     }
 
     return response.data.pedidos.map((pedido: any) =>
-      mapearPedidoAPI(pedido, mesa)
+      mapearPedidoAPI(pedido, mesaUuid)
     );
   } catch (error) {
     console.error("Erro ao buscar pedidos da mesa:", error);
@@ -30,23 +39,23 @@ export const getPedidosPorMesa = async (mesa: string): Promise<Pedido[]> => {
 };
 
 /**
- * Adiciona um novo pedido para uma mesa
+ * Adiciona um novo pedido para uma mesa usando UUID
  */
 export const adicionarPedido = async (pedido: {
-  mesa: string;
+  mesaUuid: string;
   itens: ItemCarrinho[];
   observacoesGerais?: string;
 }): Promise<Pedido> => {
   try {
     const payload = formatarPedidoParaAPI(
-      pedido.mesa,
+      pedido.mesaUuid,
       pedido.itens,
       pedido.observacoesGerais
     );
 
     const response = await api.post(API_ENDPOINTS.PEDIDOS, payload);
 
-    return mapearPedidoAPI(response.data, pedido.mesa);
+    return mapearPedidoAPI(response.data, pedido.mesaUuid);
   } catch (error) {
     console.error("Erro ao adicionar pedido:", error);
     throw new Error("Não foi possível realizar o pedido");
@@ -67,64 +76,67 @@ export const getPedidosProducao = async (): Promise<PedidoProducao[]> => {
 };
 
 /**
- * Busca os pedidos de uma mesa específica por ID da mesa
+ * Busca os pedidos de uma mesa específica por UUID da mesa
  */
-export const getPedidosPorMesaId = async (mesaId: string): Promise<Pedido[]> => {
+export const getPedidosPorMesaUuid = async (
+  mesaUuid: string
+): Promise<Pedido[]> => {
   try {
     // Buscar todos os produtos para ter acesso aos preços
     const produtosResponse = await api.get(`${API_ENDPOINTS.PRODUTOS}`);
     const produtos = produtosResponse.data;
-    
+
     // Criar um mapa de nome do produto para seu preço
     const mapaProdutoPreco: Record<string, number> = {};
     produtos.forEach((produto: any) => {
       mapaProdutoPreco[produto.nome] = produto.preco;
     });
-    
-    console.log("Mapa de produtos e preços:", mapaProdutoPreco);
-    
+
     // Buscar pedidos em produção
     const response = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
     const todosOsPedidos = response.data;
-    
-    // Filtrar apenas os pedidos da mesa especificada
+
+    // Filtrar apenas os pedidos da mesa especificada por UUID
     const pedidosDaMesa = todosOsPedidos.filter(
-      (pedido: PedidoProducao) => pedido.mesaId.toString() === mesaId
+      (pedido: PedidoProducao) => pedido.mesaUuid === mesaUuid
     );
-    
-    // Log para debug - verificar estrutura completa
-    console.log("Pedidos da mesa:", pedidosDaMesa);
-    
+
     // Calcular valor total e mapear para o formato usado pela aplicação
     return pedidosDaMesa.map((pedido: PedidoProducao) => {
       // Mapear itens e calcular valores
-      const itensComPreco = pedido.itens.map(item => {
+      const itensComPreco = pedido.itens.map((item) => {
         // Encontrar preço do produto no mapa
         const precoUnitario = mapaProdutoPreco[item.produtoNome] || 0;
         const subtotal = precoUnitario * item.quantidade;
-        
+
         return {
           produtoId: 0,
           nome: item.produtoNome,
           quantidade: item.quantidade,
           precoUnitario: precoUnitario,
           observacoes: item.observacoes,
-          subtotal: subtotal
+          subtotal: subtotal,
         };
       });
-      
+
       // Calcular valor total do pedido
-      const valorTotal = itensComPreco.reduce((total, item) => total + item.subtotal, 0);
-      
-      return mapearPedidoAPI({
-        pedidoId: pedido.pedidoId,
-        timestamp: pedido.timestamp,
-        status: pedido.status,
-        itens: itensComPreco,
-        valorTotal: valorTotal,
-        estimativaEntrega: pedido.estimativaEntrega,
-        observacoesGerais: pedido.observacoesGerais
-      }, mesaId);
+      const valorTotal = itensComPreco.reduce(
+        (total, item) => total + item.subtotal,
+        0
+      );
+
+      return mapearPedidoAPI(
+        {
+          pedidoId: pedido.pedidoId,
+          timestamp: pedido.timestamp,
+          status: pedido.status,
+          itens: itensComPreco,
+          valorTotal: valorTotal,
+          estimativaEntrega: pedido.estimativaEntrega,
+          observacoesGerais: pedido.observacoesGerais,
+        },
+        mesaUuid
+      );
     });
   } catch (error) {
     console.error("Erro ao buscar pedidos da mesa:", error);
@@ -133,7 +145,7 @@ export const getPedidosPorMesaId = async (mesaId: string): Promise<Pedido[]> => 
 };
 
 /**
- * Atualiza status de um pedido (versão para admins)
+ * Atualiza status de um pedido (versão para admins usando nova API)
  */
 export const atualizarStatusPedidoProducao = async (
   pedidoId: string,
@@ -141,10 +153,15 @@ export const atualizarStatusPedidoProducao = async (
   mensagem?: string
 ): Promise<boolean> => {
   try {
-    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { 
-      status: novoStatus,
-      mensagem: mensagem || ""
-    });
+    // Converter status string para status_id
+    const statusId = STATUS_STRING_TO_ID[novoStatus];
+
+    if (!statusId) {
+      throw new Error(`Status inválido: ${novoStatus}`);
+    }
+
+    // Usar a função refatorada
+    await atualizarStatusFechamento(Number(pedidoId), statusId);
     return true;
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);
@@ -153,7 +170,7 @@ export const atualizarStatusPedidoProducao = async (
 };
 
 /**
- * Atualiza status de um pedido (versão para clientes)
+ * Atualiza status de um pedido (versão para clientes usando nova API)
  */
 export const atualizarStatusPedido = async (
   pedidoId: string,
@@ -162,10 +179,15 @@ export const atualizarStatusPedido = async (
   mensagem?: string
 ): Promise<boolean> => {
   try {
-    await api.patch(`${API_ENDPOINTS.PEDIDOS}/${pedidoId}/status`, { 
-      status: novoStatus,
-      mensagem: mensagem || ""
-    });
+    // Converter status string para status_id
+    const statusId = STATUS_STRING_TO_ID[novoStatus];
+
+    if (!statusId) {
+      throw new Error(`Status inválido: ${novoStatus}`);
+    }
+
+    // Usar a função refatorada
+    await atualizarStatusFechamento(Number(pedidoId), statusId);
     return true;
   } catch (error) {
     console.error("Erro ao atualizar status do pedido:", error);

@@ -5,12 +5,12 @@ import { formatarPedidoParaAPI } from "../adapters/pedidoAdapter";
 import { TokenManager } from "./tokenManager";
 
 /**
- * Obtém os itens do carrinho de uma mesa
+ * Obtém os itens do carrinho de uma mesa usando UUID
  */
-export const getCarrinho = (mesa: string): ItemCarrinho[] => {
+export const getCarrinho = (mesaUuid: string): ItemCarrinho[] => {
   if (typeof window === "undefined") return [];
 
-  const stored = localStorage.getItem(`${STORAGE_KEYS.CARRINHO_PREFIX}${mesa}`);
+  const stored = localStorage.getItem(`${STORAGE_KEYS.CARRINHO_PREFIX}${mesaUuid}`);
   if (!stored) return [];
 
   try {
@@ -22,15 +22,15 @@ export const getCarrinho = (mesa: string): ItemCarrinho[] => {
 };
 
 /**
- * Salva os itens do carrinho de uma mesa
+ * Salva os itens do carrinho de uma mesa usando UUID
  */
-export const salvarCarrinho = (mesa: string, items: ItemCarrinho[]): void => {
+export const salvarCarrinho = (mesaUuid: string, items: ItemCarrinho[]): void => {
   if (typeof window === "undefined") return;
-  if (!mesa || !Array.isArray(items)) return;
+  if (!mesaUuid || !Array.isArray(items)) return;
 
   try {
     localStorage.setItem(
-      `${STORAGE_KEYS.CARRINHO_PREFIX}${mesa}`,
+      `${STORAGE_KEYS.CARRINHO_PREFIX}${mesaUuid}`,
       JSON.stringify(items)
     );
   } catch (error) {
@@ -39,18 +39,18 @@ export const salvarCarrinho = (mesa: string, items: ItemCarrinho[]): void => {
 };
 
 /**
- * Limpa o carrinho de uma mesa
+ * Limpa o carrinho de uma mesa usando UUID
  */
-export const limparCarrinho = (mesa: string): void => {
+export const limparCarrinho = (mesaUuid: string): void => {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(`${STORAGE_KEYS.CARRINHO_PREFIX}${mesa}`);
+  localStorage.removeItem(`${STORAGE_KEYS.CARRINHO_PREFIX}${mesaUuid}`);
 };
 
 /**
- * Adiciona um item ao carrinho
+ * Adiciona um item ao carrinho usando UUID da mesa
  */
-export const adicionarItem = (mesa: string, item: ItemCarrinho): void => {
-  const carrinho = getCarrinho(mesa);
+export const adicionarItem = (mesaUuid: string, item: ItemCarrinho): void => {
+  const carrinho = getCarrinho(mesaUuid);
   const itemExistente = carrinho.findIndex((i) => i.id === item.id);
 
   if (itemExistente >= 0) {
@@ -64,53 +64,53 @@ export const adicionarItem = (mesa: string, item: ItemCarrinho): void => {
     carrinho.push(item);
   }
 
-  salvarCarrinho(mesa, carrinho);
+  salvarCarrinho(mesaUuid, carrinho);
 };
 
 /**
- * Remove um item do carrinho
+ * Remove um item do carrinho usando UUID da mesa
  */
-export const removerItem = (mesa: string, itemId: string): void => {
-  const carrinho = getCarrinho(mesa);
+export const removerItem = (mesaUuid: string, itemId: string): void => {
+  const carrinho = getCarrinho(mesaUuid);
   const novosItens = carrinho.filter((item) => item.id !== itemId);
-  salvarCarrinho(mesa, novosItens);
+  salvarCarrinho(mesaUuid, novosItens);
 };
 
 /**
- * Atualiza a quantidade de um item no carrinho
+ * Atualiza a quantidade de um item no carrinho usando UUID da mesa
  */
 export const atualizarQuantidade = (
-  mesa: string,
+  mesaUuid: string,
   itemId: string,
   quantidade: number
 ): void => {
   if (quantidade < 1) return;
 
-  const carrinho = getCarrinho(mesa);
+  const carrinho = getCarrinho(mesaUuid);
   const itemIndex = carrinho.findIndex((item) => item.id === itemId);
 
   if (itemIndex >= 0) {
     carrinho[itemIndex].quantidade = quantidade;
-    salvarCarrinho(mesa, carrinho);
+    salvarCarrinho(mesaUuid, carrinho);
   }
 };
 
 /**
- * Envia o carrinho como um pedido para a API
+ * Envia o carrinho como um pedido para a API usando UUID da mesa
  */
 export const enviarCarrinhoParaPedido = async (
-  mesa: string,
+  mesaUuid: string,
   observacoesGerais?: string
 ) => {
-  const carrinho = getCarrinho(mesa);
+  const carrinho = getCarrinho(mesaUuid);
   if (carrinho.length === 0) return null;
 
   try {
-    const payload = formatarPedidoParaAPI(mesa, carrinho, observacoesGerais);
+    const payload = formatarPedidoParaAPI(mesaUuid, carrinho, observacoesGerais);
     const response = await api.post(API_ENDPOINTS.PEDIDOS, payload);
 
     // Limpa o carrinho após enviar o pedido
-    limparCarrinho(mesa);
+    limparCarrinho(mesaUuid);
 
     return response.data;
   } catch (error) {

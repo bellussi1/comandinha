@@ -29,7 +29,7 @@ export interface Pedido {
   id: string;
   itens: ItemCarrinho[];
   timestamp: number;
-  status: "confirmado" | "preparando" | "entregue";
+  status: "pendente" | "em preparo" | "entregue" | "concluido";
   mesa: string;
   observacoesGerais?: string;
 }
@@ -48,7 +48,7 @@ export interface MesaAdmin {
   id: number;
   uuid: string;
   nome: string;
-  status: "disponivel" | "expirada" | "em_uso";
+  status: "disponivel" | "em_uso";
   criadaEm?: string;
   atualizadaEm?: string;
 }
@@ -61,10 +61,26 @@ export interface MesaCriacaoResponse {
   id: number;
   uuid: string;
   nome: string;
+  status?: string | null;
+  status_id?: number | null;
 }
 
 export interface MesaStatusUpdate {
-  status: "disponivel" | "expirada" | "em_uso";
+  status: "disponivel" | "em_uso";
+}
+
+// Novos tipos baseados na API OpenAPI
+export interface MesaListResponse {
+  id: number;
+  uuid: string;
+  nome: string;
+  status: string;
+  status_id: number;
+}
+
+// Request para fechamento de mesa (novo endpoint /encerrar)
+export interface MesaFechamentoRequest {
+  metodo_pagamento?: string | null;
 }
 
 export interface Admin {
@@ -103,7 +119,7 @@ export interface ItemPedidoAPI {
 }
 
 // Definição dos status possíveis para um pedido
-export type StatusPedido = "confirmado" | "preparando" | "pronto" | "entregue";
+export type StatusPedido = "pendente" | "em preparo" | "entregue" | "concluido";
 
 // Adicionais no pedido em produção
 export interface AdicionalProducao {
@@ -124,7 +140,8 @@ export interface ItemPedidoProducao {
 // Pedido em produção
 export interface PedidoProducao {
   pedidoId: number;
-  mesaId: number;
+  mesaId?: number; // Mantido para compatibilidade
+  mesaUuid: string; // Novo campo UUID
   mesaNome: string;
   timestamp: string;
   status: string;

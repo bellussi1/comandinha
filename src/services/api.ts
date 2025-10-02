@@ -27,9 +27,13 @@ api.interceptors.request.use((config) => {
       if (/^\/mesas\/\d+\/desativar$/.test(url) && method === "post") return true;
       if (/^\/mesas\/\d+\/fechar$/.test(url) && method === "post") return true;
       
+      // Endpoints de pedidos (admin protegido)
+      if (url === "/pedidos" && method === "get") return true; // Lista todos os pedidos ativos
+      if (/^\/pedidos\/\d+\/status$/.test(url) && (method === "patch" || method === "put")) return true;
+      if (url.includes("/pedidos/producao")) return true;
+
       // Outras rotas admin existentes
       if (url.includes("admin") && !url.includes("/auth/")) return true;
-      if (url.includes("/pedidos/producao")) return true;
       if (url.includes("/categorias")) return true;
       if (url.includes("/produtos")) return true;
       

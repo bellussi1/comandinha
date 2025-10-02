@@ -26,7 +26,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import api from "@/src/services/api";
-import { atualizarStatusPedido, getPedidosPorMesaId } from "@/src/services/pedidos";
+import { atualizarStatusPedido, getPedidosPorMesaUuid } from "@/src/services/pedidos";
+import { getDisplayText } from "@/src/services/fechamento";
 import type { Pedido } from "@/src/types";
 import {
   ArrowLeft,
@@ -69,7 +70,7 @@ export default function PedidosGlobalPage() {
         // Para cada mesa, buscar os pedidos usando a função que filtra pelo ID da mesa
         for (const mesa of mesas) {
           try {
-            const pedidosDaMesa = await getPedidosPorMesaId(mesa.id.toString());
+            const pedidosDaMesa = await getPedidosPorMesaUuid(mesa.uuid);
             
             // Adicionar os pedidos encontrados ao array geral
             if (pedidosDaMesa.length > 0) {
@@ -177,9 +178,9 @@ export default function PedidosGlobalPage() {
 
       const success = await atualizarStatusPedido(
         pedidoId,
-        novoStatus as "confirmado" | "preparando" | "entregue",
+        novoStatus as "pendente" | "em preparo" | "entregue" | "concluido",
         pedido.mesa,
-        "Status atualizado pelo cliente"
+        "Status atualizado pelo admin"
       );
 
       if (success) {
@@ -219,27 +220,31 @@ export default function PedidosGlobalPage() {
 
   const getStatusBadge = (status: Pedido["status"]) => {
     switch (status) {
-      case "confirmado":
-        return <Badge className="bg-blue-500">Confirmado</Badge>;
-      case "preparando":
-        return <Badge className="bg-orange-500">Em preparo</Badge>;
+      case "pendente":
+        return <Badge className="bg-blue-500 text-white">{getDisplayText(status)}</Badge>;
+      case "em preparo":
+        return <Badge className="bg-orange-500 text-white">{getDisplayText(status)}</Badge>;
       case "entregue":
-        return <Badge className="bg-green-500">Entregue</Badge>;
+        return <Badge className="bg-green-500 text-white">{getDisplayText(status)}</Badge>;
+      case "concluido":
+        return <Badge className="bg-gray-500 text-white">{getDisplayText(status)}</Badge>;
       default:
-        return null;
+        return <Badge variant="outline">{getDisplayText(status)}</Badge>;
     }
   };
 
   const getStatusIcon = (status: Pedido["status"]) => {
     switch (status) {
-      case "confirmado":
-        return <CheckCircle className="h-5 w-5 text-blue-500" />;
-      case "preparando":
+      case "pendente":
+        return <Clock className="h-5 w-5 text-blue-500" />;
+      case "em preparo":
         return <Utensils className="h-5 w-5 text-orange-500" />;
       case "entregue":
-        return <ShoppingBag className="h-5 w-5 text-green-500" />;
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case "concluido":
+        return <ShoppingBag className="h-5 w-5 text-gray-500" />;
       default:
-        return null;
+        return <Clock className="h-5 w-5 text-gray-400" />;
     }
   };
 
@@ -329,9 +334,10 @@ export default function PedidosGlobalPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="todos">Todos os status</SelectItem>
-                        <SelectItem value="confirmado">Confirmado</SelectItem>
-                        <SelectItem value="preparando">Em preparo</SelectItem>
+                        <SelectItem value="pendente">Pendente</SelectItem>
+                        <SelectItem value="em preparo">Em preparo</SelectItem>
                         <SelectItem value="entregue">Entregue</SelectItem>
+                        <SelectItem value="concluido">Concluído</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -378,14 +384,17 @@ export default function PedidosGlobalPage() {
                 <TabsTrigger value="todos" className="px-3 py-1.5">
                   Todos
                 </TabsTrigger>
-                <TabsTrigger value="confirmado" className="px-3 py-1.5">
-                  Confirmados
+                <TabsTrigger value="pendente" className="px-3 py-1.5">
+                  Pendentes
                 </TabsTrigger>
-                <TabsTrigger value="preparando" className="px-3 py-1.5">
+                <TabsTrigger value="em preparo" className="px-3 py-1.5">
                   Em preparo
                 </TabsTrigger>
                 <TabsTrigger value="entregue" className="px-3 py-1.5">
                   Entregues
+                </TabsTrigger>
+                <TabsTrigger value="concluido" className="px-3 py-1.5">
+                  Concluídos
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -474,26 +483,38 @@ export default function PedidosGlobalPage() {
                       <Button
                         size="sm"
                         variant={
-                          pedido.status === "confirmado" ? "default" : "outline"
+                          pedido.status === "pendente" ? "default" : "outline"
                         }
                         onClick={() =>
-                          handleUpdateStatus(pedido.id, "confirmado")
+                          handleUpdateStatus(pedido.id, "pendente")
                         }
-                        disabled={pedido.status === "entregue"}
+                        disabled={pedido.status === "concluido"}
                       >
-                        Confirmado
+                        {getDisplayText("pendente")}
                       </Button>
                       <Button
                         size="sm"
                         variant={
-                          pedido.status === "preparando" ? "default" : "outline"
+                          pedido.status === "em preparo" ? "default" : "outline"
                         }
                         onClick={() =>
-                          handleUpdateStatus(pedido.id, "preparando")
+                          handleUpdateStatus(pedido.id, "em preparo")
                         }
-                        disabled={pedido.status === "entregue"}
+                        disabled={pedido.status === "concluido"}
                       >
-                        Preparando
+                        {getDisplayText("em preparo")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          pedido.status === "entregue" ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          handleUpdateStatus(pedido.id, "entregue")
+                        }
+                        disabled={pedido.status === "concluido"}
+                      >
+                        Pronto
                       </Button>
                       <Button
                         size="sm"
@@ -504,7 +525,19 @@ export default function PedidosGlobalPage() {
                           handleUpdateStatus(pedido.id, "entregue")
                         }
                       >
-                        Entregue
+                        {getDisplayText("entregue")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={
+                          pedido.status === "concluido" ? "default" : "outline"
+                        }
+                        onClick={() =>
+                          handleUpdateStatus(pedido.id, "concluido")
+                        }
+                        disabled={pedido.status === "concluido"}
+                      >
+                        {getDisplayText("concluido")}
                       </Button>
                     </div>
                   </div>

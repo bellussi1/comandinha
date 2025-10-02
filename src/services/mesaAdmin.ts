@@ -1,119 +1,96 @@
 import api from "./api";
 import { API_ENDPOINTS } from "@/src/constants";
-import type { MesaAdmin, MesaCriacaoRequest, MesaCriacaoResponse } from "@/src/types";
+import type {
+  MesaAdmin,
+  MesaCriacaoRequest,
+  MesaCriacaoResponse,
+  MesaListResponse
+} from "@/src/types";
 
 export const mesaAdminService = {
   /**
-   * Lista todas as mesas
+   * Lista todas as mesas com melhor tratamento da nova API
    */
   async listarMesas(): Promise<MesaAdmin[]> {
     try {
       const response = await api.get(API_ENDPOINTS.MESAS);
       const mesas = await Promise.all(
-        response.data.map(async (mesa: any) => {
+        response.data.map(async (mesa: MesaListResponse) => {
           // Verificar se a mesa tem pedidos ativos
           const temPedidos = await this.verificarPedidosMesa(mesa.id);
-          
+
           return {
             id: mesa.id,
             uuid: mesa.uuid,
             nome: mesa.nome,
             status: temPedidos ? "em_uso" : this.mapearStatusMesa(mesa.status),
-            criadaEm: mesa.criadaEm,
-            atualizadaEm: mesa.atualizadaEm
-          };
+            // criadaEm e atualizadaEm não estão disponíveis na nova API
+            criadaEm: undefined,
+            atualizadaEm: undefined
+          } as MesaAdmin;
         })
       );
       return mesas;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao listar mesas:", error);
+      // Melhor tratamento de erros baseado na nova API
+      if (error.response?.status === 422) {
+        throw new Error("Erro de validação: " + (error.response.data?.detail || "Dados inválidos"));
+      }
       throw new Error("Não foi possível carregar as mesas");
     }
   },
 
   /**
-   * Cria uma nova mesa
+   * Cria uma nova mesa com melhor tratamento de erros
    */
   async criarMesa(dados: MesaCriacaoRequest): Promise<MesaCriacaoResponse> {
     try {
       const response = await api.post(API_ENDPOINTS.MESAS, dados);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao criar mesa:", error);
+      // Melhor tratamento de erros baseado na nova API
+      if (error.response?.status === 422) {
+        const detail = error.response.data?.detail;
+        if (typeof detail === 'string') {
+          throw new Error("Erro de validação: " + detail);
+        } else if (Array.isArray(detail)) {
+          const errorMsg = detail.map((e: any) => e.msg || e.message || e).join(', ');
+          throw new Error("Erro de validação: " + errorMsg);
+        }
+        throw new Error("Dados inválidos para criação da mesa");
+      }
+      if (error.response?.status === 400) {
+        throw new Error("Solicitação inválida: " + (error.response.data?.detail || "Verifique os dados informados"));
+      }
       throw new Error("Não foi possível criar a mesa");
     }
   },
 
   /**
-   * Deleta uma mesa
+   * Deleta uma mesa com melhor tratamento de erros
    */
   async deletarMesa(mesaId: number): Promise<void> {
     try {
       await api.delete(`${API_ENDPOINTS.MESAS}/${mesaId}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erro ao deletar mesa:", error);
+      // Melhor tratamento de erros baseado na nova API
+      if (error.response?.status === 404) {
+        throw new Error("Mesa não encontrada");
+      }
+      if (error.response?.status === 400) {
+        throw new Error("Não é possível deletar esta mesa: " + (error.response.data?.detail || "Mesa pode estar em uso"));
+      }
+      if (error.response?.status === 422) {
+        throw new Error("Erro de validação: " + (error.response.data?.detail || "ID da mesa inválido"));
+      }
       throw new Error("Não foi possível deletar a mesa");
     }
   },
 
-  /**
-   * Desativa uma mesa (muda status para expirada)
-   */
-  async desativarMesa(mesa: MesaAdmin): Promise<void> {
-    try {
-      // Endpoint de desativação requer autenticação e usa o ID da mesa
-      await api.post(`${API_ENDPOINTS.MESAS}/${mesa.id}/desativar`);
-    } catch (error: any) {
-      console.error("Erro ao desativar mesa:", error);
-      if (error.response?.status === 403) {
-        throw new Error("Não autorizado. Verifique se você está logado como administrador.");
-      }
-      throw new Error("Não foi possível desativar a mesa");
-    }
-  },
 
-  /**
-   * Ativa uma mesa usando o endpoint correto da API
-   */
-  async ativarMesa(mesa: MesaAdmin): Promise<void> {
-    try {
-      // Usar o endpoint correto: POST /mesas/ativar com mesaId no corpo
-      const response = await api.post(`${API_ENDPOINTS.MESAS}/ativar`, {
-        mesaId: mesa.id.toString()
-      });
-      console.log("Mesa ativada com sucesso:", response.data);
-    } catch (error: any) {
-      console.error("Erro ao ativar mesa:", error);
-      if (error.response?.status === 400 && error.response?.data?.detail?.includes("já está ativa")) {
-        throw new Error("Mesa já está ativa");
-      }
-      throw new Error("Não foi possível ativar a mesa");
-    }
-  },
-
-  /**
-   * Atualiza o token de uma mesa (refresh)
-   */
-  async refreshMesa(mesaId: number): Promise<void> {
-    try {
-      await api.post(`${API_ENDPOINTS.MESAS}/${mesaId}/refresh`);
-    } catch (error) {
-      console.error("Erro ao atualizar mesa:", error);
-      throw new Error("Não foi possível atualizar a mesa");
-    }
-  },
-
-  /**
-   * Encerra sessão da mesa (endpoint admin protegido)
-   */
-  async encerrarSessaoMesa(mesaId: number): Promise<void> {
-    try {
-      await api.post(`${API_ENDPOINTS.MESAS}/${mesaId}/encerrar`);
-    } catch (error) {
-      console.error("Erro ao encerrar sessão da mesa:", error);
-      throw new Error("Não foi possível encerrar a sessão da mesa");
-    }
-  },
 
   /**
    * Verifica se uma mesa tem pedidos ativos
@@ -192,29 +169,20 @@ export const mesaAdminService = {
   /**
    * Mapeia o status da API para o formato da aplicação
    */
-  mapearStatusMesa(status: string): "disponivel" | "expirada" | "em_uso" {
+  mapearStatusMesa(status: string): "disponivel" | "em_uso" {
     if (!status) return "disponivel";
-    
+
     const statusLower = status.toLowerCase();
-    
-    // Estados que indicam mesa expirada/inativa
-    if (statusLower.includes("expirada") || 
-        statusLower.includes("inativa") || 
-        statusLower.includes("inativo") ||
-        statusLower.includes("expired") ||
-        statusLower.includes("disabled")) {
-      return "expirada";
+
+    // Estados que indicam mesa em uso
+    if (statusLower.includes("em_uso") ||
+        statusLower.includes("ocupada") ||
+        statusLower.includes("ocupado") ||
+        statusLower.includes("busy") ||
+        statusLower.includes("in_use")) {
+      return "em_uso";
     }
-    
-    // Estados que indicam mesa ativa/disponível
-    if (statusLower.includes("ativa") || 
-        statusLower.includes("ativo") || 
-        statusLower.includes("disponivel") ||
-        statusLower.includes("livre") ||
-        statusLower.includes("available")) {
-      return "disponivel";
-    }
-    
+
     // Por padrão, assumir disponível
     return "disponivel";
   },
@@ -222,14 +190,12 @@ export const mesaAdminService = {
   /**
    * Obtém a cor do status para exibição
    */
-  getStatusColor(status: "disponivel" | "expirada" | "em_uso"): string {
+  getStatusColor(status: "disponivel" | "em_uso"): string {
     switch (status) {
       case "disponivel":
         return "text-green-600 bg-green-100";
       case "em_uso":
         return "text-blue-600 bg-blue-100";
-      case "expirada":
-        return "text-red-600 bg-red-100";
       default:
         return "text-gray-600 bg-gray-100";
     }
@@ -238,14 +204,12 @@ export const mesaAdminService = {
   /**
    * Obtém o texto amigável do status
    */
-  getStatusText(status: "disponivel" | "expirada" | "em_uso"): string {
+  getStatusText(status: "disponivel" | "em_uso"): string {
     switch (status) {
       case "disponivel":
         return "Disponível";
       case "em_uso":
         return "Em Uso";
-      case "expirada":
-        return "Expirada";
       default:
         return status;
     }

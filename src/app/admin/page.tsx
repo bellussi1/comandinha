@@ -25,10 +25,11 @@ import { useToast } from "@/src/components/ui/use-toast";
 import {
   confirmarPedido,
   iniciarPreparacaoPedido,
-  listarPedidosProducao,
+  listarTodosPedidos,
   marcarPedidoEntregue,
-  marcarPedidoPronto,
+  marcarPedidoConcluido,
 } from "@/src/services/admin";
+import { getDisplayText } from "@/src/services/fechamento";
 import { useAuth } from "@/src/services/auth";
 import { PedidoProducao } from "@/src/types";
 import { formatarDataHora } from "@/src/utils/formatters";
@@ -63,8 +64,12 @@ export default function AdminPage() {
     try {
       setLoading(true);
       setError(null);
-      const pedidosData = await listarPedidosProducao();
-      setPedidos(pedidosData);
+      const pedidosData = await listarTodosPedidos();
+
+      // Garantir que sempre temos um array
+      const pedidosArray = Array.isArray(pedidosData) ? pedidosData : [];
+   
+      setPedidos(pedidosArray);
     } catch (error) {
       console.error("Erro ao carregar pedidos:", error);
       setError("Falha ao carregar pedidos. Verifique sua conexão.");
@@ -102,19 +107,23 @@ export default function AdminPage() {
       setAtualizandoStatus(pedidoId.toString());
       let sucesso = false;
 
+      // Encontrar o pedido atual para validar
+      const pedidoAtual = pedidos.find(p => p.pedidoId === pedidoId);
+      const statusAtual = pedidoAtual?.status;
+
       // Usar as funções específicas para cada status
       switch (novoStatus) {
-        case "confirmado":
+        case "pendente":
           sucesso = await confirmarPedido(pedidoId.toString());
           break;
-        case "preparando":
+        case "em preparo":
           sucesso = await iniciarPreparacaoPedido(pedidoId.toString());
-          break;
-        case "pronto":
-          sucesso = await marcarPedidoPronto(pedidoId.toString());
           break;
         case "entregue":
           sucesso = await marcarPedidoEntregue(pedidoId.toString());
+          break;
+        case "concluido":
+          sucesso = await marcarPedidoConcluido(pedidoId.toString());
           break;
         default:
           throw new Error(`Status não reconhecido: ${novoStatus}`);
@@ -122,11 +131,13 @@ export default function AdminPage() {
 
       if (sucesso) {
         // Atualizar lista local
-        setPedidos((prevPedidos) =>
-          prevPedidos.map((p) =>
+        setPedidos((prevPedidos) => {
+          // Garantir que prevPedidos é um array
+          const pedidosArray = Array.isArray(prevPedidos) ? prevPedidos : [];
+          return pedidosArray.map((p) =>
             p.pedidoId === pedidoId ? { ...p, status: novoStatus } : p
-          )
-        );
+          );
+        });
 
         toast({
           title: "Status atualizado",
@@ -186,7 +197,7 @@ export default function AdminPage() {
               Painel Administrativo
             </h1>
             <p className="text-muted-foreground">
-              Gerencie os pedidos em produção de todas as mesas
+              Gerencie os pedidos ativos do restaurante
             </p>
           </div>
           <Button variant="outline" onClick={fetchPedidos} disabled={loading}>
@@ -219,10 +230,10 @@ export default function AdminPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="todos">Todos os status</SelectItem>
-                <SelectItem value="confirmado">Confirmado</SelectItem>
-                <SelectItem value="preparando">Em preparo</SelectItem>
-                <SelectItem value="pronto">Pronto</SelectItem>
-                <SelectItem value="entregue">Entregue</SelectItem>
+                <SelectItem value="pendente">{getDisplayText("pendente")}</SelectItem>
+                <SelectItem value="em preparo">{getDisplayText("em preparo")}</SelectItem>
+                <SelectItem value="entregue">{getDisplayText("entregue")}</SelectItem>
+                <SelectItem value="concluido">{getDisplayText("concluido")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -255,7 +266,7 @@ export default function AdminPage() {
               <p className="text-muted-foreground">
                 {filtroBusca || filtroStatus !== "todos"
                   ? "Tente ajustar os filtros para ver mais resultados."
-                  : "Não há pedidos em produção no momento."}
+                  : "Não há pedidos ativos no momento."}
               </p>
             </CardContent>
           </Card>
@@ -281,7 +292,7 @@ export default function AdminPage() {
                 <CardContent className="p-6">
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      {pedido.itens.map((item, idx) => (
+                      {Array.isArray(pedido.itens) && pedido.itens.map((item, idx) => (
                         <div key={idx} className="flex justify-between">
                           <div>
                             <span className="font-medium">
@@ -293,7 +304,7 @@ export default function AdminPage() {
                                 Obs: {item.observacoes}
                               </p>
                             )}
-                            {Array.isArray(item.produtoAdicionais) &&
+                            {item.produtoAdicionais && Array.isArray(item.produtoAdicionais) &&
                               item.produtoAdicionais.length > 0 && (
                                 <ul className="text-xs text-muted-foreground pl-6 mt-1">
                                   {item.produtoAdicionais.map((adicional) => (
@@ -323,58 +334,78 @@ export default function AdminPage() {
                       </span>
                     </div>
 
-                    <div className="flex gap-2 pt-4 border-t mt-4">
+                    <div className="space-y-2 pt-4 border-t mt-4">
+                      {/* Primeira linha: 3 botões principais */}
+                      <div className="flex gap-2">
+                        <Button
+                          variant={
+                            pedido.status === "pendente" ? "default" : "outline"
+                          }
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "pendente")
+                          }
+                          disabled={
+                            atualizandoStatus === pedido.pedidoId?.toString()
+                          }
+                        >
+                          {atualizandoStatus === pedido.pedidoId?.toString() ? (
+                            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          ) : (
+                            <StatusIcon status="confirmado" />
+                          )}
+                          {getDisplayText("pendente")}
+                        </Button>
+                        <Button
+                          variant={
+                            pedido.status === "em preparo" ? "default" : "outline"
+                          }
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "em preparo")
+                          }
+                          disabled={
+                            atualizandoStatus === pedido.pedidoId?.toString()
+                          }
+                        >
+                          <Coffee className="h-4 w-4 mr-1" />
+                          {getDisplayText("em preparo")}
+                        </Button>
+                        <Button
+                          variant={
+                            pedido.status === "entregue" ? "default" : "outline"
+                          }
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "entregue")
+                          }
+                          disabled={
+                            atualizandoStatus === pedido.pedidoId?.toString()
+                          }
+                        >
+                          <Send className="h-4 w-4 mr-1" />
+                          {getDisplayText("entregue")}
+                        </Button>
+                      </div>
+
+                      {/* Segunda linha: botão concluído ocupando toda a largura */}
                       <Button
                         variant={
-                          pedido.status === "confirmado" ? "default" : "outline"
+                          pedido.status === "concluido" ? "default" : "outline"
                         }
                         size="sm"
-                        className="flex-1"
+                        className="w-full"
                         onClick={() =>
-                          handleUpdateStatus(pedido.pedidoId!, "confirmado")
+                          pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "concluido")
                         }
                         disabled={
-                          atualizandoStatus === pedido.pedidoId.toString()
+                          atualizandoStatus === pedido.pedidoId?.toString()
                         }
                       >
-                        {atualizandoStatus === pedido.pedidoId.toString() ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                        ) : (
-                          <StatusIcon status="confirmado" />
-                        )}
-                        Confirmar
-                      </Button>
-                      <Button
-                        variant={
-                          pedido.status === "preparando" ? "default" : "outline"
-                        }
-                        size="sm"
-                        className="flex-1"
-                        onClick={() =>
-                          handleUpdateStatus(pedido.pedidoId!, "preparando")
-                        }
-                        disabled={
-                          atualizandoStatus === pedido.pedidoId.toString()
-                        }
-                      >
-                        <Coffee className="h-4 w-4 mr-1" />
-                        Preparar
-                      </Button>
-                      <Button
-                        variant={
-                          pedido.status === "pronto" ? "default" : "outline"
-                        }
-                        size="sm"
-                        className="flex-1"
-                        onClick={() =>
-                          handleUpdateStatus(pedido.pedidoId!, "pronto")
-                        }
-                        disabled={
-                          atualizandoStatus === pedido.pedidoId.toString()
-                        }
-                      >
-                        <Send className="h-4 w-4 mr-1" />
-                        Pronto
+                        {getDisplayText("concluido")}
                       </Button>
                     </div>
                   </div>

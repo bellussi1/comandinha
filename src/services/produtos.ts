@@ -8,7 +8,6 @@ import type { ProdutoCreate } from "@/src/types/services";
 import { processImageFile } from "@/src/utils/fileUtils";
 import api from "./api";
 
-
 /**
  * Busca produtos
  */
@@ -55,13 +54,17 @@ export const getProdutoById = async (id: string): Promise<Produto | null> => {
 /**
  * Criar novo produto
  */
-export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | null> => {
+export const criarProduto = async (
+  produto: ProdutoCreate
+): Promise<Produto | null> => {
   try {
     let imagemBase64 = produto.imagem;
 
     // Se imagem é um arquivo, converter para base64 string
     if (produto.imagem instanceof File) {
-      imagemBase64 = await processImageFile(produto.imagem, { convertToBase64: true });
+      imagemBase64 = await processImageFile(produto.imagem, {
+        convertToBase64: true,
+      });
     }
 
     // Se não há imagem, não incluir o campo
@@ -77,15 +80,13 @@ export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | nu
     };
 
     // Só incluir imagem se ela existir e for válida
-    if (imagemBase64 && typeof imagemBase64 === 'string' && imagemBase64.length > 0) {
+    if (
+      imagemBase64 &&
+      typeof imagemBase64 === "string" &&
+      imagemBase64.length > 0
+    ) {
       produtoData.imagemUrl = imagemBase64;
-      console.log("Incluindo imagem na requisição");
-    } else {
-      console.log("Nenhuma imagem válida para enviar");
     }
-
-    console.log("Dados que serão enviados:", { ...produtoData, imagemUrl: produtoData.imagemUrl ? '[BASE64_DATA]' : undefined });
-
     const response = await api.post(API_ENDPOINTS.PRODUTOS, produtoData);
     return mapearProdutoAPI(response.data);
   } catch (error) {
@@ -97,21 +98,29 @@ export const criarProduto = async (produto: ProdutoCreate): Promise<Produto | nu
 /**
  * Atualizar produto completo (PUT)
  */
-export const atualizarProduto = async (id: string, produto: ProdutoCreate): Promise<Produto | null> => {
+export const atualizarProduto = async (
+  id: string,
+  produto: ProdutoCreate
+): Promise<Produto | null> => {
   try {
     let imagemBase64 = produto.imagem;
 
     // Se imagem é um arquivo, converter para base64 string
     if (produto.imagem instanceof File) {
-      imagemBase64 = await processImageFile(produto.imagem, { convertToBase64: true });
+      imagemBase64 = await processImageFile(produto.imagem, {
+        convertToBase64: true,
+      });
     }
 
     const produtoData = {
       ...produto,
-      imagemUrl: imagemBase64 // Enviar como string base64 no campo imagem
+      imagemUrl: imagemBase64, // Enviar como string base64 no campo imagem
     };
 
-    const response = await api.put(`${API_ENDPOINTS.PRODUTOS}/${id}`, produtoData);
+    const response = await api.put(
+      `${API_ENDPOINTS.PRODUTOS}/${id}`,
+      produtoData
+    );
     return mapearProdutoAPI(response.data);
   } catch (error) {
     console.error("Erro ao atualizar produto:", error);
@@ -176,12 +185,12 @@ export const filtrarProdutos = async ({
  * Atualizar disponibilidade de um produto
  */
 export const atualizarDisponibilidadeProduto = async (
-  id: string, 
+  id: string,
   disponivel: boolean
 ): Promise<Produto | null> => {
   try {
     const response = await api.patch(`${API_ENDPOINTS.PRODUTOS}/${id}`, {
-      disponivel
+      disponivel,
     });
     return mapearProdutoAPI(response.data);
   } catch (error) {
