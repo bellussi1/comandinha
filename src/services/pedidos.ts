@@ -82,6 +82,15 @@ export const getPedidosPorMesaUuid = async (
   mesaUuid: string
 ): Promise<Pedido[]> => {
   try {
+    // Primeiro, buscar a mesa para obter o mesaId
+    const mesaResponse = await api.get(`${API_ENDPOINTS.MESAS}/uuid/${mesaUuid}`);
+    const mesa = mesaResponse.data;
+
+    if (!mesa || !mesa.id) {
+      console.error("Mesa não encontrada para UUID:", mesaUuid);
+      return [];
+    }
+
     // Buscar todos os produtos para ter acesso aos preços
     const produtosResponse = await api.get(`${API_ENDPOINTS.PRODUTOS}`);
     const produtos = produtosResponse.data;
@@ -96,9 +105,9 @@ export const getPedidosPorMesaUuid = async (
     const response = await api.get(`${API_ENDPOINTS.PEDIDOS}/producao`);
     const todosOsPedidos = response.data;
 
-    // Filtrar apenas os pedidos da mesa especificada por UUID
+    // Filtrar apenas os pedidos da mesa especificada usando mesaId
     const pedidosDaMesa = todosOsPedidos.filter(
-      (pedido: PedidoProducao) => pedido.mesaUuid === mesaUuid
+      (pedido: PedidoProducao) => pedido.mesaId === mesa.id
     );
 
     // Calcular valor total e mapear para o formato usado pela aplicação
