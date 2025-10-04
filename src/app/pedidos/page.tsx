@@ -527,18 +527,6 @@ export default function PedidosGlobalPage() {
                       >
                         {getDisplayText("entregue")}
                       </Button>
-                      <Button
-                        size="sm"
-                        variant={
-                          pedido.status === "concluido" ? "default" : "outline"
-                        }
-                        onClick={() =>
-                          handleUpdateStatus(pedido.id, "concluido")
-                        }
-                        disabled={pedido.status === "concluido"}
-                      >
-                        {getDisplayText("concluido")}
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
