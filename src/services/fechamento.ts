@@ -42,12 +42,22 @@ export const getMesasAtivas = async (): Promise<MesaFechamento[]> => {
           const pedidos = pedidosResponse.data;
 
           if (pedidos && pedidos.length > 0) {
-            // Calcula valores totais
-            const valorTotal = pedidos.reduce((total: number, pedido: any) => {
+            // Filtra pedidos concluídos - não considerar no cálculo
+            const pedidosNaoConcluidos = pedidos.filter(
+              (p: any) => p.status !== "concluido"
+            );
+
+            // Se só tem pedidos concluídos, não mostra a mesa
+            if (pedidosNaoConcluidos.length === 0) {
+              return;
+            }
+
+            // Calcula valores totais apenas com pedidos não concluídos
+            const valorTotal = pedidosNaoConcluidos.reduce((total: number, pedido: any) => {
               return total + (pedido.valor_total || 0);
             }, 0);
 
-            const pedidosAtivos = pedidos.filter(
+            const pedidosAtivos = pedidosNaoConcluidos.filter(
               (p: any) => p.status === "pendente" || p.status === "em preparo"
             ).length;
 
@@ -56,7 +66,7 @@ export const getMesasAtivas = async (): Promise<MesaFechamento[]> => {
               nome: mesa.nome,
               status: "em uso" as const,
               tempoOcupacao: 0,
-              totalPedidos: pedidos.length,
+              totalPedidos: pedidosNaoConcluidos.length,
               valorTotal,
               ultimaAtividade: new Date().toISOString(),
               pedidosAtivos,
@@ -146,13 +156,19 @@ export const getPedidosMesa = async (
 
 /**
  * Consolida itens de pedidos agrupando por produto
+ * Ignora pedidos com status "concluido"
  */
 export const consolidarItensPedidos = (
   pedidos: PedidoFechamento[]
 ): ItemConsolidado[] => {
   const itensMap = new Map<number, ItemConsolidado>();
 
-  pedidos.forEach((pedido) => {
+  // Filtra pedidos concluídos antes de processar
+  const pedidosNaoConcluidos = pedidos.filter(
+    (pedido) => pedido.status !== "concluido"
+  );
+
+  pedidosNaoConcluidos.forEach((pedido) => {
     pedido.itens.forEach((item) => {
       const produtoId = item.produtoId;
 
@@ -190,6 +206,7 @@ export const consolidarItensPedidos = (
 
 /**
  * Gera resumo financeiro completo de uma mesa
+ * Ignora pedidos com status "concluido"
  */
 export const gerarResumoFinanceiro = async (
   mesaId: number
@@ -202,12 +219,17 @@ export const gerarResumoFinanceiro = async (
     const mesa = mesaResponse.data;
 
     // Busca todos os pedidos da mesa
-    const pedidos = await getPedidosMesa(mesaId);
+    const todosPedidos = await getPedidosMesa(mesaId);
 
-    // Consolida itens por produto
+    // Filtra pedidos concluídos - não devem ser considerados no fechamento
+    const pedidos = todosPedidos.filter(
+      (pedido) => pedido.status !== "concluido"
+    );
+
+    // Consolida itens por produto (já filtra concluídos internamente)
     const itensConsolidados = consolidarItensPedidos(pedidos);
 
-    // Calcula totais
+    // Calcula totais apenas com pedidos não concluídos
     const subtotal = pedidos.reduce(
       (total, pedido) => total + pedido.valorTotal,
       0
@@ -365,6 +387,7 @@ export const fecharContaMesa = async (
 
 /**
  * Valida se uma mesa pode ser fechada
+ * Ignora pedidos concluídos na validação
  */
 export const validarFechamentoMesa = async (
   mesaId: number
@@ -374,8 +397,14 @@ export const validarFechamentoMesa = async (
   pedidosPendentes: number;
 }> => {
   try {
-    const pedidos = await getPedidosMesa(mesaId);
-    const pedidosPendentes = pedidos.filter(
+    const todosPedidos = await getPedidosMesa(mesaId);
+
+    // Filtra pedidos concluídos - não devem ser considerados
+    const pedidosNaoConcluidos = todosPedidos.filter(
+      (p) => p.status !== "concluido"
+    );
+
+    const pedidosPendentes = pedidosNaoConcluidos.filter(
       (p) => p.status === "pendente" || p.status === "em preparo"
     );
 
