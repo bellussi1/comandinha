@@ -4,6 +4,14 @@ import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/src/components/ui/dialog";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -14,13 +22,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/src/components/ui/alert-dialog";
+import { Separator } from "@/src/components/ui/separator";
 import { useToast } from "@/src/components/ui/use-toast";
-import { fecharContaMesa } from "@/src/services/fechamento";
+import { fecharContaMesa, gerarResumoFinanceiro } from "@/src/services/fechamento";
 import { formatarMoeda } from "@/src/utils/formatters";
-import { Clock, Receipt, Users, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
-import Link from "next/link";
-import { useState } from "react";
-import type { MesaFechamento, StatusMesa } from "@/src/types";
+import { Clock, Receipt, Users, AlertTriangle, CheckCircle, Loader2, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import type { MesaFechamento, StatusMesa, ResumoFinanceiroMesa } from "@/src/types";
 
 interface MesaCardProps {
   mesa: MesaFechamento;
@@ -77,6 +85,32 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
   const StatusIcon = statusConfig.icon;
   const { toast } = useToast();
   const [fechandoMesa, setFechandoMesa] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [resumo, setResumo] = useState<ResumoFinanceiroMesa | null>(null);
+  const [loadingResumo, setLoadingResumo] = useState(false);
+
+  const carregarResumo = async () => {
+    try {
+      setLoadingResumo(true);
+      const dadosResumo = await gerarResumoFinanceiro(mesa.id);
+      setResumo(dadosResumo);
+    } catch (error) {
+      console.error("Erro ao carregar resumo:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os detalhes da mesa.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingResumo(false);
+    }
+  };
+
+  useEffect(() => {
+    if (dialogOpen && !resumo) {
+      carregarResumo();
+    }
+  }, [dialogOpen]);
 
   const handleFecharMesa = async () => {
     try {
@@ -163,18 +197,189 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
         
         {/* Botões de ação */}
         <div className="flex gap-2 pt-2">
-          <Button 
-            asChild 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-          >
-            <Link href={`/admin/fechamento/mesa/${mesa.id}`}>
-              <Receipt className="h-4 w-4 mr-2" />
-              Ver Detalhes
-            </Link>
-          </Button>
-          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Ver Detalhes
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Detalhes da Conta - {mesa.nome}
+                </DialogTitle>
+                <DialogDescription>
+                  Resumo completo dos pedidos e valores
+                </DialogDescription>
+              </DialogHeader>
+
+              {loadingResumo ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : resumo ? (
+                <div className="space-y-6">
+                  {/* Cabeçalho estilo nota fiscal */}
+                  <div className="text-center border-b pb-4">
+                    <h3 className="font-bold text-lg">RESUMO DA CONTA</h3>
+                    <p className="text-sm text-muted-foreground">{mesa.nome}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date().toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+
+                  {/* Lista de itens consolidados */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm uppercase text-muted-foreground">
+                      Itens Consumidos
+                    </h4>
+                    <div className="space-y-2">
+                      {resumo.itensConsolidados.map((item) => (
+                        <div key={item.produtoId} className="flex justify-between items-start text-sm border-b pb-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{item.nome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.quantidadeTotal}x {formatarMoeda(item.precoUnitario)}
+                            </p>
+                            {item.observacoes.length > 0 && (
+                              <p className="text-xs text-orange-600 mt-1">
+                                Obs: {item.observacoes.join(', ')}
+                              </p>
+                            )}
+                          </div>
+                          <span className="font-semibold">
+                            {formatarMoeda(item.subtotal)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Detalhes de cada pedido */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-sm uppercase text-muted-foreground">
+                      Pedidos ({resumo.pedidos.length})
+                    </h4>
+                    {resumo.pedidos.map((pedido) => (
+                      <div key={pedido.pedidoId} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">Pedido #{pedido.pedidoId}</span>
+                            <Badge variant="outline" className="text-xs">{pedido.status}</Badge>
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(pedido.timestamp).toLocaleString('pt-BR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+
+                        {/* Produtos do pedido */}
+                        <div className="pl-3 space-y-1 border-l-2 border-muted">
+                          {pedido.itens.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-start text-sm">
+                              <div className="flex-1">
+                                <span className="text-muted-foreground">{item.quantidade}x</span>
+                                <span className="ml-1">{item.nome}</span>
+                                {item.observacoes && (
+                                  <p className="text-xs text-orange-600 ml-5">
+                                    Obs: {item.observacoes}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="text-right ml-2">
+                                <div className="font-medium">{formatarMoeda(item.subtotal)}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {formatarMoeda(item.precoUnitario)} un.
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {pedido.observacoesGerais && (
+                          <div className="text-xs bg-orange-50 text-orange-800 p-2 rounded">
+                            <span className="font-medium">Obs. Geral:</span> {pedido.observacoesGerais}
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <span className="text-sm font-medium">Total do Pedido:</span>
+                          <span className="font-bold">{formatarMoeda(pedido.valorTotal)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Separator />
+
+                  {/* Totais */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-medium">{formatarMoeda(resumo.subtotal)}</span>
+                    </div>
+
+                    {resumo.desconto > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Desconto:</span>
+                        <span>-{formatarMoeda(resumo.desconto)}</span>
+                      </div>
+                    )}
+
+                    {resumo.taxaServico > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Taxa de Serviço:</span>
+                        <span>+{formatarMoeda(resumo.taxaServico)}</span>
+                      </div>
+                    )}
+
+                    <Separator />
+
+                    <div className="flex justify-between items-center pt-2">
+                      <span className="text-lg font-bold">TOTAL:</span>
+                      <span className="text-2xl font-bold text-primary">
+                        {formatarMoeda(resumo.totalFinal)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Informações adicionais */}
+                  <div className="text-center text-xs text-muted-foreground border-t pt-4">
+                    <p>Total de itens únicos: {resumo.itensConsolidados.length}</p>
+                    <p>Total de pedidos: {resumo.pedidos.length}</p>
+                    {mesa.pedidosAtivos > 0 && (
+                      <p className="text-orange-600 font-medium mt-2">
+                        ⚠️ {mesa.pedidosAtivos} pedido(s) ainda em preparo
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Erro ao carregar detalhes
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
           {mesa.valorTotal > 0 && mesa.pedidosAtivos === 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>

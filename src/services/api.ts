@@ -33,6 +33,10 @@ api.interceptors.request.use((config) => {
       if (/^\/pedidos\/\d+\/status$/.test(url) && (method === "patch" || method === "put")) return true;
       if (url.includes("/pedidos/producao")) return true;
 
+      // Endpoints de mesas específicas (admin protegido para fechamento)
+      if (/^\/mesas\/\d+\/pedidos$/.test(url) && method === "get") return true; // Lista pedidos de uma mesa específica
+      if (/^\/mesas\/\d+\/status$/.test(url) && method === "get") return true; // Status da mesa
+
       // Outras rotas admin existentes
       if (url.includes("admin") && !url.includes("/auth/")) return true;
       if (url.includes("/categorias")) return true;
@@ -44,9 +48,8 @@ api.interceptors.request.use((config) => {
     // Função helper para verificar se é rota de mesa protegida
     const isMesaProtectedRoute = () => {
       if (url === "/mesas/validar") return true;
-      if (/^\/mesas\/\d+\/status$/.test(url)) return true;
       if (/^\/mesas\/\d+\/refresh$/.test(url)) return true;
-      if (/^\/mesas\/\d+\/pedidos$/.test(url)) return true;
+      // Nota: /mesas/{id}/status e /mesas/{id}/pedidos foram movidos para admin protegido
       return false;
     };
     
