@@ -25,9 +25,8 @@ import { useToast } from "@/src/components/ui/use-toast";
 import {
   confirmarPedido,
   iniciarPreparacaoPedido,
-  listarTodosPedidos,
+  listarPedidosProducao,
   marcarPedidoEntregue,
-  marcarPedidoConcluido,
 } from "@/src/services/admin";
 import { getDisplayText } from "@/src/services/fechamento";
 import { useAuth } from "@/src/services/auth";
@@ -64,11 +63,11 @@ export default function AdminPage() {
     try {
       setLoading(true);
       setError(null);
-      const pedidosData = await listarTodosPedidos();
+      const pedidosData = await listarPedidosProducao();
 
       // Garantir que sempre temos um array
       const pedidosArray = Array.isArray(pedidosData) ? pedidosData : [];
-   
+
       setPedidos(pedidosArray);
     } catch (error) {
       console.error("Erro ao carregar pedidos:", error);
@@ -121,9 +120,6 @@ export default function AdminPage() {
           break;
         case "entregue":
           sucesso = await marcarPedidoEntregue(pedidoId.toString());
-          break;
-        case "concluido":
-          sucesso = await marcarPedidoConcluido(pedidoId.toString());
           break;
         default:
           throw new Error(`Status não reconhecido: ${novoStatus}`);
@@ -233,7 +229,6 @@ export default function AdminPage() {
                 <SelectItem value="pendente">{getDisplayText("pendente")}</SelectItem>
                 <SelectItem value="em preparo">{getDisplayText("em preparo")}</SelectItem>
                 <SelectItem value="entregue">{getDisplayText("entregue")}</SelectItem>
-                <SelectItem value="concluido">{getDisplayText("concluido")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -334,15 +329,15 @@ export default function AdminPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-2 pt-4 border-t mt-4">
-                      {/* Primeira linha: 3 botões principais */}
-                      <div className="flex gap-2">
+                    <div className="pt-4 border-t mt-4">
+                      {/* Botões de status responsivos */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <Button
                           variant={
                             pedido.status === "pendente" ? "default" : "outline"
                           }
                           size="sm"
-                          className="flex-1"
+                          className="w-full"
                           onClick={() =>
                             pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "pendente")
                           }
@@ -355,14 +350,15 @@ export default function AdminPage() {
                           ) : (
                             <StatusIcon status="confirmado" />
                           )}
-                          {getDisplayText("pendente")}
+                          <span className="hidden sm:inline">{getDisplayText("pendente")}</span>
+                          <span className="sm:hidden">Pendente</span>
                         </Button>
                         <Button
                           variant={
                             pedido.status === "em preparo" ? "default" : "outline"
                           }
                           size="sm"
-                          className="flex-1"
+                          className="w-full"
                           onClick={() =>
                             pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "em preparo")
                           }
@@ -371,14 +367,15 @@ export default function AdminPage() {
                           }
                         >
                           <Coffee className="h-4 w-4 mr-1" />
-                          {getDisplayText("em preparo")}
+                          <span className="hidden sm:inline">{getDisplayText("em preparo")}</span>
+                          <span className="sm:hidden">Preparo</span>
                         </Button>
                         <Button
                           variant={
                             pedido.status === "entregue" ? "default" : "outline"
                           }
                           size="sm"
-                          className="flex-1"
+                          className="w-full"
                           onClick={() =>
                             pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "entregue")
                           }
@@ -387,26 +384,10 @@ export default function AdminPage() {
                           }
                         >
                           <Send className="h-4 w-4 mr-1" />
-                          {getDisplayText("entregue")}
+                          <span className="hidden sm:inline">{getDisplayText("entregue")}</span>
+                          <span className="sm:hidden">Entregue</span>
                         </Button>
                       </div>
-
-                      {/* Segunda linha: botão concluído ocupando toda a largura */}
-                      <Button
-                        variant={
-                          pedido.status === "concluido" ? "default" : "outline"
-                        }
-                        size="sm"
-                        className="w-full"
-                        onClick={() =>
-                          pedido.pedidoId && handleUpdateStatus(pedido.pedidoId, "concluido")
-                        }
-                        disabled={
-                          atualizandoStatus === pedido.pedidoId?.toString()
-                        }
-                      >
-                        {getDisplayText("concluido")}
-                      </Button>
                     </div>
                   </div>
                 </CardContent>

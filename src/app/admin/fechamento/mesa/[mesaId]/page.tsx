@@ -274,33 +274,39 @@ export default function MesaDetalhesPage() {
               <CardHeader>
                 <CardTitle>Histórico de Pedidos</CardTitle>
                 <CardDescription>
-                  Todos os pedidos feitos por esta mesa
+                  Pedidos ativos desta mesa (exceto concluídos)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {resumo.pedidos.map((pedido, index) => (
-                  <div key={pedido.pedidoId} className="border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">Pedido #{pedido.pedidoId}</span>
-                        <Badge variant="outline">{pedido.status}</Badge>
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {new Date(pedido.timestamp).toLocaleString()}
-                      </span>
-                    </div>
-                    
-                    <div className="text-sm text-muted-foreground mb-2">
-                      {pedido.itens.length} item(s) • {formatarMoeda(pedido.valorTotal)}
-                    </div>
-                    
-                    {pedido.observacoesGerais && (
-                      <p className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
-                        {pedido.observacoesGerais}
-                      </p>
-                    )}
+                {resumo.pedidos.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Nenhum pedido ativo encontrado
                   </div>
-                ))}
+                ) : (
+                  resumo.pedidos.map((pedido, index) => (
+                    <div key={pedido.pedidoId} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Pedido #{pedido.pedidoId}</span>
+                          <Badge variant="outline">{pedido.status}</Badge>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(pedido.timestamp).toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="text-sm text-muted-foreground mb-2">
+                        {pedido.itens.length} item(s) • {formatarMoeda(pedido.valorTotal)}
+                      </div>
+
+                      {pedido.observacoesGerais && (
+                        <p className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
+                          {pedido.observacoesGerais}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>

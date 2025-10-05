@@ -89,8 +89,11 @@ export const listarTodosPedidos = async (): Promise<PedidoProducao[]> => {
       pedidosArray = data.items;
     }
 
-    // Mapear todos os pedidos para garantir estrutura consistente
-    return pedidosArray.map(mapearPedido);
+    // Mapear todos os pedidos e filtrar pedidos concluídos
+    // Garantir que pedidos concluídos não apareçam no painel administrativo
+    return pedidosArray
+      .map(mapearPedido)
+      .filter(pedido => pedido.status !== "concluido");
   } catch (error) {
     console.error("Erro ao buscar pedidos ativos:", error);
 

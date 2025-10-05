@@ -194,24 +194,27 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Confirmar Fechamento</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tem certeza de que deseja fechar a conta da <strong>{mesa.nome}</strong>?
-                    <br />
-                    <br />
-                    <div className="bg-muted p-3 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span>Valor Total:</span>
-                        <span className="font-bold text-lg text-primary">
-                          {formatarMoeda(mesa.valorTotal)}
-                        </span>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-4">
+                      <p>
+                        Tem certeza de que deseja fechar a conta da <strong>{mesa.nome}</strong>?
+                      </p>
+                      <div className="bg-muted p-3 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span>Valor Total:</span>
+                          <span className="font-bold text-lg text-primary">
+                            {formatarMoeda(mesa.valorTotal)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center mt-1">
+                          <span>Total de Pedidos:</span>
+                          <span className="font-medium">{mesa.totalPedidos}</span>
+                        </div>
                       </div>
-                      <div className="flex justify-between items-center mt-1">
-                        <span>Total de Pedidos:</span>
-                        <span className="font-medium">{mesa.totalPedidos}</span>
-                      </div>
+                      <p>
+                        Esta ação não pode ser desfeita e a mesa será liberada para nova ocupação.
+                      </p>
                     </div>
-                    <br />
-                    Esta ação não pode ser desfeita e a mesa será liberada para nova ocupação.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

@@ -26,7 +26,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
 import api from "@/src/services/api";
-import { atualizarStatusPedido, getPedidosPorMesaUuid } from "@/src/services/pedidos";
+import { atualizarStatusPedido } from "@/src/services/pedidos";
 import { getDisplayText } from "@/src/services/fechamento";
 import type { Pedido } from "@/src/types";
 import {
@@ -61,25 +61,43 @@ export default function PedidosGlobalPage() {
         setLoading(true);
         setError(null);
 
-        // Buscar todas as mesas
-        const mesasResponse = await api.get("/mesas");
-        const mesas = mesasResponse.data;
+        // Buscar produtos para obter preços
+        const produtosResponse = await api.get("/produtos");
+        const produtos = produtosResponse.data;
 
-        const allPedidos: Pedido[] = [];
+        // Criar mapa de preços por nome do produto
+        const mapaProdutoPreco: Record<string, number> = {};
+        produtos.forEach((produto: any) => {
+          mapaProdutoPreco[produto.nome] = produto.preco;
+        });
 
-        // Para cada mesa, buscar os pedidos usando a função que filtra pelo ID da mesa
-        for (const mesa of mesas) {
-          try {
-            const pedidosDaMesa = await getPedidosPorMesaUuid(mesa.uuid);
-            
-            // Adicionar os pedidos encontrados ao array geral
-            if (pedidosDaMesa.length > 0) {
-              allPedidos.push(...pedidosDaMesa);
-            }
-          } catch (error) {
-            console.error(`Erro ao buscar pedidos da mesa ${mesa.id}:`, error);
-          }
-        }
+        // Buscar pedidos em produção (ignora pedidos concluídos)
+        const pedidosResponse = await api.get("/pedidos/producao");
+        const pedidosProducao = pedidosResponse.data;
+
+        // Mapear pedidos para o formato esperado
+        const allPedidos: Pedido[] = pedidosProducao.map((pedido: any) => {
+          // Mapear itens com preços
+          const itensComPreco = pedido.itens.map((item: any) => {
+            const precoUnitario = mapaProdutoPreco[item.produtoNome] || 0;
+            return {
+              produtoId: 0,
+              nome: item.produtoNome,
+              quantidade: item.quantidade,
+              preco: precoUnitario,
+              observacoes: item.observacoes,
+            };
+          });
+
+          return {
+            id: pedido.pedidoId.toString(),
+            mesa: pedido.mesaNome || `Mesa ${pedido.mesaId}`,
+            itens: itensComPreco,
+            status: pedido.status,
+            timestamp: new Date(pedido.timestamp).getTime(),
+            observacoesGerais: pedido.observacoesGerais,
+          };
+        });
 
         // Ordenar por timestamp (mais recente primeiro)
         allPedidos.sort((a, b) => b.timestamp - a.timestamp);
