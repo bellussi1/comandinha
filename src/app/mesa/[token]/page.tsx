@@ -275,11 +275,12 @@ export default function MenuPage() {
               size="icon"
               className="rounded-full"
               asChild
+              aria-label="Ver pedidos"
             >
               <Link
                 href={`/mesa/${typeof token === "string" ? token : ""}/pedidos`}
               >
-                <Receipt className="h-5 w-5" />
+                <Receipt className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">Ver pedidos</span>
               </Link>
             </Button>
@@ -291,9 +292,9 @@ export default function MenuPage() {
                 className="rounded-full"
                 onClick={handleCancelarChamado}
                 disabled={cancelandoChamado}
-                title="Cancelar chamado"
+                aria-label="Cancelar chamado do garçom"
               >
-                <Hand className="h-5 w-5" />
+                <Hand className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">Cancelar chamado</span>
               </Button>
             ) : (
@@ -302,9 +303,9 @@ export default function MenuPage() {
                 size="icon"
                 className="rounded-full"
                 onClick={() => setModalChamarGarcomAberto(true)}
-                title="Chamar garçom"
+                aria-label="Chamar garçom"
               >
-                <Hand className="h-5 w-5" />
+                <Hand className="h-5 w-5" aria-hidden="true" />
                 <span className="sr-only">Chamar garçom</span>
               </Button>
             )}
@@ -316,15 +317,16 @@ export default function MenuPage() {
               size="icon"
               className="rounded-full relative"
               asChild
+              aria-label={`Ver carrinho com ${totalItensCarrinho} ${totalItensCarrinho === 1 ? 'item' : 'itens'}`}
             >
               <Link
                 href={`/mesa/${
                   typeof token === "string" ? token : ""
                 }/carrinho`}
               >
-                <ShoppingCart className="h-5 w-5" />
+                <ShoppingCart className="h-5 w-5" aria-hidden="true" />
                 {totalItensCarrinho > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0">
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0" aria-hidden="true">
                     {totalItensCarrinho}
                   </Badge>
                 )}
@@ -345,7 +347,7 @@ export default function MenuPage() {
             }
           >
             <TabsList className="w-full overflow-x-auto flex justify-start p-1 h-auto">
-              <TabsTrigger value="todos" className="px-3 py-1.5">
+              <TabsTrigger value="todos" className="px-3 py-1.5"  aria-label="Todos" >
                 Todos
               </TabsTrigger>
               {categorias.map((categoria) => (
@@ -371,11 +373,12 @@ export default function MenuPage() {
             size="sm"
             className="gap-1"
             onClick={() => setModalFiltrosAberto(true)}
+            aria-label={temFiltrosAtivos ? `Filtros (${quantidadeFiltros} ativo${quantidadeFiltros > 1 ? 's' : ''})` : 'Abrir filtros'}
           >
-            <Filter className="h-4 w-4" />
+            <Filter className="h-4 w-4" aria-hidden="true" />
             Filtros
             {temFiltrosAtivos && (
-              <Badge className="ml-1 h-5 w-5 flex items-center justify-center p-0">
+              <Badge className="ml-1 h-5 w-5 flex items-center justify-center p-0" aria-hidden="true">
                 {quantidadeFiltros}
               </Badge>
             )}
