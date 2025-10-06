@@ -10,9 +10,10 @@ import { DIETARY_RESTRICTIONS_CONFIG } from "@/src/constants/dietaryRestrictions
 interface ProdutoCardProps {
   produto: Produto;
   onSelect: (produto: Produto) => void;
+  priority?: boolean;
 }
 
-function ProdutoCardComponent({ produto, onSelect }: ProdutoCardProps) {
+function ProdutoCardComponent({ produto, onSelect, priority = false }: ProdutoCardProps) {
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
@@ -33,9 +34,13 @@ function ProdutoCardComponent({ produto, onSelect }: ProdutoCardProps) {
           alt={`Imagem de ${produto.nome}`}
           className="absolute inset-0 w-full h-full object-cover"
           fill
+          priority={priority}
+          quality={priority ? 85 : 75}
+          width={400}
+          height={300}
         />
         {produto.popular && (
-          <Badge className="absolute top-2 right-2 bg-primary text-primary-foreground shadow-md" aria-label="Produto popular">
+          <Badge className="absolute top-2 right-2 bg-yellow-500 text-black font-semibold shadow-md" aria-label="Produto popular">
             <Star className="h-3 w-3 mr-1 fill-current" aria-hidden="true" /> Popular
           </Badge>
         )}
@@ -83,6 +88,7 @@ export const ProdutoCard = React.memo(ProdutoCardComponent, (prevProps, nextProp
     prevProps.produto.nome === nextProps.produto.nome &&
     prevProps.produto.preco === nextProps.produto.preco &&
     prevProps.produto.disponivel === nextProps.produto.disponivel &&
+    prevProps.priority === nextProps.priority &&
     prevProps.onSelect === nextProps.onSelect
   );
 });

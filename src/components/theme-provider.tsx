@@ -2,8 +2,9 @@
 
 import type { ThemeProviderProps } from "next-themes";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { memo } from "react";
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+function ThemeProviderComponent({ children, ...props }: ThemeProviderProps) {
   return (
     <NextThemesProvider
       attribute="class"
@@ -16,3 +17,5 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     </NextThemesProvider>
   );
 }
+
+export const ThemeProvider = memo(ThemeProviderComponent);

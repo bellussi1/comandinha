@@ -1,7 +1,6 @@
 "use client";
 
-import { ModalFiltros, ModalProduto, ProdutoCard } from "@/src/components/menu";
-import { ModalChamarGarcom } from "@/src/components/chamado";
+import { ProdutoCard } from "@/src/components/menu";
 import { ThemeToggle } from "@/src/components/theme-toggle";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
@@ -29,7 +28,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, lazy, Suspense, startTransition, useDeferredValue } from "react";
+
+const ModalFiltros = lazy(() => import("@/src/components/menu").then(mod => ({ default: mod.ModalFiltros })));
+const ModalProduto = lazy(() => import("@/src/components/menu").then(mod => ({ default: mod.ModalProduto })));
+const ModalChamarGarcom = lazy(() => import("@/src/components/chamado").then(mod => ({ default: mod.ModalChamarGarcom })));
 
 export default function MenuPage() {
   const params = useParams();
@@ -57,6 +60,10 @@ export default function MenuPage() {
   const [filtrosAtivos, setFiltrosAtivos] = useState<string[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Usar deferred value para evitar bloqueio da UI durante filtragem
+  const deferredProdutos = useDeferredValue(produtos);
+  const deferredFiltros = useDeferredValue(filtrosAtivos);
 
   // Carregar dados da mesa
   useEffect(() => {
@@ -169,12 +176,16 @@ export default function MenuPage() {
   };
 
   const limparFiltros = () => {
-    setFiltrosAtivos([]);
-    setCategoriaAtiva(0);
+    startTransition(() => {
+      setFiltrosAtivos([]);
+      setCategoriaAtiva(0);
+    });
   };
 
   const aplicarFiltros = (filtros: string[]) => {
-    setFiltrosAtivos(filtros);
+    startTransition(() => {
+      setFiltrosAtivos(filtros);
+    });
   };
 
   const handleChamarGarcom = async () => {
@@ -230,16 +241,17 @@ export default function MenuPage() {
   const quantidadeFiltros = filtrosAtivos.length;
 
   // Organizar produtos por categoria quando "Todos" está selecionado
+  // Usar deferredProdutos para evitar bloqueio durante filtragem
   const produtosOrganizados = useMemo(() => {
     if (categoriaAtiva !== 0) {
       // Quando uma categoria específica está selecionada, apenas retornar os produtos
-      return [{ categoria: null, produtos }];
+      return [{ categoria: null, produtos: deferredProdutos }];
     }
 
     // Quando "Todos" está selecionado, agrupar por categoria na ordem das categorias
     const produtosPorCategoria = new Map<string, Produto[]>();
-    
-    produtos.forEach((produto) => {
+
+    deferredProdutos.forEach((produto) => {
       // produto.categoria é o ID da categoria como string
       if (!produtosPorCategoria.has(produto.categoria)) {
         produtosPorCategoria.set(produto.categoria, []);
@@ -257,7 +269,7 @@ export default function MenuPage() {
         categoria,
         produtos: produtosPorCategoria.get(categoria.id.toString()) || []
       }));
-  }, [produtos, categoriaAtiva, categorias]);
+  }, [deferredProdutos, categoriaAtiva, categorias]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -413,13 +425,18 @@ export default function MenuPage() {
                   </h3>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {grupo.produtos.map((produto) => (
-                    <ProdutoCard
-                      key={produto.id}
-                      produto={produto}
-                      onSelect={abrirModalProduto}
-                    />
-                  ))}
+                  {grupo.produtos.map((produto, produtoIndex) => {
+                    // Priorizar as primeiras 6 imagens da primeira categoria
+                    const isPriority = index === 0 && produtoIndex < 6;
+                    return (
+                      <ProdutoCard
+                        key={produto.id}
+                        produto={produto}
+                        onSelect={abrirModalProduto}
+                        priority={isPriority}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             ))}
@@ -428,26 +445,32 @@ export default function MenuPage() {
       </main>
 
       {/* Modals */}
-      <ModalFiltros
-        isOpen={modalFiltrosAberto}
-        onClose={() => setModalFiltrosAberto(false)}
-        filtrosAtivos={filtrosAtivos}
-        onAplicarFiltros={aplicarFiltros}
-      />
+      <Suspense fallback={null}>
+        <ModalFiltros
+          isOpen={modalFiltrosAberto}
+          onClose={() => setModalFiltrosAberto(false)}
+          filtrosAtivos={filtrosAtivos}
+          onAplicarFiltros={aplicarFiltros}
+        />
+      </Suspense>
 
-      <ModalProduto
-        produto={produtoSelecionado}
-        isOpen={modalProdutoAberto}
-        onClose={fecharModalProduto}
-        onAddToCart={adicionarAoCarrinho}
-      />
+      <Suspense fallback={null}>
+        <ModalProduto
+          produto={produtoSelecionado}
+          isOpen={modalProdutoAberto}
+          onClose={fecharModalProduto}
+          onAddToCart={adicionarAoCarrinho}
+        />
+      </Suspense>
 
-      <ModalChamarGarcom
-        isOpen={modalChamarGarcomAberto}
-        onConfirm={handleChamarGarcom}
-        onCancel={() => setModalChamarGarcomAberto(false)}
-        loading={criandoChamado}
-      />
+      <Suspense fallback={null}>
+        <ModalChamarGarcom
+          isOpen={modalChamarGarcomAberto}
+          onConfirm={handleChamarGarcom}
+          onCancel={() => setModalChamarGarcomAberto(false)}
+          loading={criandoChamado}
+        />
+      </Suspense>
 
       {/* Botão flutuante do carrinho */}
       {carrinho.length > 0 && (
