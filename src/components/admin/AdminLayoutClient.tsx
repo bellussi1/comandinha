@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
+import { ChamadosNotificacao } from "@/src/components/chamado";
 import { useAuth } from "@/src/services/auth";
 import { Button } from "@/src/components/ui/button";
 import { Menu } from "lucide-react";
@@ -62,6 +63,9 @@ function AdminLayoutClientComponent({ children }: AdminLayoutClientProps) {
   // When authenticated, render with sidebar
   return (
     <div className="flex h-screen bg-background relative">
+      {/* Notificações de chamados */}
+      <ChamadosNotificacao />
+
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Button
@@ -75,19 +79,19 @@ function AdminLayoutClientComponent({ children }: AdminLayoutClientProps) {
       </div>
 
       {/* Sidebar */}
-      <AdminSidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)} 
+      <AdminSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
-      
+
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      
+
       {/* Main content */}
       <main className="flex-1 overflow-auto lg:ml-0">
         <div className="lg:hidden h-16" /> {/* Space for mobile menu button */}

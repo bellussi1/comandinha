@@ -1,12 +1,14 @@
 "use client";
 
 import { ModalFiltros, ModalProduto, ProdutoCard } from "@/src/components/menu";
+import { ModalChamarGarcom } from "@/src/components/chamado";
 import { ThemeToggle } from "@/src/components/theme-toggle";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/src/components/ui/tabs";
 import { Toaster } from "@/src/components/ui/toaster";
 import { useToast } from "@/src/components/ui/use-toast";
+import { useChamado } from "@/src/contexts/ChamadoContext";
 import { adicionarItem, getCarrinho } from "@/src/services/carrinho";
 import { getCategorias } from "@/src/services/categoria";
 import { getMesaPorUuid, Mesa } from "@/src/services/mesa";
@@ -20,6 +22,7 @@ import { formatarMoeda } from "@/src/utils/formatters";
 import {
   ChevronRight,
   Filter,
+  Hand,
   Loader2,
   Receipt,
   ShoppingCart,
@@ -33,6 +36,13 @@ export default function MenuPage() {
   const router = useRouter();
   const { token } = params;
   const { toast } = useToast();
+  const {
+    chamadoAtivo,
+    criandoChamado,
+    cancelandoChamado,
+    criarChamado,
+    cancelarChamado,
+  } = useChamado();
 
   const [mesa, setMesa] = useState<Mesa | null>(null);
   const [carrinho, setCarrinho] = useState<ItemCarrinho[]>([]);
@@ -43,6 +53,7 @@ export default function MenuPage() {
   const [categoriaAtiva, setCategoriaAtiva] = useState<number>(0);
   const [modalProdutoAberto, setModalProdutoAberto] = useState(false);
   const [modalFiltrosAberto, setModalFiltrosAberto] = useState(false);
+  const [modalChamarGarcomAberto, setModalChamarGarcomAberto] = useState(false);
   const [filtrosAtivos, setFiltrosAtivos] = useState<string[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,6 +177,43 @@ export default function MenuPage() {
     setFiltrosAtivos(filtros);
   };
 
+  const handleChamarGarcom = async () => {
+    if (!mesa) return;
+
+    try {
+      await criarChamado(mesa.id.toString());
+      setModalChamarGarcomAberto(false);
+      toast({
+        title: "Garçom chamado!",
+        description: "O garçom foi notificado e virá até sua mesa em breve.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao chamar garçom",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelarChamado = async () => {
+    if (!chamadoAtivo || !mesa) return;
+
+    try {
+      await cancelarChamado(chamadoAtivo.id, mesa.id.toString());
+      toast({
+        title: "Chamado cancelado",
+        description: "O chamado foi cancelado com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao cancelar chamado",
+        description: "Tente novamente em alguns instantes.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Cálculos do carrinho
   const totalItensCarrinho = useMemo(
     () => carrinho.reduce((total, item) => total + item.quantidade, 0),
@@ -235,6 +283,31 @@ export default function MenuPage() {
                 <span className="sr-only">Ver pedidos</span>
               </Link>
             </Button>
+
+            {chamadoAtivo ? (
+              <Button
+                variant="default"
+                size="icon"
+                className="rounded-full"
+                onClick={handleCancelarChamado}
+                disabled={cancelandoChamado}
+                title="Cancelar chamado"
+              >
+                <Hand className="h-5 w-5" />
+                <span className="sr-only">Cancelar chamado</span>
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full"
+                onClick={() => setModalChamarGarcomAberto(true)}
+                title="Chamar garçom"
+              >
+                <Hand className="h-5 w-5" />
+                <span className="sr-only">Chamar garçom</span>
+              </Button>
+            )}
 
             <ThemeToggle />
 
@@ -364,6 +437,13 @@ export default function MenuPage() {
         isOpen={modalProdutoAberto}
         onClose={fecharModalProduto}
         onAddToCart={adicionarAoCarrinho}
+      />
+
+      <ModalChamarGarcom
+        isOpen={modalChamarGarcomAberto}
+        onConfirm={handleChamarGarcom}
+        onCancel={() => setModalChamarGarcomAberto(false)}
+        loading={criandoChamado}
       />
 
       {/* Botão flutuante do carrinho */}

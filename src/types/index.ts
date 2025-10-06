@@ -150,8 +150,30 @@ export interface PedidoProducao {
   itens: ItemPedidoProducao[];
 }
 
+// Tipos para Chamados
+export interface Chamado {
+  id: number;
+  mesaUuid: string;
+  mesaNome?: string;
+  status: "pendente" | "atendido" | "cancelado";
+  criadoEm: string;
+  atualizadoEm?: string;
+}
+
+export interface CriarChamadoRequest {
+  mesa_uuid: string;
+}
+
+export interface ChamadoResponse {
+  id: number;
+  mesa_uuid: string;
+  status: string;
+  criado_em: string;
+  atualizado_em?: string;
+}
+
 // Re-export auth types
 export * from "./auth";
 
-// Re-export fechamento types  
+// Re-export fechamento types
 export * from "./fechamento";

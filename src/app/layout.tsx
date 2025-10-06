@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import type React from "react";
 import { ThemeProvider } from "../components/theme-provider";
 import { Toaster } from "../components/ui/toaster";
+import { ChamadoProvider } from "../contexts/ChamadoContext";
 import "./globals.css";
 import { roboto } from "../lib/fonts";
 
@@ -20,8 +21,10 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={roboto.className}>
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <ChamadoProvider>
+            {children}
+            <Toaster />
+          </ChamadoProvider>
         </ThemeProvider>
       </body>
     </html>

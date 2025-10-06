@@ -4,15 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/src/lib/utils";
 import { Button } from "@/src/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Package, 
-  Tag, 
+import {
+  LayoutDashboard,
+  Package,
+  Tag,
   LogOut,
   Settings,
   Calculator,
   X,
-  Table
+  Table,
+  Hand
 } from "lucide-react";
 import { useAuth } from "@/src/services/auth";
 import { useRouter } from "next/navigation";
@@ -30,17 +31,22 @@ const navigation = [
     icon: Table,
   },
   {
+    name: "Chamados",
+    href: "/admin/chamados",
+    icon: Hand,
+  },
+  {
     name: "Produtos",
     href: "/admin/produtos",
     icon: Package,
   },
   {
-    name: "Categorias", 
+    name: "Categorias",
     href: "/admin/categorias",
     icon: Tag,
   },
   {
-    name: "Fechamento", 
+    name: "Fechamento",
     href: "/admin/fechamento",
     icon: Calculator,
   },

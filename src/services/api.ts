@@ -33,6 +33,11 @@ api.interceptors.request.use((config) => {
       if (/^\/pedidos\/\d+\/status$/.test(url) && (method === "patch" || method === "put")) return true;
       if (url.includes("/pedidos/producao")) return true;
 
+      // Endpoints de chamados (admin protegido para listagem e atender)
+      if (url.startsWith("/chamadas/historico") && method === "get") return true;
+      if (url.startsWith("/chamadas/pendentes") && method === "get") return true;
+      if (/^\/chamadas\/\d+\/atender/.test(url) && method === "patch") return true;
+
       // Endpoints de mesas específicas (admin protegido para fechamento)
       if (/^\/mesas\/\d+\/pedidos$/.test(url) && method === "get") return true; // Lista pedidos de uma mesa específica
       if (/^\/mesas\/\d+\/status$/.test(url) && method === "get") return true; // Status da mesa
@@ -53,13 +58,19 @@ api.interceptors.request.use((config) => {
       return false;
     };
     
-    // Função helper para verificar se é rota pública
+    // Função helper para verificar se é rota pública ou de mesa (sem admin)
     const isPublicRoute = () => {
       if (url === "/mesas/ativar" && method === "post") return true;
       if (/^\/mesas\/uuid\/[^\/]+$/.test(url)) return true;
       if (/^\/mesas\/uuid\/[^\/]+\/ativar$/.test(url)) return true;
       if (/^\/mesas\/uuid\/[^\/]+\/validar$/.test(url)) return true;
       if (url.includes("/auth/")) return true;
+
+      // Endpoints de chamados que usam mesa_uuid (não admin)
+      if (url === "/chamadas" && method === "post") return true; // Criar chamado
+      if (/^\/chamadas\/\d+\/cancelar$/.test(url) && method === "patch") return true; // Cancelar chamado
+      if (/^\/mesas\/uuid\/[^\/]+\/chamadas$/.test(url) && method === "get") return true; // Histórico da mesa
+
       return false;
     };
     
