@@ -16,7 +16,9 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(FORCE=true npx shadcn@latest add switch)",
-      "Bash(npm uninstall:*)"
+      "Bash(npm uninstall:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:*)"
     ],
     "deny": [],
     "ask": []
