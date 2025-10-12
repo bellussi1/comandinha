@@ -147,8 +147,7 @@ export function ImageUpload({
                     alt="Preview"
                     className="max-w-full w-[200px] h-32 object-cover rounded-md"
                     onError={(e) => {
-                      console.error('Failed to load image:', previewUrl);
-                      e.currentTarget.src = '/placeholder-image.png'; // Fallback to placeholder
+                      e.currentTarget.src = '/placeholder.svg'; // Fallback to placeholder
                       e.currentTarget.onerror = null; // Prevent infinite loop
                     }}
                   />
