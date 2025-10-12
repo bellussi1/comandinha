@@ -54,7 +54,7 @@ export const getMesasAtivas = async (): Promise<MesaFechamento[]> => {
 
             // Calcula valores totais apenas com pedidos não concluídos
             const valorTotal = pedidosNaoConcluidos.reduce((total: number, pedido: any) => {
-              return total + (pedido.valor_total || 0);
+              return total + (pedido.valorTotal || 0);
             }, 0);
 
             const pedidosAtivos = pedidosNaoConcluidos.filter(
@@ -129,24 +129,40 @@ export const getPedidosMesa = async (
     // Como a API agora suporta filtros nativamente, não precisamos filtrar no frontend
     let pedidos = response.data;
 
+    // Buscar todos os produtos para ter acesso aos preços
+    const produtosResponse = await api.get(`${API_ENDPOINTS.PRODUTOS}`);
+    const produtos = produtosResponse.data;
+
+    // Criar um mapa de nome do produto para seu preço
+    const mapaProdutoPreco: Record<string, number> = {};
+    produtos.forEach((produto: any) => {
+      mapaProdutoPreco[produto.nome] = produto.preco;
+    });
+
     return pedidos.map((pedido: any) => ({
-      pedidoId: pedido.id,
+      pedidoId: pedido.pedidoId,
       mesaId: mesaId,
       timestamp: pedido.timestamp,
       status:
-        pedido.status || STATUS_PEDIDO_MAP[pedido.status_id] || "desconhecido",
-      status_id: pedido.status_id || 1,
-      valorTotal: pedido.valor_total || 0,
-      estimativaEntrega: pedido.estimativa_entrega || "",
-      observacoesGerais: pedido.observacoes_gerais,
-      itens: (pedido.itens || []).map((item: any) => ({
-        produtoId: item.produto_id,
-        nome: item.produto?.nome || "Produto não encontrado",
-        quantidade: item.quantidade,
-        precoUnitario: item.preco_unitario || 0,
-        subtotal: item.subtotal || item.quantidade * (item.preco_unitario || 0),
-        observacoes: item.observacoes,
-      })),
+        pedido.status || STATUS_PEDIDO_MAP[pedido.statusId] || "desconhecido",
+      status_id: pedido.statusId || 1,
+      valorTotal: pedido.valorTotal || 0,
+      estimativaEntrega: pedido.estimativaEntrega || "",
+      observacoesGerais: pedido.observacoesGerais,
+      itens: (pedido.itens || []).map((item: any) => {
+        // Encontrar preço do produto no mapa usando o nome
+        const precoUnitario = mapaProdutoPreco[item.produtoNome] || 0;
+        const subtotal = precoUnitario * item.quantidade;
+
+        return {
+          produtoId: 0, // API não retorna produtoId neste endpoint
+          nome: item.produtoNome || "Produto não encontrado",
+          quantidade: item.quantidade,
+          precoUnitario: precoUnitario,
+          subtotal: subtotal,
+          observacoes: item.observacoes,
+        };
+      }),
     }));
   } catch (error) {
     console.error(`Erro ao buscar pedidos da mesa ${mesaId}:`, error);

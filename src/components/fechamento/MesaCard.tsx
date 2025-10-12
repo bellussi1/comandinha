@@ -240,35 +240,6 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
                     </p>
                   </div>
 
-                  {/* Lista de itens consolidados */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-sm uppercase text-muted-foreground">
-                      Itens Consumidos
-                    </h4>
-                    <div className="space-y-2">
-                      {resumo.itensConsolidados.map((item, index) => (
-                        <div key={`item-${item.produtoId}-${index}`} className="flex justify-between items-start text-sm border-b pb-2">
-                          <div className="flex-1">
-                            <p className="font-medium">{item.nome}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.quantidadeTotal}x {formatarMoeda(item.precoUnitario)}
-                            </p>
-                            {item.observacoes.length > 0 && (
-                              <p className="text-xs text-orange-600 mt-1">
-                                Obs: {item.observacoes.join(', ')}
-                              </p>
-                            )}
-                          </div>
-                          <span className="font-semibold">
-                            {formatarMoeda(item.subtotal)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <Separator />
-
                   {/* Detalhes de cada pedido */}
                   <div className="space-y-3">
                     <h4 className="font-semibold text-sm uppercase text-muted-foreground">
@@ -279,8 +250,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-sm">Pedido #{pedido.pedidoId}</span>
-                            <Badge variant="outline" className="text-xs">{pedido.status}</Badge>
-                          </div>
+                              </div>
                           <span className="text-xs text-muted-foreground">
                             {new Date(pedido.timestamp).toLocaleString('pt-BR', {
                               day: '2-digit',
