@@ -61,7 +61,7 @@ const getStatusConfig = (status: StatusMesa) => {
       icon: AlertTriangle
     }
   };
-  
+
   return configs[status] || configs["em uso"];
 };
 
@@ -69,14 +69,14 @@ const formatarTempo = (minutos: number): string => {
   if (minutos < 60) {
     return `${minutos}min`;
   }
-  
+
   const horas = Math.floor(minutos / 60);
   const mins = minutos % 60;
-  
+
   if (mins === 0) {
     return `${horas}h`;
   }
-  
+
   return `${horas}h ${mins}min`;
 };
 
@@ -110,12 +110,12 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
     if (dialogOpen && !resumo) {
       carregarResumo();
     }
-  }, [dialogOpen]);
+  }, [dialogOpen, resumo]);
 
   const handleFecharMesa = async () => {
     try {
       setFechandoMesa(true);
-      
+
       await fecharContaMesa(mesa.id, {
         metodo_pagamento: 'dinheiro'
       });
@@ -127,7 +127,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
 
       // Callback para atualizar a lista
       onMesaFechada?.();
-      
+
     } catch (error) {
       console.error("Erro ao fechar mesa:", error);
       const errorMessage = (error as Error).message || "Não foi possível fechar a conta da mesa. Tente novamente.";
@@ -140,13 +140,13 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
       setFechandoMesa(false);
     }
   };
-  
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <div 
+            <div
               className={`w-3 h-3 rounded-full ${statusConfig.color}`}
               aria-label={`Status: ${statusConfig.label}`}
             />
@@ -158,7 +158,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
           </Badge>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
         {/* Informações principais */}
         <div className="grid grid-cols-2 gap-4 text-sm">
@@ -167,7 +167,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
             <span className="text-muted-foreground">Pedidos:</span>
             <span className="font-medium">{mesa.totalPedidos}</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">Tempo:</span>
@@ -176,7 +176,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
             </span>
           </div>
         </div>
-        
+
         {/* Alertas */}
         {mesa.pedidosAtivos > 0 && (
           <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg text-orange-800 text-sm">
@@ -184,7 +184,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
             <span>{mesa.pedidosAtivos} pedido(s) em preparo</span>
           </div>
         )}
-        
+
         {/* Valor total */}
         <div className="border-t pt-3">
           <div className="flex items-center justify-between">
@@ -194,7 +194,7 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
             </span>
           </div>
         </div>
-        
+
         {/* Botões de ação */}
         <div className="flex gap-2 pt-2">
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -246,8 +246,8 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
                       Itens Consumidos
                     </h4>
                     <div className="space-y-2">
-                      {resumo.itensConsolidados.map((item) => (
-                        <div key={item.produtoId} className="flex justify-between items-start text-sm border-b pb-2">
+                      {resumo.itensConsolidados.map((item, index) => (
+                        <div key={`item-${item.produtoId}-${index}`} className="flex justify-between items-start text-sm border-b pb-2">
                           <div className="flex-1">
                             <p className="font-medium">{item.nome}</p>
                             <p className="text-xs text-muted-foreground">
@@ -274,8 +274,8 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
                     <h4 className="font-semibold text-sm uppercase text-muted-foreground">
                       Pedidos ({resumo.pedidos.length})
                     </h4>
-                    {resumo.pedidos.map((pedido) => (
-                      <div key={pedido.pedidoId} className="border rounded-lg p-3 space-y-2">
+                    {resumo.pedidos.map((pedido, pedidoIndex) => (
+                      <div key={`pedido-${pedido.pedidoId}-${pedidoIndex}`} className="border rounded-lg p-3 space-y-2">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-sm">Pedido #{pedido.pedidoId}</span>
@@ -293,8 +293,8 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
 
                         {/* Produtos do pedido */}
                         <div className="pl-3 space-y-1 border-l-2 border-muted">
-                          {pedido.itens.map((item, idx) => (
-                            <div key={idx} className="flex justify-between items-start text-sm">
+                          {pedido.itens.map((item, itemIndex) => (
+                            <div key={`pedido-${pedido.pedidoId}-item-${itemIndex}`} className="flex justify-between items-start text-sm">
                               <div className="flex-1">
                                 <span className="text-muted-foreground">{item.quantidade}x</span>
                                 <span className="ml-1">{item.nome}</span>
@@ -383,8 +383,8 @@ export function MesaCard({ mesa, onMesaFechada }: MesaCardProps) {
           {mesa.valorTotal > 0 && mesa.pedidosAtivos === 0 && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   disabled={fechandoMesa}
                 >
