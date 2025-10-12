@@ -20,7 +20,7 @@ export interface PedidoFechamento {
   status: string;
   status_id: number;
   valorTotal: number;
-  estimativaEntrega: string;
+  estimativaEntrega: string; // Mantido para compatibilidade com API, mas não exibido no frontend
   observacoesGerais?: string | null;
   itens: ItemPedidoFechamento[];
 }

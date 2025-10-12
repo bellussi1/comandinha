@@ -80,7 +80,6 @@ interface ProdutoFormData {
   imagem: string | File;
   disponivel: boolean;
   popular: boolean;
-  tempoPreparo: number;
   restricoes: string[];
 }
 
@@ -92,7 +91,6 @@ const defaultFormData: ProdutoFormData = {
   imagem: "",
   disponivel: true,
   popular: false,
-  tempoPreparo: 0,
   restricoes: [],
 };
 
@@ -185,12 +183,11 @@ export default function ProdutosPage() {
         descricao: formData.descricao.trim() || undefined,
         preco: formData.preco,
         categoriaId: formData.categoriaId,
-        imagem: formData.imagem instanceof File 
-          ? formData.imagem 
+        imagem: formData.imagem instanceof File
+          ? formData.imagem
           : (typeof formData.imagem === 'string' && formData.imagem.trimEnd()) || undefined,
         disponivel: formData.disponivel,
         popular: formData.popular,
-        tempoPreparo: formData.tempoPreparo > 0 ? formData.tempoPreparo : undefined,
         restricoes: formData.restricoes.length > 0 ? formData.restricoes : undefined,
       };
 
@@ -236,7 +233,6 @@ export default function ProdutosPage() {
       imagem: produto.imagem ? produto.imagem.trimEnd() : "",
       disponivel: produto.disponivel,
       popular: produto.popular || false,
-      tempoPreparo: produto.tempoPreparo || 0,
       restricoes: produto.restricoes || [],
     });
     setDialogOpen(true);
@@ -547,31 +543,18 @@ export default function ProdutosPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="preco">Preço *</Label>
-                  <Input
-                    id="preco"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.preco}
-                    onChange={(e) => setFormData({ ...formData, preco: Number(e.target.value) })}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="tempoPreparo">Tempo de Preparo (min)</Label>
-                  <Input
-                    id="tempoPreparo"
-                    type="number"
-                    min="0"
-                    value={formData.tempoPreparo}
-                    onChange={(e) => setFormData({ ...formData, tempoPreparo: Number(e.target.value) })}
-                    placeholder="0"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="preco">Preço *</Label>
+                <Input
+                  id="preco"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.preco}
+                  onChange={(e) => setFormData({ ...formData, preco: Number(e.target.value) })}
+                  placeholder="0.00"
+                  required
+                />
               </div>
 
               <div>

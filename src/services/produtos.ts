@@ -75,7 +75,6 @@ export const criarProduto = async (
       categoriaId: produto.categoriaId,
       disponivel: produto.disponivel,
       popular: produto.popular,
-      tempoPreparo: produto.tempoPreparo,
       restricoes: produto.restricoes,
     };
 
@@ -87,6 +86,7 @@ export const criarProduto = async (
     ) {
       produtoData.imagemUrl = imagemBase64;
     }
+
     const response = await api.post(API_ENDPOINTS.PRODUTOS, produtoData);
     return mapearProdutoAPI(response.data);
   } catch (error) {
@@ -112,10 +112,13 @@ export const atualizarProduto = async (
       });
     }
 
-    const produtoData = {
+    const produtoData: any = {
       ...produto,
       imagemUrl: imagemBase64, // Enviar como string base64 no campo imagem
     };
+
+    // Remover tempoPreparo do envio (não usado mais no frontend)
+    delete produtoData.tempoPreparo;
 
     const response = await api.put(
       `${API_ENDPOINTS.PRODUTOS}/${id}`,

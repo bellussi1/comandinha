@@ -1,6 +1,6 @@
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
-import { Clock, Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { Produto } from "@/src/types";
 import { ProductImage } from "@/src/utils/imageUtils";
@@ -85,26 +85,20 @@ export function ModalProduto({
 
           <p className="text-muted-foreground mb-4">{produto.descricao}</p>
 
-          <div className="flex items-center text-sm text-muted-foreground mb-6">
-            <Clock className="h-4 w-4 mr-1" aria-hidden="true" />
-            <span aria-label={`Tempo de preparo: ${produto.tempoPreparo} minutos`}>
-              {produto.tempoPreparo} min
-            </span>
-            {produto.restricoes && produto.restricoes.length > 0 && (
-              <div className="flex ml-3 gap-1 flex-wrap" role="list" aria-label="Restrições alimentares">
-                {produto.restricoes.map((restricao) => {
-                  const restricaoConfig = DIETARY_RESTRICTIONS_CONFIG[restricao as keyof typeof DIETARY_RESTRICTIONS_CONFIG];
+          {produto.restricoes && produto.restricoes.length > 0 && (
+            <div className="flex gap-1 flex-wrap mb-6" role="list" aria-label="Restrições alimentares">
+              {produto.restricoes.map((restricao) => {
+                const restricaoConfig = DIETARY_RESTRICTIONS_CONFIG[restricao as keyof typeof DIETARY_RESTRICTIONS_CONFIG];
 
-                  return restricaoConfig ? (
-                    <Badge key={restricao} variant="outline" className="flex items-center gap-1" role="listitem">
-                      <span aria-hidden="true">{restricaoConfig.emoji}</span>
-                      {restricaoConfig.nome}
-                    </Badge>
-                  ) : null;
-                })}
-              </div>
-            )}
-          </div>
+                return restricaoConfig ? (
+                  <Badge key={restricao} variant="outline" className="flex items-center gap-1" role="listitem">
+                    <span aria-hidden="true">{restricaoConfig.emoji}</span>
+                    {restricaoConfig.nome}
+                  </Badge>
+                ) : null;
+              })}
+            </div>
+          )}
 
           <div className="mb-4">
             <label

@@ -7,7 +7,7 @@ export interface Produto {
   imagem: string;
   disponivel: boolean;
   popular?: boolean;
-  tempoPreparo?: number;
+  tempoPreparo?: number; // Mantido para compatibilidade com API, mas não exibido no frontend
   restricoes?: string[];
 }
 
@@ -105,7 +105,7 @@ export interface PedidoAPI {
   status: string;
   itens: ItemPedidoAPI[];
   valorTotal: number;
-  estimativaEntrega: string;
+  estimativaEntrega: string; // Mantido para compatibilidade com API, mas não exibido no frontend
   observacoesGerais?: string | null;
 }
 
@@ -146,7 +146,7 @@ export interface PedidoProducao {
   timestamp: string;
   status: string;
   observacoesGerais: string | null;
-  estimativaEntrega: string;
+  estimativaEntrega: string; // Mantido para compatibilidade com API, mas não exibido no frontend
   itens: ItemPedidoProducao[];
 }
 

@@ -34,7 +34,6 @@ import { PedidoProducao } from "@/src/types";
 import { formatarDataHora } from "@/src/utils/formatters";
 import {
   AlertCircle,
-  Clock,
   Coffee,
   Loader2,
   RefreshCw,
@@ -321,13 +320,6 @@ export default function AdminPage() {
                         <p className="text-sm">{pedido.observacoesGerais}</p>
                       </div>
                     )}
-
-                    <div className="flex items-center text-sm">
-                      <Clock className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Estimativa: {formatarDataHora(pedido.estimativaEntrega)}
-                      </span>
-                    </div>
 
                     <div className="pt-4 border-t mt-4">
                       {/* Botões de status responsivos */}

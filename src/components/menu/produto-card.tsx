@@ -1,7 +1,7 @@
 import React from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { Card, CardContent } from "@/src/components/ui/card";
-import { Clock, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { Produto } from "@/src/types";
 import { ProductImage } from "@/src/utils/imageUtils";
 import { formatarMoeda } from "@/src/utils/formatters";
@@ -55,26 +55,20 @@ function ProdutoCardComponent({ produto, onSelect, priority = false }: ProdutoCa
         <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
           {produto.descricao}
         </p>
-        <div className="flex items-center text-xs text-muted-foreground">
-          <Clock className="h-3 w-3 mr-1" aria-hidden="true" />
-          <span aria-label={`Tempo de preparo: ${produto.tempoPreparo} minutos`}>
-            {produto.tempoPreparo} min
-          </span>
-          {produto.restricoes && produto.restricoes.length > 0 && (
-            <div className="flex ml-3 gap-1 flex-wrap" role="list" aria-label="Restrições alimentares">
-              {produto.restricoes.map((restricao) => {
-                const restricaoConfig = DIETARY_RESTRICTIONS_CONFIG[restricao as keyof typeof DIETARY_RESTRICTIONS_CONFIG];
+        {produto.restricoes && produto.restricoes.length > 0 && (
+          <div className="flex gap-1 flex-wrap text-xs" role="list" aria-label="Restrições alimentares">
+            {produto.restricoes.map((restricao) => {
+              const restricaoConfig = DIETARY_RESTRICTIONS_CONFIG[restricao as keyof typeof DIETARY_RESTRICTIONS_CONFIG];
 
-                return restricaoConfig ? (
-                  <Badge key={restricao} variant="outline" className="text-xs px-1 h-5 flex items-center gap-1" role="listitem">
-                    <span className="text-[10px]" aria-hidden="true">{restricaoConfig.emoji}</span>
-                    {restricaoConfig.label}
-                  </Badge>
-                ) : null;
-              })}
-            </div>
-          )}
-        </div>
+              return restricaoConfig ? (
+                <Badge key={restricao} variant="outline" className="text-xs px-1 h-5 flex items-center gap-1" role="listitem">
+                  <span className="text-[10px]" aria-hidden="true">{restricaoConfig.emoji}</span>
+                  {restricaoConfig.label}
+                </Badge>
+              ) : null;
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
