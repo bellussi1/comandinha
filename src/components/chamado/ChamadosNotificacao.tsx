@@ -64,7 +64,7 @@ export function ChamadosNotificacao() {
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1">
               <h4 className="font-semibold text-sm">
-                Mesa {chamado.mesaNome || chamado.mesaUuid}
+                Mesa {chamado.mesaNome || chamado.id}
               </h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Está chamando o garçom

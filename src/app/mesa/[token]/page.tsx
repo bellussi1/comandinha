@@ -192,7 +192,7 @@ export default function MenuPage() {
     if (!mesa) return;
 
     try {
-      await criarChamado(mesa.id.toString());
+      await criarChamado(mesa.uuid.toString());
       setModalChamarGarcomAberto(false);
       toast({
         title: "Garçom chamado!",
