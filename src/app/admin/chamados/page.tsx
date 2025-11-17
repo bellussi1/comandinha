@@ -246,7 +246,7 @@ export default function ChamadosPage() {
                   {chamadosFiltrados.map((chamado) => (
                     <TableRow key={chamado.id}>
                       <TableCell className="font-medium">
-                        {chamado.mesaNome || chamado.mesaUuid}
+                        {chamado.mesaNome }
                       </TableCell>
                       <TableCell>{getStatusBadge(chamado.status)}</TableCell>
                       <TableCell>{formatarDataHora(chamado.criadoEm)}</TableCell>
