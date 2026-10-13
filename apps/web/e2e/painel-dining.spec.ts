@@ -263,6 +263,7 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   await page.getByRole('button', { name: /Abrir carrinho/ }).click();
   const cart = page.getByRole('dialog', { name: 'Seu carrinho' });
   await expect(cart).toBeVisible();
+  await page.mouse.move(0, 0);
   await expect(cart.getByRole('heading', { name: 'Seu carrinho' })).toHaveCSS(
     'color',
     'rgb(64, 34, 58)',
