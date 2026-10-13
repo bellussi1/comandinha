@@ -5,10 +5,10 @@ import type { SeedConfig } from './seed-config.js';
 export async function seedOwner(
   prisma: PrismaClient,
   config: SeedConfig,
-): Promise<void> {
+): Promise<{ restaurantId: string }> {
   const passwordHash = await hashPassword(config.ownerPassword);
 
-  await prisma.$transaction(async (transaction) => {
+  return prisma.$transaction(async (transaction) => {
     const restaurant = await transaction.restaurant.upsert({
       where: { slug: config.restaurantSlug },
       create: { name: config.restaurantName, slug: config.restaurantSlug },
@@ -39,5 +39,7 @@ export async function seedOwner(
       },
       update: { role: 'OWNER', isActive: true },
     });
+
+    return { restaurantId: restaurant.id };
   });
 }

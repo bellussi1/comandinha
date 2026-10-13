@@ -100,7 +100,7 @@ Liveness e readiness verificam a infraestrutura; não são funcionalidades do pr
 | `pnpm api:client:generate` | Atualiza o contrato e os tipos TypeScript do cliente |
 | `pnpm api:client:check` | Falha se OpenAPI ou tipos gerados estiverem desatualizados |
 | `pnpm --filter @comandinha/api prisma:migrate` | Aplica as migrações PostgreSQL pendentes |
-| `pnpm --filter @comandinha/api seed` | Cria ou atualiza um proprietário e restaurante locais; requer `ALLOW_LOCAL_DEMO_SEED=true`, URL PostgreSQL de loopback e variáveis `DEMO_*` |
+| `pnpm --filter @comandinha/api seed` | Cria ou atualiza o proprietário e restaurante locais e insere 3 mesas, 4 categorias e 8 produtos de demonstração; requer `ALLOW_LOCAL_DEMO_SEED=true`, PostgreSQL de loopback e variáveis `DEMO_*` |
 | `pnpm infra:down` | Para o banco local iniciado pelo Compose |
 
 O CI executa instalação congelada, migração, lint, verificação de tipos, testes unitários, E2E HTTP da API, integração com PostgreSQL, smoke test Playwright, validação do cliente OpenAPI e build. Ele usa credenciais descartáveis de teste e não publica ou implanta aplicações.
@@ -130,7 +130,7 @@ O arquivo `.env.example` contém valores fictícios para desenvolvimento local. 
 
 Se a porta 5432 já estiver ocupada, escolha outra em `POSTGRES_PORT` e atualize a porta em `DATABASE_URL` para o mesmo valor. As portas publicadas pelo Compose ficam vinculadas a `127.0.0.1`.
 
-Para habilitar o gateway local, gere um segredo aleatório com `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` e use o mesmo valor em `AUTH_GATEWAY_SECRET`. Configure também `APP_ORIGIN` para a origem exata do navegador, sem caminho. Em produção, `API_INTERNAL_URL` precisa usar HTTPS. Depois de aplicar a migração, defina `ALLOW_LOCAL_DEMO_SEED=true`, preencha as cinco variáveis `DEMO_*` no `.env` local e execute o seed. Ele só aceita PostgreSQL em `localhost`, `127.0.0.0/8` ou `::1` e recusa `NODE_ENV=production`.
+Para habilitar o gateway local, gere um segredo aleatório com `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` e use o mesmo valor em `AUTH_GATEWAY_SECRET`. Configure também `APP_ORIGIN` para a origem exata do navegador, sem caminho. Em produção, `API_INTERNAL_URL` precisa usar HTTPS. Depois de aplicar a migração, defina `ALLOW_LOCAL_DEMO_SEED=true`, preencha as cinco variáveis `DEMO_*` no `.env` local e execute o seed. Ele só aceita PostgreSQL em `localhost`, `127.0.0.0/8` ou `::1` e recusa `NODE_ENV=production`. O seed cria três mesas com códigos QR estáveis, quatro categorias e oito produtos de exemplo para o catálogo local; pode ser executado novamente sem duplicá-los e preserva produtos existentes e registros personalizados. Cada QR usa o código público da mesa na rota `/q/{code}`. Nenhum dado é apagado.
 
 O Next.js expõe `POST /api/auth/login`, `GET /api/auth/session` e `DELETE /api/auth/session`. O segredo opaco da sessão fica em cookie HttpOnly, SameSite=Lax e Path=/; em produção o cookie também usa Secure e o prefixo `__Host-`. A resposta do navegador contém somente metadados seguros. O Next envia o segredo de gateway e o token ao Nest no servidor; o navegador nunca recebe nenhum deles. `GET /api/auth/session` valida a sessão a cada chamada e remove cookies inválidos. Login e logout exigem um cabeçalho Origin igual a `APP_ORIGIN`.
 
