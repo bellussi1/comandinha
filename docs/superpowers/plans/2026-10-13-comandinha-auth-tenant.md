@@ -15,11 +15,11 @@
 - Keep the work on the existing isolated branch `codex/comandinha-modernization` in `.worktrees/comandinha-modernization`. Do not change the source checkout or main branch.
 - Implement the NestJS API independently. Treat legacy backend code as reference material only; do not copy implementation without a license.
 - Do not inspect or migrate the SQLite database. Do not deploy, provision infrastructure, or commit real credentials.
-- Local development may create one owner, restaurant, and membership through an explicit, idempotent seed command. It must require environment-provided credentials and refuse production mode.
+- Local development may create one owner, restaurant, and membership through an explicit, idempotent seed command. It must require environment-provided credentials, a separate `ALLOW_LOCAL_DEMO_SEED=true` opt-in, and a loopback PostgreSQL URL; it refuses production mode.
 - Keep the session cookie opaque and HttpOnly. Never return it in a browser-facing response, persist it in localStorage, or trust a client-supplied user, role, or restaurant identifier.
 - Require a separate high-entropy `AUTH_GATEWAY_SECRET` on Nest session-management routes. Next Route Handlers send it server-side; browser requests cannot supply it. Compare it safely and fail closed when it is missing. This is a service credential, never a `NEXT_PUBLIC_*` variable.
-- A valid session requires an active user, active membership, unexpired session, and no revocation timestamp. Password verification uses Node's supported `node:crypto` primitives with per-password random salt and constant-time comparison; no custom cryptography.
-- Apply login throttling appropriate for the current single-instance local environment and document that a shared store is required before horizontal production scaling. This milestone does not claim production readiness.
+- A valid session requires an active user, active membership, unexpired session, and no revocation timestamp. Password verification uses Node's supported `node:crypto` primitives with per-password random salt and constant-time comparison; new scrypt hashes use OWASP's `N=2^17, r=8, p=1` baseline while the fixed legacy format remains verifiable.
+- Apply login throttling by account and trusted source in NestJS, plus aggregate source throttles in both NestJS and the Next BFF. Normalize IPv6 clients to `/64`, never trust browser-supplied forwarding headers, and document that the per-instance in-memory limits need shared/distributed storage before horizontal production scaling. The production Next gateway requires HTTPS for `API_INTERNAL_URL`. This milestone does not claim production readiness.
 - Treat responsive behavior as a project-wide UI requirement for follow-up flow migrations: customer, QR, and table-service experiences are always mobile-first; admin may be desktop-first but must remain fully usable on mobile and tablet. This auth/API milestone does not redesign existing screens.
 
 ## Review focus
@@ -28,7 +28,7 @@
 - The API stores only a hash of a high-entropy random session secret. A leaked database row must not authenticate a request.
 - Tenant and role in the authenticated principal come exclusively from the session's active membership. Forged `restaurantId`, `userId`, role, or tenant headers cannot override them.
 - Logout and expiry immediately invalidate a session. Revocation is persisted, not simulated by deleting browser state alone.
-- The Next gateway returns no raw session secret, sets `HttpOnly`, `SameSite=Lax`, a root cookie path, and `Secure` in production; mutating requests require the configured trusted origin.
+- The Next gateway returns no raw session secret, sets `HttpOnly`, `SameSite=Lax`, a root cookie path, and `Secure` in production; mutating requests require the configured trusted origin. Login also enforces a trusted-source limit and fails closed in production if no trusted client identity is available.
 - Direct browser requests to Nest session creation fail without the server-only gateway secret.
 - Generated OpenAPI client types are current, and existing workspace tests, build, lint, and typecheck remain green.
 - The legacy login and existing admin data flows remain available and unchanged during this milestone. Do not claim the web product has completed its API migration when only the new session gateway is integrated.
@@ -40,7 +40,7 @@
 - API foundation: new `apps/api/src/auth/**` (including `password-hasher.ts`), `apps/api/src/database/**` updates only as needed, `apps/api/src/app.module.ts`, `apps/api/src/main.ts`, and `apps/api/src/openapi.ts`.
 - API tests: unit tests under `apps/api/src/auth/**` and `apps/api/prisma/**`, plus PostgreSQL-backed `apps/api/test/auth-schema.integration-spec.ts` and `apps/api/test/auth.integration-spec.ts`.
 - Contract: generated `apps/api/openapi.json`, `packages/api-client/src/generated/schema.d.ts`, and `packages/api-client/src/index.ts` only if a typed helper is needed.
-- Next gateway: `apps/web/src/app/api/auth/login/route.ts`, `apps/web/src/app/api/auth/session/route.ts`, `apps/web/src/lib/server/auth-api.ts`, and `apps/web/src/lib/server/auth-cookie.ts`.
+- Next gateway: `apps/web/src/app/api/auth/login/route.ts`, `apps/web/src/app/api/auth/session/route.ts`, `apps/web/src/lib/server/auth-api.ts`, `apps/web/src/lib/server/auth-cookie.ts`, and `apps/web/src/lib/server/login-source-rate-limit.ts`.
 - Web tests: route-handler tests under `apps/web/src/app/api/auth/**/__tests__/**` or the repository's existing Jest convention, plus focused cookie/origin tests.
 - Configuration and docs: root `.env.example`, `README.md`, and `docs/adr/0002-admin-sessions-and-tenant-context.md`.
 
@@ -56,7 +56,7 @@
 - `User`: normalized unique email, display name, password hash, active state, timestamps.
 - `Membership`: user and restaurant relation, explicit role and active state, unique user/restaurant pair.
 - `AdminSession`: unique token hash, user and membership association, expiry, revocation, creation and last-seen timestamps; indexes support token lookup and expiry cleanup.
-- Local seed command reads `DEMO_OWNER_NAME`, `DEMO_OWNER_EMAIL`, `DEMO_OWNER_PASSWORD`, `DEMO_RESTAURANT_NAME`, and `DEMO_RESTAURANT_SLUG`; it avoids duplicate records and refuses `NODE_ENV=production`.
+- Local seed command reads `DEMO_OWNER_NAME`, `DEMO_OWNER_EMAIL`, `DEMO_OWNER_PASSWORD`, `DEMO_RESTAURANT_NAME`, and `DEMO_RESTAURANT_SLUG`; it avoids duplicate records, requires explicit local opt-in and a loopback database URL, and refuses `NODE_ENV=production`.
 
 - [x] **Step 1: Write schema and seed acceptance tests**
 
@@ -86,25 +86,25 @@ Run Prisma validation/generation, focused seed tests, and the PostgreSQL integra
 - `GET /auth/sessions/current` requires the opaque session secret and returns safe user, restaurant, role, and expiry metadata without returning password or token hashes.
 - `DELETE /auth/sessions/current` requires the secret, persists revocation, and returns `204`.
 - Protected handlers obtain a principal shaped as `{ userId, restaurantId, membershipId, role, sessionId }` through a guard/decorator. No handler reads tenant identity from request body or query parameters.
-- Login throttling is applied to session creation; configuration and the current single-instance storage limitation are documented.
+- Login throttling applies five attempts per normalized account per minute. The account key is hashed before storage, and the in-memory storage limitation is documented.
 
-- [ ] **Step 1: Write failing auth unit and integration tests**
+- [x] **Step 1: Write failing auth unit and integration tests**
 
 Cover password hash/salt verification, generic invalid credentials, gateway-secret rejection, session-secret hashing, session expiry/revocation, inactive user/membership rejection, membership-derived tenant context, and forged tenant headers. The database integration cases run only against local PostgreSQL.
 
-- [ ] **Step 2: Implement password and session primitives**
+- [x] **Step 2: Implement password and session primitives**
 
 Use `node:crypto` `scrypt`, `randomBytes`, `createHash`, and `timingSafeEqual`. Generate at least 256 bits of random session entropy, return the secret once to the caller, store only its SHA-256 hash, and enforce expiry/revocation on every validation.
 
-- [ ] **Step 3: Implement the Prisma-backed auth service and guard**
+- [x] **Step 3: Implement the Prisma-backed auth service and guard**
 
 Normalize email, verify active membership, create a session tied to that membership, and derive the request principal from persisted records. Do not add public signup, tenant selection by arbitrary ID, refresh-token reuse, JWT signing, or credentials in logs.
 
-- [ ] **Step 4: Expose documented session routes and rate limiting**
+- [x] **Step 4: Expose documented session routes and rate limiting**
 
 Add DTO validation, appropriate 401/204 responses, OpenAPI cookie-gateway notes, and login throttling. Ensure errors do not reveal whether an email exists. Generate the OpenAPI document.
 
-- [ ] **Step 5: Run API verification**
+- [x] **Step 5: Run API verification**
 
 Run focused unit tests, PostgreSQL integration tests, `pnpm --filter @comandinha/api lint`, `typecheck`, `build`, and the API test suite. Verify revoked and expired secrets return 401 and cross-tenant context cannot be forged.
 
@@ -115,25 +115,25 @@ Run focused unit tests, PostgreSQL integration tests, `pnpm --filter @comandinha
 - Modify: `apps/web/package.json` only if a test utility is genuinely needed
 
 **Interfaces:**
-- `POST /api/auth/login` validates origin and request shape, calls the internal Nest API, and sets the opaque secret only as an HttpOnly cookie. Its JSON response contains safe identity metadata, never the secret.
+- `POST /api/auth/login` validates origin and request shape, applies a source-IP limit using only trusted infrastructure identity, calls the internal Nest API, and sets the opaque secret only as an HttpOnly cookie. Its JSON response contains safe identity metadata, never the secret.
 - `GET /api/auth/session` reads the cookie server-side, validates it with Nest, and returns safe session metadata; it clears invalid/expired cookies.
 - `DELETE /api/auth/session` validates origin, revokes the Nest session, clears the cookie, and returns `204`.
 - Cookie name is a documented `__Host-`-compatible name in production, with `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/`, and max-age aligned to session expiry. Local HTTP development uses a non-`__Host-` fallback name without `Secure`.
-- Internal Nest origin comes from server-only `API_INTERNAL_URL`; it is never exposed through `NEXT_PUBLIC_*` configuration.
+- Internal Nest origin comes from server-only `API_INTERNAL_URL`; it is never exposed through `NEXT_PUBLIC_*` configuration, and must use HTTPS when `NODE_ENV=production`.
 
-- [ ] **Step 1: Write failing gateway route tests**
+- [x] **Step 1: Write failing gateway route tests**
 
 Mock only the internal Nest HTTP boundary. Assert login success/failure, secret not present in JSON, exact cookie flags, missing/invalid cookie handling, logout revocation, and rejection of absent or mismatched Origin on mutations.
 
-- [ ] **Step 2: Implement server-only Nest client and cookie helpers**
+- [x] **Step 2: Implement server-only Nest client and cookie helpers**
 
 Build a small fetch wrapper using `API_INTERNAL_URL`, bounded request timeouts, safe error mapping, and no forwarding of arbitrary browser headers. Keep all cookie read/write code inside server-only modules and Route Handlers.
 
-- [ ] **Step 3: Implement login, current-session, and logout routes**
+- [x] **Step 3: Implement login, current-session, and logout routes**
 
 Set and clear the cookie with explicit options; return only safe session metadata. Validate Origin against configured `APP_ORIGIN` (set explicitly to localhost during development); do not infer a trusted origin from arbitrary forwarded host headers. Do not enable broad CORS or expose a raw-token endpoint to client code.
 
-- [ ] **Step 4: Verify the web gateway**
+- [x] **Step 4: Verify the web gateway**
 
 Run the route tests, web typecheck, lint, and production build. Inspect rendered metadata/build output to confirm the API secret never appears in client bundles or public environment configuration.
 
@@ -143,21 +143,21 @@ Run the route tests, web typecheck, lint, and production build. Inspect rendered
 - Modify: `.env.example`, `README.md`, `apps/api/openapi.json`, `packages/api-client/src/generated/schema.d.ts`
 - Create: `docs/adr/0002-admin-sessions-and-tenant-context.md`
 
-- [ ] **Step 1: Generate and verify the OpenAPI client**
+- [x] **Step 1: Generate and verify the OpenAPI client**
 
 Run the repository's `pnpm api:client:generate` and `pnpm api:client:check`; ensure no manually duplicated frontend DTOs are introduced for session responses.
 
-- [ ] **Step 2: Document the local end-to-end setup**
+- [x] **Step 2: Document the local end-to-end setup**
 
 Document required environment variables (`API_INTERNAL_URL`, `AUTH_GATEWAY_SECRET`, `APP_ORIGIN`, cookie mode, and local seed inputs), local PostgreSQL startup, migration, explicit dev seed, session endpoints, cookie behavior, current feature boundary, and cleanup. Keep `.env.example` placeholders non-secret.
 
-- [ ] **Step 3: Run final verification**
+- [x] **Step 3: Run final verification**
 
 Run `pnpm test`, `pnpm lint`, `pnpm typecheck`, `pnpm build`, the API integration suite, and focused Next Route Handler tests. If a command requires Docker/PostgreSQL, report unavailable infrastructure clearly rather than substituting a mock for the database isolation tests.
 
-- [ ] **Step 4: Inspect the final diff and request review**
+- [x] **Step 4: Inspect the final diff and request review**
 
-Run `git diff --check`, inspect migration and generated-client diffs, and request a fresh code review focused on secret handling, tenant derivation, CSRF/origin checks, seed safety, and compatibility with the still-legacy UI. Do not deploy or push as part of this plan.
+Run `git diff --check`, inspect migration and generated-client diffs, and request a fresh code review focused on secret handling, tenant derivation, CSRF/origin checks, seed safety, and compatibility with the still-legacy UI. Do not deploy. On 2026-10-13, the user authorized single-responsibility commits and pushing the combined branch for pull requests against `develop` and `master`.
 
 ## Follow-up plan
 
