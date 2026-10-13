@@ -32,3 +32,13 @@ test('rejects stale checked-in types', async () => {
     await assert.rejects(assertGeneratedMatches(generatedPath, checkedInPath), /not up to date/);
   });
 });
+
+test('treats generated files with equivalent LF and CRLF line endings as identical', async () => {
+  await withGeneratedFiles(
+    'export interface paths {}\n',
+    'export interface paths {}\r\n',
+    async (generatedPath, checkedInPath) => {
+      await assertGeneratedMatches(generatedPath, checkedInPath);
+    },
+  );
+});

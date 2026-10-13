@@ -4,6 +4,7 @@ import { PrismaClient } from '../generated/prisma/client.js';
 
 const localDatabaseUrl =
   'postgresql://comandinha:comandinha_local_only@127.0.0.1:5432/comandinha?schema=public';
+const databaseTimeoutMillis = 2_000;
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -17,7 +18,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
 
     super({
-      adapter: new PrismaPg({ connectionString }),
+      adapter: new PrismaPg({
+        connectionString,
+        connectionTimeoutMillis: databaseTimeoutMillis,
+        query_timeout: databaseTimeoutMillis,
+      }),
     });
   }
 

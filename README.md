@@ -65,7 +65,7 @@ O Compose mantém o volume local do PostgreSQL para a próxima execução. Use `
 | Swagger | http://localhost:3001/docs | Documentação do contrato atual |
 | OpenAPI JSON | http://localhost:3001/openapi.json | Contrato usado para gerar os tipos |
 | Liveness | http://localhost:3001/health/live | Confirma que o processo da API responde |
-| Readiness | http://localhost:3001/health/ready | Confirma que a API consegue consultar o PostgreSQL |
+| Readiness | http://localhost:3001/health/ready | Confirma que a API consegue consultar o PostgreSQL com timeout de 2 segundos |
 
 Liveness e readiness verificam a infraestrutura; não são funcionalidades do produto. A porta do teste Playwright é `3100` e só é usada durante os testes.
 
@@ -76,6 +76,7 @@ Liveness e readiness verificam a infraestrutura; não são funcionalidades do pr
 | `pnpm lint` | Executa os linters dos pacotes |
 | `pnpm typecheck` | Verifica os tipos do monorepo |
 | `pnpm test` | Executa testes unitários e dos scripts do workspace |
+| `pnpm --filter @comandinha/api test:e2e` | Executa os testes HTTP de saúde e do contrato OpenAPI |
 | `pnpm --filter @comandinha/web exec playwright install chromium` | Instala o navegador usado pelo smoke test |
 | `pnpm test:integration` | Executa integração com PostgreSQL e smoke test Playwright |
 | `pnpm build` | Gera os builds de produção para validação local |
@@ -84,7 +85,7 @@ Liveness e readiness verificam a infraestrutura; não são funcionalidades do pr
 | `pnpm --filter @comandinha/api prisma:migrate` | Aplica as migrações PostgreSQL pendentes |
 | `pnpm infra:down` | Para o banco local iniciado pelo Compose |
 
-O CI executa instalação congelada, migração, lint, verificação de tipos, testes, integração, validação do cliente OpenAPI e build. Ele usa credenciais descartáveis de teste e não publica ou implanta aplicações.
+O CI executa instalação congelada, migração, lint, verificação de tipos, testes unitários, E2E HTTP da API, integração com PostgreSQL, smoke test Playwright, validação do cliente OpenAPI e build. Ele usa credenciais descartáveis de teste e não publica ou implanta aplicações.
 
 ## Variáveis de ambiente
 

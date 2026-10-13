@@ -15,13 +15,17 @@ const openapiTS = openapiTypescriptModule.default?.default ?? openapiTypescriptM
 const astToString = openapiTypescriptModule.astToString;
 const commentHeader = openapiTypescriptModule.COMMENT_HEADER;
 
+function normalizeLineEndings(contents) {
+  return contents.replace(/\r\n?/g, '\n');
+}
+
 export async function assertGeneratedMatches(generatedPath, checkedInPath) {
   const [generated, checkedIn] = await Promise.all([
     readFile(generatedPath, 'utf8'),
     readFile(checkedInPath, 'utf8'),
   ]);
 
-  if (generated !== checkedIn) {
+  if (normalizeLineEndings(generated) !== normalizeLineEndings(checkedIn)) {
     throw new Error(`${checkedInPath} is not up to date. Run pnpm api:client:generate.`);
   }
 }

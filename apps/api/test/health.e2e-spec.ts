@@ -55,6 +55,14 @@ describe('GET /health/live', () => {
     await expect(response.json()).resolves.toEqual({ status: 'not-ready' });
   });
 
+  it('keeps liveness available while the database check fails', async () => {
+    databaseAvailable = false;
+    const response = await fetch(new URL('/health/live', baseUrl));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: 'ok' });
+  });
+
   it('publishes liveness in the OpenAPI document', async () => {
     const response = await fetch(new URL('/openapi.json', baseUrl));
     const document = await response.json();
