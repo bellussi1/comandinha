@@ -6,10 +6,11 @@
     "node": ">=24.15.0"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:integration": "turbo run test:e2e",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

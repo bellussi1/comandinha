@@ -125,23 +125,23 @@ Commit as `feat(web): upgrade Next and UI foundation`.
 - Produces: `GET /health/live` returns HTTP 200 with `{ "status": "ok" }` without querying PostgreSQL; the API listens on port 3001 by default.
 - Produces: OpenAPI document metadata named `Comandinha API`, version `1.0.0`, with `/health/live` documented.
 
-- [ ] **Step 1: Scaffold the minimum NestJS application and test harness**
+- [x] **Step 1: Scaffold the minimum NestJS application and test harness**
 
 Use Nest CLI 12.0.8 on Node 24.21.0 to create the API package manifest, Nest CLI and strict TypeScript configuration, ESM bootstrap module, API scripts, and Vitest E2E setup. Add `@nestjs/testing` 12.1.3 and use Node's built-in `fetch` for HTTP assertions. Do not add the health route yet. Verify the app typechecks and builds.
 
-- [ ] **Step 2: Write the failing liveness endpoint test**
+- [x] **Step 2: Write the failing liveness endpoint test**
 
 Create an E2E test that calls `GET /health/live` and asserts status 200 and the exact JSON body. Run `pnpm --filter @comandinha/api test:e2e`; expected: FAIL because the route does not exist.
 
-- [ ] **Step 3: Implement the liveness module and route**
+- [x] **Step 3: Implement the liveness module and route**
 
 Add `HealthService.live(): { status: "ok" }` and `HealthController` at `/health/live`. Register the module and ensure the handler does not inject or query the database.
 
-- [ ] **Step 4: Publish OpenAPI metadata and rerun tests**
+- [x] **Step 4: Publish OpenAPI metadata and rerun tests**
 
 Configure `@nestjs/swagger` 12.0.2 and verify the generated document includes the liveness response. Run API unit tests, E2E tests, typecheck, and build; expected: pass.
 
-- [ ] **Step 5: Commit the API shell**
+- [x] **Step 5: Commit the API shell**
 
 Commit as `feat(api): bootstrap NestJS health endpoint`.
 
