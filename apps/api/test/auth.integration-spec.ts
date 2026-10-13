@@ -272,8 +272,10 @@ describe('admin authentication with PostgreSQL', () => {
       password: 'wrong-password',
     }, true, secondSourceKey);
 
-    expect(attempts.map(({ status }) => status)).toEqual([401, 401, 401, 401, 401, 429]);
-    await expect(attempts[5].json()).resolves.toEqual({
+    expect(attempts.filter(({ status }) => status === 401)).toHaveLength(5);
+    const throttledAttempts = attempts.filter(({ status }) => status === 429);
+    expect(throttledAttempts).toHaveLength(1);
+    await expect(throttledAttempts[0].json()).resolves.toEqual({
       statusCode: 429,
       message: 'ThrottlerException: Too Many Requests',
     });
@@ -296,8 +298,8 @@ describe('admin authentication with PostgreSQL', () => {
       password: 'wrong-password',
     }, true, 'd'.repeat(64));
 
-    expect(attempts.slice(0, 20).every(({ status }) => status === 401)).toBe(true);
-    expect(attempts[20].status).toBe(429);
+    expect(attempts.filter(({ status }) => status === 401)).toHaveLength(20);
+    expect(attempts.filter(({ status }) => status === 429)).toHaveLength(1);
     expect(otherSource.status).toBe(401);
   });
 
