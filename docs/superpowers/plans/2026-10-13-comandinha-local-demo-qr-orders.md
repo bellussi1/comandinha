@@ -145,12 +145,12 @@
 - seedDemo(prisma, restaurantId) creates missing demo tables, categories and products within that restaurant only. It does not truncate or delete records.
 - Seed set: Mesa 01–03; Hambúrgueres, Porções, Bebidas and Sobremesas; Smash clássico (2990), Cheeseburger da casa (3490), Batata rústica (1800), Anéis de cebola (1600), Refrigerante lata (700), Suco de laranja (1200), Brownie de chocolate (1400) and Pudim da casa (1000), all prices in centavos.
 
-- [ ] **Step 1: Add PostgreSQL tests that run seedDemo twice, assert exactly three demo tables/four categories/eight demo products, preserve a custom table/category/product, and verify codes are stable. Run and verify failures.**
-- [ ] **Step 2: Implement the demo seed in one transaction. Upsert only the known category set; create a sample product only when the same restaurant/category/name is absent, preserving existing product edits and all unrelated records.**
-- [ ] **Step 3: Change seed.ts to run the protected owner seed then seedDemo for its restaurant. Retain parseSeedConfig's production, opt-in, loopback and credential checks unchanged.**
-- [ ] **Step 4: Update README and .env.example descriptions so the seed documents all demo records, QR route, local login, migration and seed commands without committed credentials.**
-- [ ] **Step 5: Run seed config tests, seed integration tests and git diff --check. Expected: second run adds no duplicates and the custom records remain byte-for-byte unchanged.**
-- [ ] **Step 6: Commit as feat: seed local tables and menu.**
+- [x] **Step 1: Add PostgreSQL tests that run seedDemo twice, assert exactly three demo tables/four categories/eight demo products, preserve a custom table/category/product, and verify codes are stable. Run and verify failures.**
+- [x] **Step 2: Implement the demo seed in one transaction. Upsert only the known category set; create a sample product only when the same restaurant/category/name is absent, preserving existing product edits and all unrelated records.**
+- [x] **Step 3: Change seed.ts to run the protected owner seed then seedDemo for its restaurant. Retain parseSeedConfig's production, opt-in, loopback and credential checks unchanged.**
+- [x] **Step 4: Update README and .env.example descriptions so the seed documents all demo records, QR route, local login, migration and seed commands without committed credentials.**
+- [x] **Step 5: Run seed config tests, seed integration tests and git diff --check. Expected: second run adds no duplicates and the custom records remain byte-for-byte unchanged.**
+- [x] **Step 6: Commit as feat: seed local tables and menu.**
 
 ### Task 6: Cliente OpenAPI e rotas BFF Next.js
 
