@@ -258,49 +258,51 @@ describe('admin authentication with PostgreSQL', () => {
     const limitedEmail = `limited-${suffix}@example.test`;
     const firstSourceKey = 'a'.repeat(64);
     const secondSourceKey = 'b'.repeat(64);
+    // Guards run before DTO validation, so this exercises the limiter without concurrent DB work.
     const attempts = await Promise.all(
       Array.from({ length: 6 }, () =>
-        postSession({ email: limitedEmail, password: 'wrong-password' }, true, firstSourceKey),
+        postSession({ email: limitedEmail, password: '' }, true, firstSourceKey),
       ),
     );
     const unrelatedAccount = await postSession({
       email: `unrelated-${suffix}@example.test`,
-      password: 'wrong-password',
+      password: '',
     }, true, firstSourceKey);
     const sameAccountFromAnotherSource = await postSession({
       email: limitedEmail,
-      password: 'wrong-password',
+      password: '',
     }, true, secondSourceKey);
 
-    expect(attempts.filter(({ status }) => status === 401)).toHaveLength(5);
+    expect(attempts.filter(({ status }) => status === 400)).toHaveLength(5);
     const throttledAttempts = attempts.filter(({ status }) => status === 429);
     expect(throttledAttempts).toHaveLength(1);
     await expect(throttledAttempts[0].json()).resolves.toEqual({
       statusCode: 429,
       message: 'ThrottlerException: Too Many Requests',
     });
-    expect(unrelatedAccount.status).toBe(401);
-    expect(sameAccountFromAnotherSource.status).toBe(401);
+    expect(unrelatedAccount.status).toBe(400);
+    expect(sameAccountFromAnotherSource.status).toBe(400);
   });
 
   it('limits aggregate login work from one source across different account names', async () => {
     const sourceKey = 'c'.repeat(64);
+    // Guards run before DTO validation, so this exercises the limiter without concurrent DB work.
     const attempts = await Promise.all(
       Array.from({ length: 21 }, (_, index) =>
         postSession({
           email: `source-attempt-${index}-${suffix}@example.test`,
-          password: 'wrong-password',
+          password: '',
         }, true, sourceKey),
       ),
     );
     const otherSource = await postSession({
       email: `other-source-${suffix}@example.test`,
-      password: 'wrong-password',
+      password: '',
     }, true, 'd'.repeat(64));
 
-    expect(attempts.filter(({ status }) => status === 401)).toHaveLength(20);
+    expect(attempts.filter(({ status }) => status === 400)).toHaveLength(20);
     expect(attempts.filter(({ status }) => status === 429)).toHaveLength(1);
-    expect(otherSource.status).toBe(401);
+    expect(otherSource.status).toBe(400);
   });
 
   it('publishes the session routes and bearer contract through OpenAPI', async () => {
