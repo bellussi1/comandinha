@@ -95,12 +95,12 @@
 - Allowed transitions: PENDING to PREPARING or CANCELLED; PREPARING to READY or CANCELLED; READY to DELIVERED; DELIVERED and CANCELLED are terminal.
 - OWNER, ADMIN and STAFF may read and advance or cancel orders within those transitions.
 
-- [ ] **Step 1: Write integration cases for tenant-scoped listing/detail, status filtering, all allowed transitions, every invalid transition, and cross-tenant IDs. Run and verify failures.**
-- [ ] **Step 2: Write failing unit cases for each transition and terminal state in order-status.spec.ts.**
-- [ ] **Step 3: Implement canTransitionOrderStatus(current: OrderStatus, next: OrderStatus): boolean, list/detail/summary/update service methods. Use a transaction and conditional update on id, restaurantId and current status so concurrent status changes cannot overwrite one another.**
-- [ ] **Step 4: Implement DTO and controller with AdminSessionGuard. Return 404 for an order outside the principal restaurant.**
-- [ ] **Step 5: Run orders integration and transition unit tests. Expected: allowed transitions persist; invalid transitions return 409; other-tenant orders are not disclosed.**
-- [ ] **Step 6: Commit as feat: add order queue and status transitions.**
+- [x] **Step 1: Write integration cases for tenant-scoped listing/detail, status filtering, all allowed transitions, every invalid transition, and cross-tenant IDs. Run and verify failures.**
+- [x] **Step 2: Write failing unit cases for each transition and terminal state in order-status.spec.ts.**
+- [x] **Step 3: Implement canTransitionOrderStatus(current: OrderStatus, next: OrderStatus): boolean, list/detail/summary/update service methods. Use a transaction and conditional update on id, restaurantId and current status so concurrent status changes cannot overwrite one another.**
+- [x] **Step 4: Implement DTO and controller with AdminSessionGuard. Return 404 for an order outside the principal restaurant.**
+- [x] **Step 5: Run orders integration and transition unit tests. Expected: allowed transitions persist; invalid transitions return 409; other-tenant orders are not disclosed.**
+- [x] **Step 6: Commit as feat: add order queue and status transitions.**
 
 ### Task 4: API pública do QR, catálogo e criação/acompanhamento de pedidos
 
