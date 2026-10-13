@@ -1,6 +1,6 @@
 # Comandinha — especificação de modernização fullstack
 
-**Status:** proposta revisada para avaliação. Direção escolhida pelo usuário: monorepo Next.js + NestJS. Este documento ainda não autoriza implementação, publicação ou provisionamento.
+**Status:** aprovada para implementação local incremental pelo usuário em 13 de outubro de 2026. A aprovação cobre o escopo técnico descrito; não autoriza publicação, deploy ou provisionamento cloud.
 
 ## Objetivo
 
