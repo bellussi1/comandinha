@@ -5,3 +5,5 @@ allowBuilds:
   '@parcel/watcher@2.6.0': true
   sharp@0.33.5: true
   unrs-resolver@1.12.2: true
+minimumReleaseAgeExclude:
+  - zod@4.6.7
