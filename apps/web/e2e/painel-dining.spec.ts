@@ -213,8 +213,36 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
     await expect(page.getByRole('button', { name: 'Ver QR de Mesa 01' })).toBeVisible();
   }
 
+  await page.setViewportSize({ width: 320, height: 800 });
   await page.getByRole('button', { name: 'Ver QR de Mesa 01' }).click();
-  await expect(page.getByRole('dialog', { name: 'QR da Mesa 01' })).toBeVisible();
+  const qrDialog = page.getByRole('dialog', { name: 'QR da Mesa 01' });
+  await expect(qrDialog).toBeVisible();
+  await qrDialog.evaluate(async (dialog) => {
+    await Promise.all(
+      dialog.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => undefined),
+      ),
+    );
+  });
+  const qrDialogBounds = await qrDialog.boundingBox();
+  expect(qrDialogBounds).not.toBeNull();
+  expect(qrDialogBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(qrDialogBounds!.x + qrDialogBounds!.width).toBeLessThanOrEqual(320);
+  const qrFrameGeometry = await page.locator('.painel-qr-frame').evaluate((frame) => {
+    const svg = frame.querySelector('svg')!;
+    const frameStyle = getComputedStyle(frame);
+    const frameBounds = frame.getBoundingClientRect();
+    const qrBounds = svg.getBoundingClientRect();
+    const contentLeft = frameBounds.left + frame.clientLeft + Number.parseFloat(frameStyle.paddingLeft);
+    const contentRight = frameBounds.left + frame.clientLeft + frame.clientWidth - Number.parseFloat(frameStyle.paddingRight);
+    return {
+      width: qrBounds.width,
+      fits: qrBounds.left >= contentLeft - 1 && qrBounds.right <= contentRight + 1,
+    };
+  });
+  expect(qrFrameGeometry.width).toBeGreaterThanOrEqual(180);
+  expect(qrFrameGeometry.fits).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByRole('heading', { name: 'QR da Mesa 01' })).toHaveCSS(
     'color',
     'rgb(64, 34, 58)',

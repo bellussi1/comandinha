@@ -2385,7 +2385,8 @@
 
 .painel-qr-frame svg {
   display: block;
-  width: min(15rem, calc(100vw - 5rem));
+  width: min(15rem, 100%);
+  max-width: 100%;
   height: auto;
 }
 
@@ -2778,6 +2779,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .painel-confirm-dialog,
+  .painel-confirm-overlay,
   .painel-table-editor-dialog,
   .painel-qr-dialog,
   .painel-table-editor-overlay,
@@ -2849,6 +2851,8 @@
   background: #f8eeeb;
 }
 
-.painel-login-story :focus-visible {
+.painel-root .painel-login-story :focus-visible,
+.painel-root .painel-sidebar :focus-visible,
+.painel-root .painel-mobile-header :focus-visible {
   outline-color: var(--painel-amber);
 }

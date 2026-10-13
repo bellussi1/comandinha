@@ -51,6 +51,15 @@ test('panel supporting text and login accent meet WCAG AA contrast', async ({ pa
 
   expect.soft(contrastRatio(colors.supportingText, colors.surface)).toBeGreaterThanOrEqual(4.5);
   expect.soft(contrastRatio(colors.accentText, colors.plum)).toBeGreaterThanOrEqual(4.5);
+
+  const storyBrand = page.locator('.painel-login-story .painel-login-brand');
+  await storyBrand.focus();
+  await expect(storyBrand).toHaveCSS('outline-style', 'solid');
+  const focusColors = await storyBrand.evaluate((link) => ({
+    outline: getComputedStyle(link).outlineColor,
+    surface: getComputedStyle(link.closest('.painel-login-story')!).backgroundColor,
+  }));
+  expect(contrastRatio(focusColors.outline, focusColors.surface)).toBeGreaterThanOrEqual(3);
 });
 
 test('public menu supporting text and accent meet WCAG AA contrast', async ({ page }) => {

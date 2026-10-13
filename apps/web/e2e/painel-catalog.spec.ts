@@ -146,6 +146,25 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
   await expect(
     page.getByRole('complementary', { name: 'Navegação do painel' }).getByText('Casa do Enzo'),
   ).toBeVisible();
+  const overviewLink = page.locator('.painel-sidebar .painel-nav-link').first();
+  let overviewFocused = await overviewLink.evaluate((link) => link === document.activeElement);
+  for (let tabCount = 0; !overviewFocused && tabCount < 8; tabCount += 1) {
+    await page.keyboard.press('Tab');
+    overviewFocused = await overviewLink.evaluate((link) => link === document.activeElement);
+  }
+  expect(overviewFocused).toBe(true);
+  await expect(overviewLink).toHaveCSS('outline-color', 'rgb(216, 173, 97)');
+  await page.setViewportSize({ width: 320, height: 800 });
+  const mobileBrand = page.locator('.painel-mobile-header .painel-brand');
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  let mobileBrandFocused = false;
+  for (let tabCount = 0; !mobileBrandFocused && tabCount < 12; tabCount += 1) {
+    await page.keyboard.press('Tab');
+    mobileBrandFocused = await mobileBrand.evaluate((link) => link === document.activeElement);
+  }
+  expect(mobileBrandFocused).toBe(true);
+  await expect(mobileBrand).toHaveCSS('outline-color', 'rgb(216, 173, 97)');
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.getByRole('button', { name: 'Criar categoria e incluir o primeiro produto' }).click();
   await page.getByLabel('Nome da categoria').fill('Bebidas');
@@ -168,6 +187,19 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
   await expect(page.getByText('Suco de laranja')).toBeVisible();
   await page.getByRole('button', { name: 'Restaurar Suco de laranja' }).click();
   await expect(page.getByText('Suco de laranja')).toBeVisible();
+
+  await page.getByRole('tab', { name: /Categorias/ }).click();
+  await page.getByRole('button', { name: 'Excluir Bebidas' }).click();
+  const confirmation = page.getByRole('alertdialog', { name: 'Excluir categoria?' });
+  await expect(confirmation).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const confirmationOverlayDuration = await page.locator('.painel-confirm-overlay').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  expect(confirmationOverlayDuration).toBeLessThanOrEqual(0.001);
+  await page.getByRole('button', { name: 'Cancelar' }).click();
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.getByRole('tab', { name: /Produtos/ }).click();
 
   expect(catalogRequests).toEqual(
     expect.arrayContaining([

@@ -635,7 +635,10 @@ export function CatalogWorkspace() {
             if (!open) setCategoryToDelete(null);
           }}
         >
-          <AlertDialogContent className="painel-confirm-dialog">
+          <AlertDialogContent
+            className="painel-confirm-dialog"
+            overlayClassName="painel-confirm-overlay"
+          >
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir categoria?</AlertDialogTitle>
               <AlertDialogDescription>
