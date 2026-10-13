@@ -17,6 +17,7 @@ type UpdateProduct = ApiPaths["/catalog/products/{id}"]["patch"]["requestBody"][
 type ProductFormProps = {
   categories: Category[];
   initialProduct?: Product;
+  defaultCategoryId?: string;
   onSave: (payload: CreateProduct) => Promise<void>;
   onUpdate: (payload: UpdateProduct) => Promise<void>;
   onCancel: () => void;
@@ -26,6 +27,7 @@ type ProductFormProps = {
 export function ProductForm({
   categories,
   initialProduct,
+  defaultCategoryId,
   onSave,
   onUpdate,
   onCancel,
@@ -36,7 +38,7 @@ export function ProductForm({
     initialProduct?.description ?? "",
   );
   const [categoryId, setCategoryId] = useState(
-    initialProduct?.categoryId ?? "",
+    initialProduct?.categoryId ?? defaultCategoryId ?? "",
   );
   const [price, setPrice] = useState(
     initialProduct ? (initialProduct.priceInCents / 100).toFixed(2).replace(".", ",") : "",

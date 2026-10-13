@@ -93,6 +93,27 @@ describe("CatalogWorkspace", () => {
       .toBeEnabled();
   });
 
+  it("continues to the first product after creating the first category", async () => {
+    const user = userEvent.setup();
+    const firstCategory = { ...category, id: "category-first", name: "Lanches", nameNormalized: "lanches" };
+    service.listCatalogCategories.mockResolvedValue([]);
+    service.listCatalogProducts.mockResolvedValue([]);
+    service.createCatalogCategory.mockResolvedValue(firstCategory);
+    renderWorkspace();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Criar categoria e incluir o primeiro produto",
+      }),
+    );
+    await user.type(screen.getByLabelText("Nome da categoria"), "Lanches");
+    await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
+
+    expect(await screen.findByRole("heading", { name: "Novo produto" }))
+      .toBeInTheDocument();
+    expect(screen.getByLabelText("Categoria")).toHaveValue("category-first");
+  });
+
   it("provides loaded categories to the new product form", async () => {
     const user = userEvent.setup();
     seedCatalog([]);

@@ -91,6 +91,8 @@ export function CatalogWorkspace() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [continueToFirstProduct, setContinueToFirstProduct] = useState(false);
+  const [defaultProductCategoryId, setDefaultProductCategoryId] = useState<string | null>(null);
   const [categoryToDelete, setCategoryToDelete] =
     useState<CatalogCategory | null>(null);
 
@@ -160,13 +162,15 @@ export function CatalogWorkspace() {
 
   function openProductEditor(product?: CatalogProduct) {
     setActionError(null);
+    setDefaultProductCategoryId(null);
     setEditingProduct(product ?? null);
     setEditor("product");
   }
 
-  function openCategoryEditor(category?: CatalogCategory) {
+  function openCategoryEditor(category?: CatalogCategory, continueToProduct = false) {
     setActionError(null);
     setEditingCategory(category ?? null);
+    setContinueToFirstProduct(continueToProduct);
     setEditor("category");
   }
 
@@ -174,6 +178,8 @@ export function CatalogWorkspace() {
     setEditor(null);
     setEditingProduct(null);
     setEditingCategory(null);
+    setContinueToFirstProduct(false);
+    setDefaultProductCategoryId(null);
   }
 
   async function saveProduct(payload: CreateCatalogProduct) {
@@ -192,7 +198,18 @@ export function CatalogWorkspace() {
   async function saveCategory(
     payload: CreateCatalogCategory,
   ) {
-    await createCatalogCategory(payload);
+    const createdCategory = await createCatalogCategory(payload);
+    if (continueToFirstProduct) {
+      setCategories((current) => [
+        ...current.filter((category) => category.id !== createdCategory.id),
+        createdCategory,
+      ]);
+      setDefaultProductCategoryId(createdCategory.id);
+      setContinueToFirstProduct(false);
+      setEditingCategory(null);
+      setEditor("product");
+      return;
+    }
     closeEditor();
     await loadCatalog();
   }
@@ -266,6 +283,7 @@ export function CatalogWorkspace() {
       <section className="painel-catalog-page">
         <ProductForm
           categories={categories}
+          defaultCategoryId={defaultProductCategoryId ?? undefined}
           initialProduct={editingProduct ?? undefined}
           key={editingProduct?.id ?? "new-product"}
           onCancel={closeEditor}
@@ -360,33 +378,37 @@ export function CatalogWorkspace() {
       ) : tab === "products" ? (
         <>
           <div className="painel-catalog-toolbar">
-            <label className="painel-search" htmlFor="catalog-search">
-              <Search aria-hidden="true" size={18} />
-              <Input
-                aria-label="Buscar produto ou categoria"
-                id="catalog-search"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar produto ou categoria"
-                type="search"
-                value={search}
-              />
-            </label>
-            <label className="painel-filter-select" htmlFor="catalog-category-filter">
-              <ArrowDownWideNarrow aria-hidden="true" size={17} />
-              <select
-                id="catalog-category-filter"
-                onChange={(event) => setCategoryFilter(event.target.value)}
-                value={categoryFilter}
-              >
-                <option value="">Todas as categorias</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {canManage && (
+            {products.length > 0 && (
+              <>
+                <label className="painel-search" htmlFor="catalog-search">
+                  <Search aria-hidden="true" size={18} />
+                  <Input
+                    aria-label="Buscar produto ou categoria"
+                    id="catalog-search"
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Buscar produto ou categoria"
+                    type="search"
+                    value={search}
+                  />
+                </label>
+                <label className="painel-filter-select" htmlFor="catalog-category-filter">
+                  <ArrowDownWideNarrow aria-hidden="true" size={17} />
+                  <select
+                    id="catalog-category-filter"
+                    onChange={(event) => setCategoryFilter(event.target.value)}
+                    value={categoryFilter}
+                  >
+                    <option value="">Todas as categorias</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
+            {canManage && categories.length > 0 && (
               <Button
                 aria-pressed={showArchived}
                 className={`painel-archive-filter${showArchived ? " is-active" : ""}`}
@@ -400,27 +422,18 @@ export function CatalogWorkspace() {
             )}
             {canManage && (
               <Button
+                aria-label={categories.length === 0 ? "Criar categoria e incluir o primeiro produto" : undefined}
                 className="painel-action-button painel-new-button"
-                disabled={categories.length === 0}
-                onClick={() => openProductEditor()}
-                title={categories.length === 0 ? "Cadastre uma categoria primeiro" : undefined}
+                onClick={() => categories.length === 0
+                  ? openCategoryEditor(undefined, true)
+                  : openProductEditor()}
                 type="button"
               >
                 <Plus aria-hidden="true" size={17} />
-                Novo produto
+                {categories.length === 0 ? "Começar cardápio" : "Novo produto"}
               </Button>
             )}
           </div>
-
-          {canManage && categories.length === 0 && (
-            <div className="painel-first-category-note">
-              <FolderPlus aria-hidden="true" size={19} />
-              <p>Comece criando uma categoria. Depois, você pode incluir produtos nela.</p>
-              <Button onClick={() => { setTab("categories"); openCategoryEditor(); }} type="button" variant="outline">
-                Criar categoria
-              </Button>
-            </div>
-          )}
 
           {filteredProducts.length === 0 ? (
             <div className="painel-catalog-state painel-empty-state">
@@ -428,7 +441,9 @@ export function CatalogWorkspace() {
               <h2>{products.length === 0 ? "Nenhum produto por aqui" : "Nenhum resultado encontrado"}</h2>
               <p>
                 {products.length === 0
-                  ? "Inclua o primeiro item do cardápio para começar."
+                  ? categories.length === 0
+                    ? "Comece com uma categoria. Ao salvá-la, você seguirá direto para cadastrar o primeiro produto."
+                    : "Inclua o primeiro item do cardápio para começar."
                   : "Tente outra busca ou selecione uma categoria diferente."}
               </p>
             </div>

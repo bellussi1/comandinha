@@ -980,34 +980,6 @@
   font-size: 0.78rem;
 }
 
-.painel-first-category-note {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  border: 1px solid #ead7ce;
-  border-radius: 0.85rem;
-  margin-block: 1rem;
-  padding: 0.85rem 1rem;
-  color: #674c4a;
-  background: #fff9f4;
-}
-
-.painel-first-category-note > svg {
-  flex: 0 0 auto;
-  color: #aa6255;
-}
-
-.painel-first-category-note p {
-  flex: 1;
-  margin: 0;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.painel-first-category-note button {
-  flex: 0 0 auto;
-}
-
 .painel-product-list,
 .painel-category-list {
   display: grid;
@@ -1733,18 +1705,6 @@
   .painel-toolbar-copy small {
     max-width: 13rem;
     line-height: 1.4;
-  }
-
-  .painel-first-category-note {
-    flex-wrap: wrap;
-  }
-
-  .painel-first-category-note p {
-    flex-basis: calc(100% - 3rem);
-  }
-
-  .painel-first-category-note button {
-    width: 100%;
   }
 
   .painel-form-grid,

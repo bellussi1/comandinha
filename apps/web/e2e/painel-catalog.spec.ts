@@ -128,16 +128,13 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
     page.getByRole('complementary', { name: 'Navegação do painel' }).getByText('Casa do Enzo'),
   ).toBeVisible();
 
-  await page.getByRole('tab', { name: /Categorias/ }).click();
-  await page.getByRole('button', { name: 'Nova categoria' }).click();
+  await page.getByRole('button', { name: 'Criar categoria e incluir o primeiro produto' }).click();
   await page.getByLabel('Nome da categoria').fill('Bebidas');
   await page.getByRole('button', { name: 'Salvar categoria' }).click();
-  await expect(page.getByText('Bebidas')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Novo produto' })).toBeVisible();
+  await expect(page.getByLabel('Categoria')).toHaveValue(categoryId);
 
-  await page.getByRole('tab', { name: /Produtos/ }).click();
-  await page.getByRole('button', { name: 'Novo produto' }).click();
   await page.getByLabel('Nome do produto').fill('Suco de laranja');
-  await page.getByLabel('Categoria').selectOption(categoryId);
   await page.getByLabel('Preço (R$)').fill('12,34');
   await page.getByRole('button', { name: 'Salvar produto' }).click();
   await expect(page.getByText('Suco de laranja')).toBeVisible();
