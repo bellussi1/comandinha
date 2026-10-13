@@ -34,6 +34,10 @@
     },
     "typecheck": {
       "dependsOn": ["^build", "^typecheck"]
+    },
+    "@comandinha/api#typecheck": {
+      "dependsOn": ["^build", "^typecheck"],
+      "passThroughEnv": ["DATABASE_URL"]
     }
   }
 }

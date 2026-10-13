@@ -19,6 +19,7 @@ test('passes local application environment only to dev tasks', () => {
     'NEXT_PUBLIC_WEBSOCKET_URL',
     'NEXT_PUBLIC_USE_MOCK',
   ];
+  const devOnlyEnvironment = requiredDevEnvironment.filter((name) => name !== 'DATABASE_URL');
 
   assert.deepEqual(
     requiredDevEnvironment.filter((name) => !turboConfig.tasks.dev.passThroughEnv?.includes(name)),
@@ -29,14 +30,19 @@ test('passes local application environment only to dev tasks', () => {
     ...(turboConfig.globalPassThroughEnv ?? []),
   ];
   const otherTaskEnvironment = Object.entries(turboConfig.tasks)
-    .filter(([taskName]) => taskName !== 'dev')
+    .filter(([taskName]) => taskName !== 'dev' && taskName !== '@comandinha/api#typecheck')
     .flatMap(([, task]) => [...(task.env ?? []), ...(task.passThroughEnv ?? [])]);
 
   assert.equal(
-    requiredDevEnvironment.some((name) =>
+    devOnlyEnvironment.some((name) =>
       [...globallyExposedEnvironment, ...otherTaskEnvironment].includes(name),
     ),
     false,
+  );
+  assert.equal(globallyExposedEnvironment.includes('DATABASE_URL'), false);
+  assert.equal(
+    turboConfig.tasks['@comandinha/api#typecheck']?.passThroughEnv?.includes('DATABASE_URL'),
+    true,
   );
 });
 
