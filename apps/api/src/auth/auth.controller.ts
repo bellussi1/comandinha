@@ -22,7 +22,7 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { ThrottlerGetTrackerFunction } from '@nestjs/throttler';
 import { AdminSessionGuard } from './admin-session.guard.js';
 import { AuthService } from './auth.service.js';
@@ -45,11 +45,13 @@ function getTrustedClientKey(request: Record<string, unknown>): string {
     : 'missing-source';
 }
 
-const getSourceTracker: ThrottlerGetTrackerFunction = (request) => getTrustedClientKey(request);
+const getSourceTracker: ThrottlerGetTrackerFunction = (request) =>
+  getTrustedClientKey(request);
 
 const getAccountTracker: ThrottlerGetTrackerFunction = (request) => {
   const body = request.body as { email?: unknown } | undefined;
-  const accountKey = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const accountKey =
+    typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
 
   return createHash('sha256')
     .update(`${accountKey}\0${getTrustedClientKey(request)}`, 'utf8')
@@ -57,6 +59,7 @@ const getAccountTracker: ThrottlerGetTrackerFunction = (request) => {
 };
 
 @ApiTags('auth')
+@SkipThrottle({ publicOrder: true })
 @Controller('auth/sessions')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -67,16 +70,21 @@ export class AuthController {
     account: { limit: 5, ttl: 60_000, getTracker: getAccountTracker },
     source: { limit: 20, ttl: 60_000, getTracker: getSourceTracker },
   })
-  @ApiOperation({ summary: 'Cria uma sessão administrativa pelo gateway same-origin' })
+  @ApiOperation({
+    summary: 'Cria uma sessão administrativa pelo gateway same-origin',
+  })
   @ApiHeader({ name: 'x-comandinha-gateway-secret', required: true })
   @ApiHeader({
     name: 'x-comandinha-client-key',
     required: false,
-    description: 'Hash da origem confiável encaminhado pelo gateway; compõe o limite por conta/origem.',
+    description:
+      'Hash da origem confiável encaminhado pelo gateway; compõe o limite por conta/origem.',
   })
   @ApiBody({ type: CreateSessionRequestDto })
   @ApiCreatedResponse({ type: CreatedSessionDto })
-  @ApiUnauthorizedResponse({ description: 'Credenciais inválidas ou gateway não autorizado.' })
+  @ApiUnauthorizedResponse({
+    description: 'Credenciais inválidas ou gateway não autorizado.',
+  })
   @ApiTooManyRequestsResponse({
     type: TooManyRequestsDto,
     description: 'Limite de tentativas excedido.',
@@ -92,7 +100,9 @@ export class AuthController {
   @ApiHeader({ name: 'x-comandinha-gateway-secret', required: true })
   @ApiOperation({ summary: 'Valida a sessão administrativa atual' })
   @ApiOkResponse({ type: SessionMetadataDto })
-  @ApiUnauthorizedResponse({ description: 'Sessão ausente, revogada ou expirada.' })
+  @ApiUnauthorizedResponse({
+    description: 'Sessão ausente, revogada ou expirada.',
+  })
   current(@CurrentAdmin() principal: AdminPrincipal) {
     return this.authService.toSessionMetadata(principal);
   }
@@ -104,7 +114,9 @@ export class AuthController {
   @ApiHeader({ name: 'x-comandinha-gateway-secret', required: true })
   @ApiOperation({ summary: 'Revoga a sessão administrativa atual' })
   @ApiNoContentResponse({ description: 'Sessão revogada.' })
-  @ApiUnauthorizedResponse({ description: 'Sessão ausente, revogada ou expirada.' })
+  @ApiUnauthorizedResponse({
+    description: 'Sessão ausente, revogada ou expirada.',
+  })
   async revoke(@CurrentAdmin() principal: AdminPrincipal): Promise<void> {
     await this.authService.revokeSession(principal);
   }

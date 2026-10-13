@@ -10,8 +10,8 @@ import { GatewaySecretGuard } from './gateway-secret.guard.js';
 
 // The throttler package is CommonJS, so it needs the CommonJS Reflector token
 // when the API runs as ESM. Otherwise Nest loads two distinct class tokens.
-const CommonJsReflector = createRequire(import.meta.url)('@nestjs/core').Reflector as
-  typeof NestReflector;
+const CommonJsReflector = createRequire(import.meta.url)('@nestjs/core')
+  .Reflector as typeof NestReflector;
 
 @Module({
   imports: [
@@ -19,10 +19,23 @@ const CommonJsReflector = createRequire(import.meta.url)('@nestjs/core').Reflect
     ThrottlerModule.forRoot([
       { name: 'account', ttl: 60_000, limit: 5 },
       { name: 'source', ttl: 60_000, limit: 20 },
+      { name: 'publicOrder', ttl: 60_000, limit: 10 },
     ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, AdminSessionGuard, GatewaySecretGuard, ThrottlerGuard, CommonJsReflector],
-  exports: [AuthService, AdminSessionGuard, GatewaySecretGuard],
+  providers: [
+    AuthService,
+    AdminSessionGuard,
+    GatewaySecretGuard,
+    ThrottlerGuard,
+    CommonJsReflector,
+  ],
+  exports: [
+    AuthService,
+    AdminSessionGuard,
+    GatewaySecretGuard,
+    ThrottlerGuard,
+    CommonJsReflector,
+  ],
 })
 export class AuthModule {}
