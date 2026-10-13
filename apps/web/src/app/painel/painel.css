@@ -25,14 +25,16 @@
 .painel-root button,
 .painel-root a,
 .painel-root input,
-.painel-root select {
+.painel-root select,
+.painel-root textarea {
   -webkit-tap-highlight-color: transparent;
 }
 
 .painel-root button:focus-visible,
 .painel-root a:focus-visible,
 .painel-root input:focus-visible,
-.painel-root select:focus-visible {
+.painel-root select:focus-visible,
+.painel-root textarea:focus-visible {
   outline: 3px solid var(--comandinha-color-focus);
   outline-offset: 3px;
 }
@@ -51,7 +53,7 @@
   width: 2.45rem;
   height: 2.45rem;
   place-items: center;
-  border-radius: 0.8rem;
+  border-radius: var(--comandinha-radius-md);
   color: var(--painel-plum);
   background: var(--painel-coral);
 }
@@ -118,7 +120,7 @@
 .painel-login-story-copy h1 {
   max-width: 10ch;
   margin: 1.3rem 0 1.1rem;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: clamp(3.5rem, 7vw, 6.6rem);
   font-weight: 400;
   letter-spacing: -0.065em;
@@ -194,7 +196,7 @@
 
 .painel-login-card h2 {
   margin: 0.65rem 0 0.45rem;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: clamp(2.2rem, 4vw, 3rem);
   font-weight: 400;
   letter-spacing: -0.055em;
@@ -227,9 +229,12 @@
 .painel-root .painel-login-input {
   height: 3.15rem;
   border-color: #e1d9d5;
-  border-radius: 0.8rem;
+  border-radius: var(--comandinha-radius-md);
   background: #fff;
   box-shadow: 0 1px 2px rgb(47 31 42 / 3%);
+  transition:
+    border-color var(--comandinha-motion-fast) var(--comandinha-motion-ease),
+    box-shadow var(--comandinha-motion-fast) var(--comandinha-motion-ease);
 }
 
 .painel-login-select {
@@ -245,13 +250,13 @@
   align-items: center;
   justify-content: center;
   gap: 0.7rem;
-  border-radius: 0.8rem;
+  border-radius: var(--comandinha-radius-md);
   color: #fffaf5;
   background: var(--painel-plum);
   font-size: 0.91rem;
   transition:
-    background-color 180ms ease,
-    transform 180ms ease;
+    background-color var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    transform var(--comandinha-motion-base) var(--comandinha-motion-ease);
 }
 
 .painel-root .painel-login-submit:hover:not(:disabled) {
@@ -335,7 +340,7 @@
 
 .painel-sidebar .painel-eyebrow {
   color: rgb(255 250 245 / 52%);
-  font-size: 0.58rem;
+  font-size: var(--comandinha-type-label);
 }
 
 .painel-restaurant-card strong {
@@ -422,7 +427,7 @@
   border-radius: 50%;
   color: var(--painel-plum);
   background: var(--painel-amber);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: 1.05rem;
 }
 
@@ -460,7 +465,7 @@
   color: inherit;
   background: transparent;
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: background-color var(--comandinha-motion-fast) var(--comandinha-motion-ease);
 }
 
 .painel-logout-button:hover:not(:disabled) {
@@ -498,7 +503,7 @@
 
 .painel-page-heading h1 {
   margin: 0.55rem 0 0.35rem;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: clamp(2.35rem, 4.2vw, 3.4rem);
   font-weight: 400;
   letter-spacing: -0.055em;
@@ -588,7 +593,7 @@
 .painel-state-card h1 {
   margin: 0.6rem 0;
   color: var(--painel-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: 1.8rem;
   font-weight: 400;
   letter-spacing: -0.04em;
@@ -1229,7 +1234,7 @@
   border-radius: 0.72rem;
   color: #8e5e57;
   background: #f4e7e2;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: 0.9rem;
 }
 
@@ -1253,7 +1258,7 @@
 .painel-catalog-state h2 {
   margin: 0.3rem 0 0;
   color: #382d37;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: 1.55rem;
   font-weight: 400;
   letter-spacing: -0.035em;
@@ -1345,7 +1350,7 @@
 .painel-editor-heading h2 {
   margin: 0.32rem 0 0.2rem;
   color: #342a33;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-size: 1.8rem;
   font-weight: 400;
   letter-spacing: -0.04em;
@@ -1513,6 +1518,26 @@
   font-size: 0.76rem;
 }
 
+.painel-confirm-dialog,
+.painel-qr-dialog {
+  --painel-plum: var(--comandinha-color-plum);
+  --painel-plum-deep: var(--comandinha-color-plum-deep);
+  --painel-coral: var(--comandinha-color-coral);
+  --painel-amber: var(--comandinha-color-amber);
+  --painel-paper: var(--comandinha-color-paper);
+  --painel-ink: var(--comandinha-color-ink);
+  --painel-muted: var(--comandinha-color-muted);
+  --painel-line: var(--comandinha-color-line);
+  color: var(--painel-ink);
+  font-family: var(--comandinha-font-body);
+}
+
+.painel-confirm-dialog :is(button, a, input, select, textarea):focus-visible,
+.painel-qr-dialog :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--comandinha-color-focus);
+  outline-offset: 3px;
+}
+
 .painel-confirm-dialog {
   border-color: var(--painel-line);
   border-radius: 1rem;
@@ -1520,7 +1545,7 @@
 
 .painel-confirm-dialog [data-radix-alert-dialog-title] {
   color: #342a33;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--comandinha-font-display);
   font-weight: 400;
 }
 
@@ -1851,11 +1876,17 @@
   align-items: center;
   gap: 0.6rem 0.75rem;
   border: 1px solid var(--painel-line);
-  border-radius: 1rem;
+  border-radius: var(--comandinha-radius-lg);
   padding: 1.1rem;
   background: #fff;
-  box-shadow: 0 9px 30px rgb(51 35 49 / 3%);
+  box-shadow: var(--comandinha-shadow-card);
+  animation: painel-dining-enter var(--comandinha-motion-enter) var(--comandinha-motion-ease) both;
+  animation-delay: calc(var(--metric-index, 0) * 45ms);
 }
+
+.painel-dashboard-metric:nth-child(2) { --metric-index: 1; }
+.painel-dashboard-metric:nth-child(3) { --metric-index: 2; }
+.painel-dashboard-metric:nth-child(4) { --metric-index: 3; }
 
 .painel-dashboard-metric-icon,
 .painel-dashboard-shortcut-icon {
@@ -1923,22 +1954,44 @@
 }
 
 .painel-dashboard-shortcut {
+  position: relative;
   display: flex;
   min-width: 0;
   min-height: 5.8rem;
   align-items: center;
   gap: 0.75rem;
   border: 1px solid var(--painel-line);
-  border-radius: 1rem;
+  border-radius: var(--comandinha-radius-lg);
   padding: 0.85rem;
   background: #fff;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition:
+    transform var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    border-color var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    box-shadow var(--comandinha-motion-base) var(--comandinha-motion-ease);
+  animation: painel-dining-enter var(--comandinha-motion-enter) var(--comandinha-motion-ease) both;
 }
+
+.painel-dashboard-shortcut:first-child {
+  border-color: #dfc9d7;
+}
+
+.painel-dashboard-shortcut:first-child::before {
+  position: absolute;
+  inset-block: 0.75rem;
+  inset-inline-start: 0;
+  width: 3px;
+  border-radius: var(--comandinha-radius-pill);
+  background: var(--comandinha-color-coral);
+  content: "";
+}
+
+.painel-dashboard-shortcut:nth-child(2) { animation-delay: 45ms; }
+.painel-dashboard-shortcut:nth-child(3) { animation-delay: 90ms; }
 
 .painel-dashboard-shortcut:hover {
   transform: translateY(-2px);
   border-color: #d9c5d2;
-  box-shadow: 0 12px 28px rgb(51 35 49 / 7%);
+  box-shadow: var(--comandinha-shadow-raised);
 }
 
 .painel-dashboard-shortcut > span:nth-child(2) {
@@ -2011,7 +2064,10 @@
   color: #fffaf5;
   background: var(--painel-plum);
   box-shadow: none;
-  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    transform var(--comandinha-motion-fast) var(--comandinha-motion-ease),
+    background-color var(--comandinha-motion-fast) var(--comandinha-motion-ease),
+    box-shadow var(--comandinha-motion-fast) var(--comandinha-motion-ease);
 }
 
 .painel-root .painel-action-button:hover:not(:disabled) {
@@ -2104,9 +2160,9 @@
 .painel-order-card {
   min-width: 0;
   border: 1px solid var(--painel-line);
-  border-radius: 1rem;
+  border-radius: var(--comandinha-radius-lg);
   background: #fff;
-  box-shadow: 0 9px 30px rgb(51 35 49 / 3%);
+  box-shadow: var(--comandinha-shadow-card);
   animation: painel-dining-enter 420ms both;
   animation-delay: calc(min(var(--card-index, 0), 6) * 45ms);
 }
@@ -2116,7 +2172,10 @@
   min-height: 13.8rem;
   flex-direction: column;
   padding: 1rem;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition:
+    transform var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    border-color var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    box-shadow var(--comandinha-motion-base) var(--comandinha-motion-ease);
 }
 
 .painel-table-card:hover {
@@ -2430,6 +2489,18 @@
 .painel-order-card {
   overflow: hidden;
   padding: 1rem;
+  transition:
+    transform var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    border-color var(--comandinha-motion-base) var(--comandinha-motion-ease),
+    box-shadow var(--comandinha-motion-base) var(--comandinha-motion-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .painel-order-card:hover {
+    transform: translateY(-1px);
+    border-color: #d9c5d2;
+    box-shadow: 0 14px 30px rgb(51 35 49 / 7%);
+  }
 }
 
 .painel-order-card-header {
@@ -2697,12 +2768,15 @@
 
 @media (prefers-reduced-motion: reduce) {
   .painel-table-card,
-  .painel-order-card {
+  .painel-order-card,
+  .painel-dashboard-metric,
+  .painel-dashboard-shortcut {
     animation: none;
   }
 
   .painel-dashboard-shortcut:hover,
   .painel-table-card:hover,
+  .painel-order-card:hover,
   .painel-root .painel-action-button:hover:not(:disabled) {
     transform: none;
   }

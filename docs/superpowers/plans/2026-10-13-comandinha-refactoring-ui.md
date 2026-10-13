@@ -38,7 +38,7 @@
 
 **Interfaces:**
 - Define namespaced `--comandinha-*` tokens for brand colors, neutral surfaces, text hierarchy, spacing, radius, shadow, and motion.
-- Keep tokens scoped to `.painel-root` and `.public-menu-page`; leave legacy admin and unrelated pages unchanged.
+- Keep tokens scoped to the new `.painel-root`, `.public-menu-page`, and their Radix portal dialogs; leave legacy admin and unrelated pages unchanged.
 
 - [x] Review the current token values against contrast needs and the reference’s hierarchy principles.
 - [x] Add or update Playwright contrast checks; responsive and reduced-motion checks already exist in the panel and QR flow specs.
@@ -60,11 +60,11 @@
 - Keep the routes, service calls, forms, and operational actions unchanged.
 - Use one dominant action per view, de-emphasize supporting metadata, and group content through spacing and surface contrast before adding borders.
 
-- [ ] Add regression assertions for supported viewport widths, keyboard focus, and reduced motion to the existing panel E2E coverage; run them to identify any current failures.
-- [ ] Refine login, overview, catalog, tables, and orders using the shared type/spacing/color system.
-- [ ] Keep empty, loading, success, and error states legible and actionable.
-- [ ] Run `pnpm --filter @comandinha/web exec playwright test e2e/painel-catalog.spec.ts e2e/painel-dining.spec.ts`.
-- [ ] Commit as `refactor(web): apply visual hierarchy to admin screens`.
+- [x] Add regression assertions for supported viewport widths, keyboard focus, and reduced motion to the existing panel E2E coverage; run them to identify any current failures.
+- [x] Refine login, overview, catalog, tables, and orders using the shared type/spacing/color system.
+- [x] Keep empty, loading, success, and error states legible and actionable.
+- [x] Run the panel catalog and dining Playwright coverage against the active local server.
+- [x] Commit as `refactor(web): apply visual hierarchy to admin screens`.
 
 ### Task 3: Refine the public QR menu
 

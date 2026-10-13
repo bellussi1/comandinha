@@ -115,6 +115,13 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
       await route.fulfill({ status: 200, json: [table] });
       return;
     }
+    if (url.pathname === '/api/admin/orders/summary' && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        json: { PENDING: 1, PREPARING: 0, READY: 0, DELIVERED: 0, CANCELLED: 0 },
+      });
+      return;
+    }
     if (url.pathname === '/api/admin/orders' && method === 'GET') {
       const orders = orderCreated ? [panelOrder()] : [];
       const status = url.searchParams.get('status');
@@ -163,12 +170,60 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/painel\/catalogo$/);
 
-  await page.getByRole('link', { name: 'Mesas', exact: true }).click();
+  await page.goto('/painel');
+  await expect(page.getByRole('heading', { name: 'Bom trabalho, Enzo.' })).toBeVisible();
+  for (const viewport of [
+    { width: 320, height: 800 },
+    { width: 360, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const dimensions = await page.evaluate(() => ({
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    await expect(page.getByRole('link', { name: /Acompanhar pedidos/ })).toBeVisible();
+  }
+  const firstDashboardShortcut = page.locator('.painel-dashboard-shortcut').first();
+  await firstDashboardShortcut.focus();
+  await expect(firstDashboardShortcut).toHaveCSS('outline-style', 'solid');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const dashboardMotion = await page.locator('.painel-dashboard-metric').first().evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  expect(dashboardMotion).toBeLessThanOrEqual(0.001);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  await page.goto('/painel/mesas');
   await expect(page.getByRole('heading', { name: 'Mesas com acesso direto.' })).toBeVisible();
+  for (const viewport of [
+    { width: 320, height: 800 },
+    { width: 360, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const dimensions = await page.evaluate(() => ({
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    await expect(page.getByRole('button', { name: 'Ver QR de Mesa 01' })).toBeVisible();
+  }
+
   await page.getByRole('button', { name: 'Ver QR de Mesa 01' }).click();
   await expect(page.getByRole('dialog', { name: 'QR da Mesa 01' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'QR da Mesa 01' })).toHaveCSS(
+    'color',
+    'rgb(64, 34, 58)',
+  );
 
-  const publicUrl = await page.getByLabel('Link público').inputValue();
+  const publicLinkInput = page.getByLabel('Link público');
+  await publicLinkInput.focus();
+  await expect(publicLinkInput).toHaveCSS('outline-style', 'solid');
+  const publicUrl = await publicLinkInput.inputValue();
   expect(new URL(publicUrl).pathname).toBe(`/q/${tableCode}`);
   await expect(page.getByRole('img', { name: 'Código QR para Mesa 01' })).toBeVisible();
   await page.goto(publicUrl);
@@ -176,6 +231,7 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   await expect(page.getByText('Smash clássico')).toBeVisible();
 
   for (const viewport of [
+    { width: 320, height: 800 },
     { width: 360, height: 800 },
     { width: 768, height: 1024 },
     { width: 1440, height: 900 },
@@ -207,6 +263,7 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const viewport of [
+    { width: 320, height: 800 },
     { width: 360, height: 800 },
     { width: 768, height: 1024 },
     { width: 1440, height: 900 },

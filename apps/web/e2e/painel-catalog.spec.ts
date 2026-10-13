@@ -113,7 +113,26 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
     await route.fulfill({ status: 405, json: { message: 'Method not allowed' } });
   });
 
+  await page.setViewportSize({ width: 320, height: 800 });
   await page.goto('/painel/login');
+  await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible();
+  let dimensions = await page.evaluate(() => ({
+    pageWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }));
+  expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  const email = page.getByLabel('E-mail');
+  await email.focus();
+  await expect(email).toHaveCSS('outline-style', 'solid');
+  await expect(email).toHaveCSS('outline-width', '3px');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(
+    await page.locator('.painel-login-card').evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).animationDuration),
+    ),
+  ).toBeLessThanOrEqual(0.001);
+  await page.setViewportSize({ width: 1440, height: 900 });
+
   await page.getByLabel('E-mail').fill('enzo@example.com');
   await page.getByLabel('Senha').fill('password-123');
   await page.getByRole('button', { name: 'Entrar' }).click();
@@ -189,7 +208,7 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
         .evaluate((label) => Number.parseFloat(getComputedStyle(label).fontSize));
       expect(actionLabelFontSize).toBeGreaterThanOrEqual(12);
     }
-    const dimensions = await page.evaluate(() => ({
+    dimensions = await page.evaluate(() => ({
       pageWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     }));
