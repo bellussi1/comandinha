@@ -17,6 +17,7 @@ test-results/
 
 # next.js
 .next/
+.next-ui-check/
 out/
 .turbo/
 /.worktrees/
