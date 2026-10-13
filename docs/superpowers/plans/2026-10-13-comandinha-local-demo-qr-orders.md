@@ -226,14 +226,14 @@
 - Successful submission clears the cart and stores returned order id in comandinha:qr-last-order:{code} for confirmation/tracking. Failed submission leaves the cart intact and exposes an accessible retry message.
 - OrderTracking polls GET summaries every 10 seconds only while the page is visible, displays only the stored order id, stops after DELIVERED/CANCELLED or unmount, and never displays another table's orders.
 
-- [ ] **Step 1: Write failing Jest tests for loading the menu, category navigation, cart totals, storage keyed per code, server price refresh, submit lock, cart preservation on error, success confirmation and tracking stop conditions. Run and verify failures.**
-- [ ] **Step 2: Implement public-dining browser service with typed OpenAPI responses and strict error states.**
-- [ ] **Step 3: Implement menu and cart components. Keep totals informational until server confirmation; submit only product IDs, quantities and notes. Disable the submit action while pending.**
-- [ ] **Step 4: Implement order confirmation and 10-second visibility-aware tracking with cleanup and polite live-region updates.**
-- [ ] **Step 5: Implement /q/[code] as a client experience with server page metadata set noindex and a not-found/error state for invalid codes. Keep /mesa/[uuid] untouched.**
-- [ ] **Step 6: Add mobile-first coral/plum styling, fixed cart CTA that respects safe-area insets, keyboard-accessible category/cart controls, focus states and reduced motion.**
-- [ ] **Step 7: Run PublicMenu tests, web lint and typecheck. Expected: no hydration errors; cart survives reload but not a table-code change; failed order keeps all cart lines.**
-- [ ] **Step 8: Commit as feat: add public QR menu and order tracking.**
+- [x] **Step 1: Write failing Jest tests for loading the menu, category navigation, cart totals, storage keyed per code, server price refresh, submit lock, cart preservation on error, success confirmation and tracking stop conditions. Run and verify failures.**
+- [x] **Step 2: Implement public-dining browser service with typed OpenAPI responses and strict error states.**
+- [x] **Step 3: Implement menu and cart components. Keep totals informational until server confirmation; submit only product IDs, quantities and notes. Disable the submit action while pending.**
+- [x] **Step 4: Implement order confirmation and 10-second visibility-aware tracking with cleanup and polite live-region updates.**
+- [x] **Step 5: Implement /q/[code] as a client experience with server page metadata set noindex and a not-found/error state for invalid codes. Keep /mesa/[uuid] untouched.**
+- [x] **Step 6: Add mobile-first coral/plum styling, fixed cart CTA that respects safe-area insets, keyboard-accessible category/cart controls, focus states and reduced motion.**
+- [x] **Step 7: Run PublicMenu tests, web lint and typecheck. Expected: no hydration errors; cart survives reload but not a table-code change; failed order keeps all cart lines.**
+- [x] **Step 8: Commit as feat: add public QR menu and order tracking.**
 
 ### Task 9: Fluxo ponta a ponta, documentação final e validação
 
