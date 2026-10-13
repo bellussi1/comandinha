@@ -241,12 +241,12 @@
 - Create: apps/web/e2e/painel-dining.spec.ts
 - Modify: README.md
 
-- [ ] **Step 1: Write Playwright flow for login, QR link opening, product selection, cart submission, status advance in /painel/pedidos, and public tracking update. Use deterministic API mocks; API behavior remains covered by PostgreSQL integration tests.**
-- [ ] **Step 2: Add viewport checks at 360x800, 768x1024 and 1440x900 for the public menu and panel; assert no horizontal overflow and test reduced motion.**
-- [ ] **Step 3: Add a compatibility assertion that /admin and /mesa/[uuid] remain reachable with their existing API calls mocked. Run the E2E suite and verify both legacy paths.**
-- [ ] **Step 4: Finish README instructions for migrate, seed, login, opening /painel/mesas, scanning /q/{code}, submitting a sample order and advancing its status.**
-- [ ] **Step 5: Run API unit/integration/E2E tests, web Jest/Playwright/lint/typecheck, pnpm api:client:check, and root build. Expected: all pass against local PostgreSQL; no remote operation runs.**
-- [ ] **Step 6: Run git diff --check, verify .env remains ignored and absent from the staged diff, and commit only final E2E/docs changes as test: verify local QR order journey.**
+- [x] **Step 1: Write Playwright flow for login, QR link opening, product selection, cart submission, status advance in /painel/pedidos, and public tracking update. Use deterministic API mocks; API behavior remains covered by PostgreSQL integration tests.**
+- [x] **Step 2: Add viewport checks at 360x800, 768x1024 and 1440x900 for the public menu and panel; assert no horizontal overflow and test reduced motion.**
+- [x] **Step 3: Add a compatibility assertion that /admin and /mesa/[uuid] remain reachable with their existing API calls mocked. Run the E2E suite and verify both legacy paths.**
+- [x] **Step 4: Finish README instructions for migrate, seed, login, opening /painel/mesas, scanning /q/{code}, submitting a sample order and advancing its status.**
+- [x] **Step 5: Run API unit/integration/E2E tests, web Jest/Playwright/lint/typecheck, pnpm api:client:check, and root build. Expected: all pass against local PostgreSQL; no remote operation runs.**
+- [x] **Step 6: Run git diff --check, verify .env remains ignored and absent from the staged diff, and commit only final E2E/docs changes as test: verify local QR order journey.**
 
 ## Coverage review
 
