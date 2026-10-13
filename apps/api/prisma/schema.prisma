@@ -8,14 +8,16 @@ datasource db {
 }
 
 model Restaurant {
-  id               String             @id @default(uuid()) @db.Uuid
-  name             String
-  slug             String             @unique
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  memberships      Membership[]
+  id                String            @id @default(uuid()) @db.Uuid
+  name              String
+  slug              String            @unique
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  memberships       Membership[]
   catalogCategories CatalogCategory[]
   catalogProducts   CatalogProduct[]
+  tables            RestaurantTable[]
+  orders            Order[]
 }
 
 enum MembershipRole {
@@ -75,7 +77,7 @@ model CatalogCategory {
   displayOrder   Int              @default(0)
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurant     Restaurant       @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   products       CatalogProduct[]
 
   @@unique([restaurantId, nameNormalized])
@@ -98,9 +100,71 @@ model CatalogProduct {
   isActive        Boolean         @default(true)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
-  restaurant      Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  restaurant      Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   category        CatalogCategory @relation(fields: [categoryId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
+  orderItems      OrderItem[]
 
+  @@unique([id, restaurantId])
   @@index([restaurantId, isActive, categoryId])
   @@index([restaurantId, isActive, name])
+}
+
+enum OrderStatus {
+  PENDING
+  PREPARING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
+model RestaurantTable {
+  id           String     @id @default(uuid()) @db.Uuid
+  restaurantId String     @db.Uuid
+  name         String     @db.VarChar(80)
+  publicCode   String     @unique @db.VarChar(64)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders       Order[]
+
+  @@unique([id, restaurantId])
+  @@unique([restaurantId, name])
+  @@index([restaurantId, isActive, name])
+}
+
+model Order {
+  id           String          @id @default(uuid()) @db.Uuid
+  restaurantId String          @db.Uuid
+  tableId      String          @db.Uuid
+  status       OrderStatus     @default(PENDING)
+  notes        String?         @db.VarChar(200)
+  totalInCents Int
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table        RestaurantTable @relation(fields: [tableId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
+  items        OrderItem[]
+
+  @@unique([id, restaurantId])
+  @@index([restaurantId, status, createdAt])
+  @@index([tableId, createdAt])
+}
+
+model OrderItem {
+  id               String         @id @default(uuid()) @db.Uuid
+  restaurantId     String         @db.Uuid
+  orderId          String         @db.Uuid
+  productId        String         @db.Uuid
+  nameSnapshot     String         @db.VarChar(120)
+  unitPriceInCents Int
+  quantity         Int
+  notes            String?        @db.VarChar(200)
+  lineTotalInCents Int
+  createdAt        DateTime       @default(now())
+  order            Order          @relation(fields: [orderId, restaurantId], references: [id, restaurantId], onDelete: Cascade)
+  product          CatalogProduct @relation(fields: [productId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
+
+  @@index([restaurantId, orderId])
+  @@index([productId, restaurantId])
 }
