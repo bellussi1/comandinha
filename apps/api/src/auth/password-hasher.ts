@@ -4,22 +4,34 @@ import {
   timingSafeEqual,
 } from 'node:crypto';
 
-const scryptParameters = {
+const legacyScryptParameters = {
   N: 16_384,
   r: 8,
   p: 1,
   maxmem: 64 * 1024 * 1024,
 } as const;
+const currentScryptParameters = {
+  N: 131_072,
+  r: 8,
+  p: 1,
+  maxmem: 256 * 1024 * 1024,
+} as const;
 const saltLength = 16;
 const keyLength = 64;
 
-function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
+type ScryptParameters = typeof legacyScryptParameters | typeof currentScryptParameters;
+
+function deriveKey(
+  password: string,
+  salt: Buffer,
+  parameters: ScryptParameters,
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     scryptCallback(
       password,
       salt,
       keyLength,
-      scryptParameters,
+      parameters,
       (error, derivedKey) => {
         if (error) {
           reject(error);
@@ -34,14 +46,14 @@ function deriveKey(password: string, salt: Buffer): Promise<Buffer> {
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(saltLength);
-  const derivedKey = await deriveKey(password, salt);
+  const derivedKey = await deriveKey(password, salt, currentScryptParameters);
 
   return [
     'scrypt',
-    '1',
-    String(scryptParameters.N),
-    String(scryptParameters.r),
-    String(scryptParameters.p),
+    '2',
+    String(currentScryptParameters.N),
+    String(currentScryptParameters.r),
+    String(currentScryptParameters.p),
     salt.toString('base64url'),
     derivedKey.toString('base64url'),
   ].join('$');
@@ -62,12 +74,19 @@ export async function verifyPassword(
     extra,
   ] = encoded.split('$');
 
+  const parameters =
+    version === '1'
+      ? legacyScryptParameters
+      : version === '2'
+        ? currentScryptParameters
+        : undefined;
+
   if (
     algorithm !== 'scrypt' ||
-    version !== '1' ||
-    cost !== String(scryptParameters.N) ||
-    blockSize !== String(scryptParameters.r) ||
-    parallelization !== String(scryptParameters.p) ||
+    !parameters ||
+    cost !== String(parameters.N) ||
+    blockSize !== String(parameters.r) ||
+    parallelization !== String(parameters.p) ||
     !saltValue ||
     !keyValue ||
     extra !== undefined
@@ -82,6 +101,6 @@ export async function verifyPassword(
     return false;
   }
 
-  const actualKey = await deriveKey(password, salt);
+  const actualKey = await deriveKey(password, salt, parameters);
   return timingSafeEqual(actualKey, expectedKey);
 }

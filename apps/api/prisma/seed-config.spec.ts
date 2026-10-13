@@ -3,6 +3,8 @@ import { parseSeedConfig } from './seed-config.js';
 
 const validEnvironment = {
   NODE_ENV: 'development',
+  ALLOW_LOCAL_DEMO_SEED: 'true',
+  DATABASE_URL: 'postgresql://comandinha:local-only@127.0.0.1:5432/comandinha',
   DEMO_OWNER_NAME: 'Comandinha Owner',
   DEMO_OWNER_EMAIL: 'OWNER@EXAMPLE.COM',
   DEMO_OWNER_PASSWORD: 'a-long-local-password',
@@ -28,9 +30,28 @@ describe('parseSeedConfig', () => {
   });
 
   it('requires every owner and restaurant value instead of using default credentials', () => {
-    expect(() => parseSeedConfig({ NODE_ENV: 'development' })).toThrow(
+    expect(() => parseSeedConfig({
+      NODE_ENV: 'development',
+      ALLOW_LOCAL_DEMO_SEED: 'true',
+      DATABASE_URL: validEnvironment.DATABASE_URL,
+    })).toThrow(
       'DEMO_OWNER_NAME is required.',
     );
+  });
+
+  it('requires an explicit local seed opt-in', () => {
+    expect(() =>
+      parseSeedConfig({ ...validEnvironment, ALLOW_LOCAL_DEMO_SEED: 'false' }),
+    ).toThrow('Set ALLOW_LOCAL_DEMO_SEED=true to run the local demo seed.');
+  });
+
+  it('refuses a remote database even outside production mode', () => {
+    expect(() =>
+      parseSeedConfig({
+        ...validEnvironment,
+        DATABASE_URL: 'postgresql://app:secret@db.example.com:5432/comandinha',
+      }),
+    ).toThrow('Demo seed can only target a loopback database URL.');
   });
 
   it('rejects a password shorter than twelve characters', () => {

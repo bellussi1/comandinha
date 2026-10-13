@@ -106,6 +106,8 @@ describe('identity schema with PostgreSQL', () => {
     const email = `seed-${suffix}@example.test`;
     const config = parseSeedConfig({
       NODE_ENV: 'test',
+      ALLOW_LOCAL_DEMO_SEED: 'true',
+      DATABASE_URL: process.env.DATABASE_URL,
       DEMO_OWNER_NAME: 'Seed Integration Owner',
       DEMO_OWNER_EMAIL: email,
       DEMO_OWNER_PASSWORD: 'a-long-local-password',

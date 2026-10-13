@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 export interface SeedConfig {
   ownerName: string;
   ownerEmail: string;
@@ -18,6 +20,27 @@ function requiredValue(environment: NodeJS.ProcessEnv, key: string): string {
 export function parseSeedConfig(environment: NodeJS.ProcessEnv): SeedConfig {
   if (environment.NODE_ENV === 'production') {
     throw new Error('Demo seed is disabled in production.');
+  }
+
+  if (environment.ALLOW_LOCAL_DEMO_SEED !== 'true') {
+    throw new Error('Set ALLOW_LOCAL_DEMO_SEED=true to run the local demo seed.');
+  }
+
+  const databaseUrl = requiredValue(environment, 'DATABASE_URL');
+  let database: URL;
+  try {
+    database = new URL(databaseUrl);
+  } catch {
+    throw new Error('DATABASE_URL must be a valid local PostgreSQL URL.');
+  }
+
+  const hostname = database.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const isLoopbackHost =
+    hostname === 'localhost' ||
+    hostname === '::1' ||
+    (isIP(hostname) === 4 && hostname.startsWith('127.'));
+  if (!['postgres:', 'postgresql:'].includes(database.protocol) || !isLoopbackHost) {
+    throw new Error('Demo seed can only target a loopback database URL.');
   }
 
   const ownerName = requiredValue(environment, 'DEMO_OWNER_NAME');

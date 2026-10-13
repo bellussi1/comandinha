@@ -7,6 +7,10 @@ export function configureOpenApi(app: INestApplication): OpenAPIObject {
     .setTitle('Comandinha API')
     .setDescription('API do Comandinha para gerenciamento de pedidos e restaurantes.')
     .setVersion('1.0.0')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'opaque session token' },
+      'admin-session',
+    )
     .build();
   const openApiDocument = SwaggerModule.createDocument(app, openApiConfig);
 
