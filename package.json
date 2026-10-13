@@ -12,10 +12,11 @@
     "api:client:check": "pnpm --filter @comandinha/api prisma:generate && node scripts/check-api-client.mjs",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "pnpm test:dev-script && pnpm test:client-script && turbo run test",
+    "test": "pnpm test:dev-script && pnpm test:client-script && pnpm test:docs && turbo run test",
     "test:integration": "node --env-file-if-exists=.env node_modules/turbo/bin/turbo run test:integration",
     "test:dev-script": "node --test scripts/dev.test.mjs",
     "test:client-script": "node --test scripts/check-api-client.test.mjs",
+    "test:docs": "node --test scripts/readme-check.test.mjs && node scripts/check-readme.mjs",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

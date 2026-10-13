@@ -236,19 +236,19 @@ Commit as `ci: validate monorepo contracts and builds`.
 - Consumes: workspace scripts, services, health endpoints, and UI/API stack from prior tasks.
 - Produces: documented local setup on Node 24.21.0, pnpm 12.11.2, and Docker; setup uses example configuration only and clearly labels health endpoints as infrastructure checks, not product functionality.
 
-- [ ] **Step 1: Write README verification checklist**
+- [x] **Step 1: Write README verification checklist**
 
 Add a documentation check for required sections: project status, stack/version snapshot, prerequisites, one-command startup, web/API URLs, test commands, environment variables, and known unimplemented product flows.
 
-- [ ] **Step 2: Document setup and architecture trade-offs**
+- [x] **Step 2: Document setup and architecture trade-offs**
 
 Update README and ADR with the selected Next.js/NestJS monorepo, clean-room backend constraint, Prisma 7 and PostgreSQL choice, generated OpenAPI client, local Compose workflow, and explicit no-deploy status.
 
-- [ ] **Step 3: Verify commands and links from a clean checkout**
+- [x] **Step 3: Verify commands and links from a clean checkout**
 
 Follow the README in the worktree with a fresh `.env` copied from `.env.example`; run the documented startup and test commands. Expected: documented commands match actual root scripts and no real secret is required.
 
-- [ ] **Step 4: Commit foundation documentation**
+- [x] **Step 4: Commit foundation documentation**
 
 Commit as `docs: document Comandinha monorepo foundation`.
 
