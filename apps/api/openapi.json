@@ -1,6 +1,148 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/auth/sessions": {
+      "post": {
+        "operationId": "AuthController_create",
+        "parameters": [
+          {
+            "name": "x-comandinha-client-key",
+            "in": "header",
+            "description": "Hash da origem confiável encaminhado pelo gateway; compõe o limite por conta/origem.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciais inválidas ou gateway não autorizado."
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipSelectionRequiredDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de tentativas excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cria uma sessão administrativa pelo gateway same-origin",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sessions/current": {
+      "get": {
+        "operationId": "AuthController_current",
+        "parameters": [
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMetadataDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ausente, revogada ou expirada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Valida a sessão administrativa atual",
+        "tags": [
+          "auth"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthController_revoke",
+        "parameters": [
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sessão revogada."
+          },
+          "401": {
+            "description": "Sessão ausente, revogada ou expirada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Revoga a sessão administrativa atual",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/health/live": {
       "get": {
         "operationId": "HealthController_live",
@@ -90,6 +232,485 @@
           "health"
         ]
       }
+    },
+    "/catalog/categories": {
+      "get": {
+        "operationId": "CatalogCategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Lista as categorias do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogCategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "409": {
+            "description": "Já existe uma categoria com esse nome."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Cria uma categoria no restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      }
+    },
+    "/catalog/categories/{id}": {
+      "get": {
+        "operationId": "CatalogCategoriesController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta uma categoria do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogCategoriesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          },
+          "409": {
+            "description": "Já existe uma categoria com esse nome."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Atualiza uma categoria do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogCategoriesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Categoria removida."
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          },
+          "409": {
+            "description": "A categoria ainda possui produtos."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Remove uma categoria vazia do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      }
+    },
+    "/catalog/products": {
+      "get": {
+        "operationId": "CatalogProductsController_list",
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogProductResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem consultar produtos arquivados."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Lista produtos ativos ou, para administradores, arquivados",
+        "tags": [
+          "catalog products"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Cria um produto no restaurante da sessão",
+        "tags": [
+          "catalog products"
+        ]
+      }
+    },
+    "/catalog/products/{id}": {
+      "get": {
+        "operationId": "CatalogProductsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta um produto do restaurante da sessão",
+        "tags": [
+          "catalog products"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogProductsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Produto ou categoria não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Atualiza ou restaura um produto do restaurante da sessão",
+        "tags": [
+          "catalog products"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogProductsController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Produto arquivado."
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Arquiva um produto sem apagar seus dados",
+        "tags": [
+          "catalog products"
+        ]
+      }
     }
   },
   "info": {
@@ -101,6 +722,509 @@
   "tags": [],
   "servers": [],
   "components": {
-    "schemas": {}
+    "securitySchemes": {
+      "admin-session": {
+        "scheme": "bearer",
+        "bearerFormat": "opaque session token",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CreateSessionRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "owner@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "writeOnly": true
+          },
+          "restaurantSlug": {
+            "type": "string",
+            "example": "my-restaurant",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "SessionUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
+      },
+      "SessionRestaurantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "SessionMembershipDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "STAFF"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "role"
+        ]
+      },
+      "CreatedSessionDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/SessionUserDto"
+          },
+          "restaurant": {
+            "$ref": "#/components/schemas/SessionRestaurantDto"
+          },
+          "membership": {
+            "$ref": "#/components/schemas/SessionMembershipDto"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sessionToken": {
+            "type": "string",
+            "description": "Opaque session secret; returned only to the trusted Next.js gateway."
+          }
+        },
+        "required": [
+          "user",
+          "restaurant",
+          "membership",
+          "expiresAt",
+          "sessionToken"
+        ]
+      },
+      "MembershipChoiceDto": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "STAFF"
+            ]
+          },
+          "restaurant": {
+            "$ref": "#/components/schemas/SessionRestaurantDto"
+          }
+        },
+        "required": [
+          "membershipId",
+          "role",
+          "restaurant"
+        ]
+      },
+      "MembershipSelectionRequiredDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "RESTAURANT_SELECTION_REQUIRED"
+            ]
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembershipChoiceDto"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "memberships"
+        ]
+      },
+      "TooManyRequestsDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 429
+          },
+          "message": {
+            "type": "string",
+            "example": "ThrottlerException: Too Many Requests"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message"
+        ]
+      },
+      "SessionMetadataDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/SessionUserDto"
+          },
+          "restaurant": {
+            "$ref": "#/components/schemas/SessionRestaurantDto"
+          },
+          "membership": {
+            "$ref": "#/components/schemas/SessionMembershipDto"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "user",
+          "restaurant",
+          "membership",
+          "expiresAt"
+        ]
+      },
+      "CatalogCategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameNormalized": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "displayOrder": {
+            "type": "number"
+          },
+          "productCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "name",
+          "nameNormalized",
+          "displayOrder",
+          "productCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCatalogCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Bebidas"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "example": "https://example.com/menu.jpg"
+          },
+          "displayOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Ordem da categoria. O valor padrão é zero."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCatalogCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "nullable": true
+          },
+          "displayOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        }
+      },
+      "CatalogProductResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "priceInCents": {
+            "type": "number",
+            "description": "Preço em centavos inteiros."
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "dietaryTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "categoryId",
+          "name",
+          "priceInCents",
+          "available",
+          "featured",
+          "dietaryTags",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCatalogProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Suco de laranja"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceInCents": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Preço em centavos inteiros."
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri"
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Disponível para pedidos. O valor padrão é true."
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Destaque no catálogo. O valor padrão é false."
+          },
+          "dietaryTags": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          }
+        },
+        "required": [
+          "name",
+          "categoryId",
+          "priceInCents"
+        ]
+      },
+      "UpdateCatalogProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceInCents": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Preço em centavos inteiros."
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "nullable": true
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "dietaryTags": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440,
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Permite restaurar um produto arquivado."
+          }
+        }
+      }
+    }
   }
 }

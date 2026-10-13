@@ -4,6 +4,41 @@
  */
 
 export interface paths {
+    "/auth/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cria uma sessão administrativa pelo gateway same-origin */
+        post: operations["AuthController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/sessions/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Valida a sessão administrativa atual */
+        get: operations["AuthController_current"];
+        put?: never;
+        post?: never;
+        /** Revoga a sessão administrativa atual */
+        delete: operations["AuthController_revoke"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -38,10 +73,240 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista as categorias do restaurante da sessão */
+        get: operations["CatalogCategoriesController_list"];
+        put?: never;
+        /** Cria uma categoria no restaurante da sessão */
+        post: operations["CatalogCategoriesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta uma categoria do restaurante da sessão */
+        get: operations["CatalogCategoriesController_get"];
+        put?: never;
+        post?: never;
+        /** Remove uma categoria vazia do restaurante da sessão */
+        delete: operations["CatalogCategoriesController_remove"];
+        options?: never;
+        head?: never;
+        /** Atualiza uma categoria do restaurante da sessão */
+        patch: operations["CatalogCategoriesController_update"];
+        trace?: never;
+    };
+    "/catalog/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista produtos ativos ou, para administradores, arquivados */
+        get: operations["CatalogProductsController_list"];
+        put?: never;
+        /** Cria um produto no restaurante da sessão */
+        post: operations["CatalogProductsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta um produto do restaurante da sessão */
+        get: operations["CatalogProductsController_get"];
+        put?: never;
+        post?: never;
+        /** Arquiva um produto sem apagar seus dados */
+        delete: operations["CatalogProductsController_archive"];
+        options?: never;
+        head?: never;
+        /** Atualiza ou restaura um produto do restaurante da sessão */
+        patch: operations["CatalogProductsController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: never;
+    schemas: {
+        CreateSessionRequestDto: {
+            /**
+             * Format: email
+             * @example owner@example.com
+             */
+            email: string;
+            password: string;
+            /** @example my-restaurant */
+            restaurantSlug?: string;
+        };
+        SessionUserDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: email */
+            email: string;
+        };
+        SessionRestaurantDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            slug: string;
+        };
+        SessionMembershipDto: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "STAFF";
+        };
+        CreatedSessionDto: {
+            user: components["schemas"]["SessionUserDto"];
+            restaurant: components["schemas"]["SessionRestaurantDto"];
+            membership: components["schemas"]["SessionMembershipDto"];
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description Opaque session secret; returned only to the trusted Next.js gateway. */
+            sessionToken: string;
+        };
+        MembershipChoiceDto: {
+            /** Format: uuid */
+            membershipId: string;
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "STAFF";
+            restaurant: components["schemas"]["SessionRestaurantDto"];
+        };
+        MembershipSelectionRequiredDto: {
+            /** @enum {string} */
+            code: "RESTAURANT_SELECTION_REQUIRED";
+            memberships: components["schemas"]["MembershipChoiceDto"][];
+        };
+        TooManyRequestsDto: {
+            /** @example 429 */
+            statusCode: number;
+            /** @example ThrottlerException: Too Many Requests */
+            message: string;
+        };
+        SessionMetadataDto: {
+            user: components["schemas"]["SessionUserDto"];
+            restaurant: components["schemas"]["SessionRestaurantDto"];
+            membership: components["schemas"]["SessionMembershipDto"];
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        CatalogCategoryResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            restaurantId: string;
+            name: string;
+            nameNormalized: string;
+            description?: string | null;
+            /** Format: uri */
+            imageUrl?: string | null;
+            displayOrder: number;
+            productCount: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateCatalogCategoryDto: {
+            /** @example Bebidas */
+            name: string;
+            description?: string;
+            /**
+             * Format: uri
+             * @example https://example.com/menu.jpg
+             */
+            imageUrl?: string;
+            /** @description Ordem da categoria. O valor padrão é zero. */
+            displayOrder?: number;
+        };
+        UpdateCatalogCategoryDto: {
+            name?: string;
+            description?: string | null;
+            /** Format: uri */
+            imageUrl?: string | null;
+            displayOrder?: number;
+        };
+        CatalogProductResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            restaurantId: string;
+            /** Format: uuid */
+            categoryId: string;
+            name: string;
+            description?: string | null;
+            /** @description Preço em centavos inteiros. */
+            priceInCents: number;
+            /** Format: uri */
+            imageUrl?: string | null;
+            available: boolean;
+            featured: boolean;
+            dietaryTags: string[];
+            prepTimeMinutes?: number | null;
+            isActive: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateCatalogProductDto: {
+            /** @example Suco de laranja */
+            name: string;
+            description?: string;
+            /** Format: uuid */
+            categoryId: string;
+            /** @description Preço em centavos inteiros. */
+            priceInCents: number;
+            /** Format: uri */
+            imageUrl?: string;
+            /** @description Disponível para pedidos. O valor padrão é true. */
+            available?: boolean;
+            /** @description Destaque no catálogo. O valor padrão é false. */
+            featured?: boolean;
+            dietaryTags?: string[];
+            prepTimeMinutes?: number;
+        };
+        UpdateCatalogProductDto: {
+            name?: string;
+            description?: string | null;
+            /** Format: uuid */
+            categoryId?: string;
+            /** @description Preço em centavos inteiros. */
+            priceInCents?: number;
+            /** Format: uri */
+            imageUrl?: string | null;
+            available?: boolean;
+            featured?: boolean;
+            dietaryTags?: string[];
+            prepTimeMinutes?: number | null;
+            /** @description Permite restaurar um produto arquivado. */
+            isActive?: boolean;
+        };
+    };
     responses: never;
     parameters: never;
     requestBodies: never;
@@ -50,6 +315,112 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    AuthController_create: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Hash da origem confiável encaminhado pelo gateway; compõe o limite por conta/origem. */
+                "x-comandinha-client-key"?: string;
+                "x-comandinha-gateway-secret": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSessionRequestDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreatedSessionDto"];
+                };
+            };
+            /** @description Credenciais inválidas ou gateway não autorizado. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MembershipSelectionRequiredDto"];
+                };
+            };
+            /** @description Limite de tentativas excedido. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TooManyRequestsDto"];
+                };
+            };
+        };
+    };
+    AuthController_current: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-comandinha-gateway-secret": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionMetadataDto"];
+                };
+            };
+            /** @description Sessão ausente, revogada ou expirada. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AuthController_revoke: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-comandinha-gateway-secret": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Sessão revogada. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão ausente, revogada ou expirada. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     HealthController_live: {
         parameters: {
             query?: never;
@@ -114,6 +485,484 @@ export interface operations {
                         status: "not-ready";
                     };
                 };
+            };
+        };
+    };
+    CatalogCategoriesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCategoryResponseDto"][];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogCategoriesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCatalogCategoryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCategoryResponseDto"];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar o catálogo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Já existe uma categoria com esse nome. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogCategoriesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCategoryResponseDto"];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Categoria não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogCategoriesController_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Categoria removida. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar o catálogo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Categoria não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A categoria ainda possui produtos. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogCategoriesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogCategoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCategoryResponseDto"];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar o catálogo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Categoria não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Já existe uma categoria com esse nome. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogProductsController_list: {
+        parameters: {
+            query?: {
+                includeArchived?: boolean;
+                categoryId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductResponseDto"][];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem consultar produtos arquivados. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogProductsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCatalogProductDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductResponseDto"];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar o catálogo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Categoria não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogProductsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductResponseDto"];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Produto não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogProductsController_archive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Produto arquivado. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar o catálogo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Produto não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    CatalogProductsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCatalogProductDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProductResponseDto"];
+                };
+            };
+            /** @description Dados inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar o catálogo. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Produto ou categoria não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
