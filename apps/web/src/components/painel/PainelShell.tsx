@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowUpRight,
+  Armchair,
+  ClipboardList,
   House,
   LayoutGrid,
   LogOut,
@@ -24,6 +26,8 @@ type PainelShellProps = {
 const navigation = [
   { href: "/painel", label: "Visão geral", icon: House },
   { href: "/painel/catalogo", label: "Catálogo", icon: LayoutGrid },
+  { href: "/painel/mesas", label: "Mesas", icon: Armchair },
+  { href: "/painel/pedidos", label: "Pedidos", icon: ClipboardList },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -140,6 +144,26 @@ export function PainelShell({ children, session, onLogout }: PainelShellProps) {
         <div className="painel-mobile-restaurant">
           {session.restaurant.name}
         </div>
+        <nav
+          aria-label="Navegação principal"
+          className="painel-mobile-navigation"
+        >
+          {navigation.map(({ href, label, icon: Icon }) => {
+            const active =
+              href === "/painel" ? pathname === href : pathname.startsWith(href);
+            return (
+              <Link
+                aria-current={active ? "page" : undefined}
+                className={`painel-mobile-nav-link${active ? " is-active" : ""}`}
+                href={href}
+                key={href}
+              >
+                <Icon aria-hidden="true" size={18} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
         <main className="painel-main-content">
           {logoutError && (
             <p className="painel-form-alert" role="alert">
