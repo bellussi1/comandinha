@@ -45,11 +45,11 @@
 - Produces Order with id, restaurantId, tableId, status, notes, totalInCents, createdAt and updatedAt; the table relation uses both tableId and restaurantId.
 - Produces OrderItem with id, restaurantId, orderId, productId, nameSnapshot, unitPriceInCents, quantity, notes and lineTotalInCents; order and product relations enforce the same restaurant.
 
-- [ ] **Step 1: Add a PostgreSQL integration test that creates a restaurant, table, order and item through Prisma and asserts the composite tenant relations and unique publicCode.** Run it against the current schema and confirm it fails because the models are absent.
-- [ ] **Step 2: Add the enums, models, relations, unique constraints and indexes to schema.prisma. Use Restrict for table/order item history and Cascade only when deleting the restaurant in disposable test cleanup.**
-- [ ] **Step 3: Generate the migration in migration.sql. Include indexes for restaurant/status/createdAt and table/createdAt, plus foreign keys that prevent cross-restaurant order/table/product references.**
-- [ ] **Step 4: Run Prisma validate, generate, apply the migration to the local development database, and rerun the integration test. Expected: schema valid and all assertions pass.**
-- [ ] **Step 5: Commit only the schema, migration and test as feat: add table and order persistence.**
+- [x] **Step 1: Add a PostgreSQL integration test that creates a restaurant, table, order and item through Prisma and asserts the composite tenant relations and unique publicCode.** Run it against the current schema and confirm it fails because the models are absent.
+- [x] **Step 2: Add the enums, models, relations, unique constraints and indexes to schema.prisma. Use Restrict for table/order item history and Cascade only when deleting the restaurant in disposable test cleanup.**
+- [x] **Step 3: Generate the migration in migration.sql. Include indexes for restaurant/status/createdAt and table/createdAt, plus foreign keys that prevent cross-restaurant order/table/product references.**
+- [x] **Step 4: Run Prisma validate, generate, apply the migration to the local development database, and rerun the integration test. Expected: schema valid and all assertions pass.**
+- [x] **Step 5: Commit only the schema, migration and test as feat: add table and order persistence.**
 
 ### Task 2: API autenticada de mesas
 
@@ -69,12 +69,12 @@
 - TableResponse contains id, restaurantId, name, publicCode, isActive, createdAt, updatedAt and activeOrderCount; activeOrderCount counts PENDING, PREPARING and READY orders.
 - OWNER/ADMIN can create, rename and deactivate/reactivate. STAFF can list and read only. Deactivation is allowed when orders exist.
 
-- [ ] **Step 1: Write integration cases for unauthenticated access, OWNER CRUD, STAFF read-only access, duplicate names, deactivation with existing orders, and cross-tenant IDs. Run and verify expected failures.**
-- [ ] **Step 2: Write the failing role helper tests: OWNER/ADMIN writes pass; STAFF writes throw ForbiddenException.**
-- [ ] **Step 3: Implement DTO validation and tables-access.ts; names are trimmed, 1–80 characters, and empty names are rejected.**
-- [ ] **Step 4: Implement the tenant-scoped service/controller. Generate publicCode with randomBytes(32).toString('base64url'); retry a unique collision up to three times, then fail safely. PATCH uses updateMany scoped by both id and restaurantId.**
-- [ ] **Step 5: Run the table integration and role tests. Expected: only the owning restaurant sees the row; no delete operation exists; all role and duplicate-name expectations pass.**
-- [ ] **Step 6: Commit as feat: add tenant-scoped table management.**
+- [x] **Step 1: Write integration cases for unauthenticated access, OWNER CRUD, STAFF read-only access, duplicate names, deactivation with existing orders, and cross-tenant IDs. Run and verify expected failures.**
+- [x] **Step 2: Write the failing role helper tests: OWNER/ADMIN writes pass; STAFF writes throw ForbiddenException.**
+- [x] **Step 3: Implement DTO validation and tables-access.ts; names are trimmed, 1–80 characters, and empty names are rejected.**
+- [x] **Step 4: Implement the tenant-scoped service/controller. Generate publicCode with randomBytes(32).toString('base64url'); retry a unique collision up to three times, then fail safely. PATCH uses updateMany scoped by both id and restaurantId.**
+- [x] **Step 5: Run the table integration and role tests. Expected: only the owning restaurant sees the row; no delete operation exists; all role and duplicate-name expectations pass.**
+- [x] **Step 6: Commit as feat: add tenant-scoped table management.**
 
 ### Task 3: API autenticada de pedidos
 
