@@ -160,31 +160,31 @@ Commit as `feat(api): bootstrap NestJS health endpoint`.
 - Produces: `pnpm dev` starts PostgreSQL through Compose, waits for its healthy state, then starts web and API; Ctrl+C stops app processes. `pnpm infra:down` stops local services.
 - Modifies: root `pnpm dev` from Task 1 to run `node --env-file-if-exists=.env scripts/dev.mjs`, which passes root environment values to both app processes.
 
-- [ ] **Step 1: Write readiness tests for healthy and unavailable PostgreSQL**
+- [x] **Step 1: Write readiness tests for healthy and unavailable PostgreSQL**
 
 Add API tests asserting ready returns 200 when `SELECT 1` succeeds and 503 when the database provider rejects. Run them before implementation; expected: FAIL because readiness and Prisma are not registered.
 
-- [ ] **Step 2: Configure Prisma 7 and the initial Restaurant migration**
+- [x] **Step 2: Configure Prisma 7 and the initial Restaurant migration**
 
 Add Prisma 7.10.0, `@prisma/client` 7.10.0, `@prisma/adapter-pg` 7.10.0, and `pg`. Define the `Restaurant` model in `schema.prisma`, configure `prisma.config.ts`, generate the client, and create a reviewed initial migration.
 
-- [ ] **Step 3: Implement Prisma lifecycle and readiness query**
+- [x] **Step 3: Implement Prisma lifecycle and readiness query**
 
 Create a Nest provider that constructs Prisma Client with the PostgreSQL adapter, connects/disconnects with application lifecycle hooks, and exposes `checkConnection(): Promise<boolean>`. Make `/health/ready` use this provider and return the specified JSON/status codes.
 
-- [ ] **Step 4: Add PostgreSQL 18 Compose health check**
+- [x] **Step 4: Add PostgreSQL 18 Compose health check**
 
 Create a local PostgreSQL service with a named volume, a `pg_isready` health check, and credentials loaded from ignored `.env`; `.env.example` contains placeholders only. Do not add a tracked database file or import production data.
 
-- [ ] **Step 5: Add a root local-development command and startup-order test**
+- [x] **Step 5: Add a root local-development command and startup-order test**
 
-Create `scripts/dev.mjs` to resolve the repository root from `import.meta.url`, start `docker compose up -d --wait postgres` with that root as the child working directory, then launch `turbo run dev --parallel` with the same working directory. Handle termination signals by stopping child processes. Root `pnpm dev` calls this script; the API process does not start until PostgreSQL reports healthy. Add a Node test around the extracted orchestration function with a delayed fake Compose child and assert Turbo is not spawned before Compose exits successfully; assert a failed health wait never starts Turbo.
+Create `scripts/dev.mjs` to resolve the repository root from `import.meta.url`, start `docker compose up -d --wait postgres` with that root as the child working directory, then launch `turbo run dev` with the same working directory. Handle termination signals by stopping child processes. Root `pnpm dev` calls this script; the API process does not start until PostgreSQL reports healthy. Add a Node test around the extracted orchestration function with a delayed fake Compose child and assert Turbo is not spawned before Compose exits successfully; assert a failed health wait never starts Turbo.
 
-- [ ] **Step 6: Verify migrations, readiness, and Compose**
+- [x] **Step 6: Verify migrations, readiness, and Compose**
 
 Run `docker compose config`, `docker compose up -d postgres`, `pnpm --filter @comandinha/api prisma migrate deploy`, API readiness E2E tests, and the complete `pnpm dev` startup. Expected: a blank database receives the initial migration, readiness reports 200 only when PostgreSQL is available, and liveness still works if PostgreSQL is stopped.
 
-- [ ] **Step 7: Commit local database foundation**
+- [x] **Step 7: Commit local database foundation**
 
 Commit as `feat(api): add PostgreSQL readiness and local database`.
 

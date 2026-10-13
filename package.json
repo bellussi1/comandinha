@@ -6,11 +6,13 @@
     "node": ">=24.15.0"
   },
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "node --env-file-if-exists=.env scripts/dev.mjs",
+    "infra:down": "docker compose down",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:integration": "turbo run test:e2e",
+    "test:dev-script": "node --test scripts/dev.test.mjs",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
