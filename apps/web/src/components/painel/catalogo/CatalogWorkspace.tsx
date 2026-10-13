@@ -507,16 +507,20 @@ export function CatalogWorkspace() {
                               type="button"
                             >
                               <Check aria-hidden="true" size={17} />
+                              <span className="painel-action-label">
+                                {product.available ? "Pausar" : "Ativar"}
+                              </span>
                             </button>
                             <button
                               aria-label={product.featured ? `Remover destaque de ${product.name}` : `Destacar ${product.name}`}
                               aria-pressed={product.featured}
-                              className="painel-icon-action"
+                              className={`painel-icon-action${product.featured ? " is-active" : ""}`}
                               onClick={() => void changeFeatured(product)}
                               title={product.featured ? "Remover destaque" : "Destacar produto"}
                               type="button"
                             >
                               <Sparkles aria-hidden="true" size={17} />
+                              <span className="painel-action-label">Destaque</span>
                             </button>
                             <button
                               aria-label={`Editar ${product.name}`}
@@ -526,6 +530,7 @@ export function CatalogWorkspace() {
                               type="button"
                             >
                               <PencilLine aria-hidden="true" size={17} />
+                              <span className="painel-action-label">Editar</span>
                             </button>
                             <button
                               aria-label={`Arquivar ${product.name}`}
@@ -535,6 +540,7 @@ export function CatalogWorkspace() {
                               type="button"
                             >
                               <Archive aria-hidden="true" size={17} />
+                              <span className="painel-action-label">Arquivar</span>
                             </button>
                           </>
                         ) : (
@@ -597,17 +603,21 @@ export function CatalogWorkspace() {
                         aria-label={`Editar ${category.name}`}
                         className="painel-icon-action"
                         onClick={() => openCategoryEditor(category)}
+                        title="Editar categoria"
                         type="button"
                       >
                         <PencilLine aria-hidden="true" size={17} />
+                        <span className="painel-action-label">Editar</span>
                       </button>
                       <button
                         aria-label={`Excluir ${category.name}`}
                         className="painel-icon-action is-danger"
                         onClick={() => { setActionError(null); setCategoryToDelete(category); }}
+                        title="Excluir categoria"
                         type="button"
                       >
                         <Trash2 aria-hidden="true" size={17} />
+                        <span className="painel-action-label">Excluir</span>
                       </button>
                     </div>
                   )}

@@ -169,6 +169,7 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
   );
 
   for (const viewport of [
+    { width: 320, height: 800 },
     { width: 360, height: 800 },
     { width: 768, height: 1024 },
     { width: 1440, height: 900 },
@@ -176,6 +177,18 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
     await page.setViewportSize(viewport);
     await expect(page.getByRole('heading', { name: 'Cardápio com ordem.' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Novo produto' })).toBeVisible();
+    if (viewport.width <= 360) {
+      await expect(page.getByText('Ativar', { exact: true })).toBeVisible();
+      const availabilityTarget = await page.getByRole('button', {
+        name: 'Marcar Suco de laranja disponível',
+      }).boundingBox();
+      expect(availabilityTarget?.height).toBeGreaterThanOrEqual(44);
+      const actionLabelFontSize = await page
+        .locator('.painel-product-actions .painel-action-label')
+        .first()
+        .evaluate((label) => Number.parseFloat(getComputedStyle(label).fontSize));
+      expect(actionLabelFontSize).toBeGreaterThanOrEqual(12);
+    }
     const dimensions = await page.evaluate(() => ({
       pageWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,

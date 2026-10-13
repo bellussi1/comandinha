@@ -233,6 +233,7 @@ export function TablesWorkspace() {
                       type="button"
                     >
                       <SquarePen aria-hidden="true" size={17} />
+                      <span className="painel-action-label">Renomear</span>
                     </button>
                     <button
                       aria-label={`${table.isActive ? "Desativar" : "Ativar"} ${table.name}`}
@@ -247,6 +248,9 @@ export function TablesWorkspace() {
                       ) : (
                         <ToggleLeft aria-hidden="true" size={18} />
                       )}
+                      <span className="painel-action-label">
+                        {table.isActive ? "Desativar" : "Ativar"}
+                      </span>
                     </button>
                   </>
                 )}

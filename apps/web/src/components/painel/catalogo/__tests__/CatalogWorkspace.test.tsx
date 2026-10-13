@@ -150,6 +150,20 @@ describe("CatalogWorkspace", () => {
     expect(await screen.findByText("Indisponível")).toBeInTheDocument();
   });
 
+  it("puts clear labels beside the product quick-action icons", async () => {
+    seedCatalog();
+    renderWorkspace();
+
+    await screen.findByRole("button", {
+      name: "Marcar Suco de laranja indisponível",
+    });
+
+    expect(screen.getByText("Pausar", { exact: true })).toBeInTheDocument();
+    expect(screen.getByText("Destaque", { exact: true })).toBeInTheDocument();
+    expect(screen.getByText("Editar", { exact: true })).toBeInTheDocument();
+    expect(screen.getByText("Arquivar", { exact: true })).toBeInTheDocument();
+  });
+
   it("archives and restores a product while showing the archived filter", async () => {
     const user = userEvent.setup();
     const archivedProduct = { ...product, isActive: false };

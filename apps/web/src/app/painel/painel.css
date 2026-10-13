@@ -1136,6 +1136,10 @@
   padding-left: 0.6rem;
 }
 
+.painel-action-label {
+  display: none;
+}
+
 .painel-icon-action {
   display: grid;
   width: 2.35rem;
@@ -2702,4 +2706,50 @@
   .painel-root .painel-action-button:hover:not(:disabled) {
     transform: none;
   }
+}
+
+@media (max-width: 680px) {
+  .painel-root .painel-icon-action {
+    display: inline-flex;
+    width: auto;
+    min-width: 2.75rem;
+    height: auto;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    padding: 0.35rem 0.24rem;
+  }
+
+  .painel-root .painel-action-label {
+    display: inline;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .painel-root .painel-product-actions {
+    flex-wrap: wrap;
+    gap: 0;
+  }
+
+  .painel-root .painel-category-actions {
+    flex-wrap: wrap;
+    gap: 0.1rem;
+  }
+
+  .painel-root .painel-table-actions {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .painel-root .painel-restore-button {
+    min-height: 2.75rem;
+  }
+}
+
+.painel-root .painel-icon-action.is-active {
+  color: var(--painel-plum);
+  background: #f8eeeb;
 }
