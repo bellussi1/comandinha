@@ -1,6 +1,6 @@
 # Comandinha — especificação de modernização fullstack
 
-**Status:** proposta para revisão. Esta especificação define o caminho recomendado; não autoriza implementação, deploy ou provisionamento.
+**Status:** proposta revisada para avaliação. Direção escolhida: monorepo Next.js + FastAPI. Este documento ainda não autoriza implementação, publicação ou provisionamento.
 
 ## Objetivo
 
@@ -10,16 +10,17 @@ O MVP deve demonstrar o ciclo QR Code → cardápio → carrinho → pedido → 
 
 ## Contexto auditado
 
-A auditoria foi feita em 12 de outubro de 2026, nas cópias locais dos seguintes estados:
+A auditoria estática foi feita em 12 de outubro de 2026, nas cópias locais dos seguintes estados:
 
 - Frontend bellussi1/comandinha, branch master, commit d95a617.
 - Backend thiagombrs/comandinha-backend, branch main, commit 501b028.
 
-O frontend usa Next.js 15.0.2, React 19 RC, TypeScript e Tailwind. O backend usa FastAPI, SQLAlchemy, Alembic e PostgreSQL/SQLite. O backend possui routers, schemas, repositórios e modelos; não é correto descrevê-lo como sem separação de responsabilidades.
+O frontend declara Next.js 15.0.2, um React 19 release candidate, Tailwind CSS 3.4 e componentes Radix/shadcn, além de Axios e Jest. O backend declara FastAPI na faixa 0.113.x, SQLAlchemy 1.4.41, Alembic 1.13.1, Pydantic 2 e Uvicorn. O banco é PostgreSQL ou SQLite, conforme configuração.
 
-Achados que afetam a arquitetura:
+Achados relevantes:
 
-- A assinatura de JWT usa uma chave fixa no código.
+- A assinatura e validação de JWT usam uma chave fixa no código.
+- O endpoint /auth/refresh renova um access token usando o próprio access token válido; não há uma credencial de renovação separada ou revogação de sessão.
 - O cadastro público cria uma conta administrativa, e as entidades de operação não têm vínculo com restaurante.
 - A listagem de pedidos de produção, o detalhe de pedido e a listagem de pedidos por mesa não aplicam autorização administrativa ou sessão de mesa.
 - Next.js 15.0.2 está abaixo das versões corrigidas para vulnerabilidades críticas de React Server Components. A auditoria read-only do lockfile encontrou 11 vulnerabilidades em dependências de produção: duas críticas, sete altas e duas moderadas.
@@ -35,62 +36,71 @@ A auditoria foi estática. Não foram instaladas dependências, rodados testes d
 ## Princípios e limites
 
 - Não modificar as branches principais dos repositórios de origem.
-- Não reutilizar nem republicar código do backend de terceiros sem licença ou autorização verificável. Tratar o backend como referência funcional; implementar a nova API de forma independente.
+- Não reutilizar nem republicar código do backend de terceiros sem licença ou autorização verificável. Tratar seu comportamento como referência; enquanto a licença não estiver esclarecida, implementar a API nova de forma independente.
 - Não executar deploy, publicação, provisionamento cloud, Terraform apply ou equivalente.
 - Não inserir segredos reais. Registrar exemplos apenas em arquivos de ambiente de exemplo.
-- Não migrar ou apagar dados sem inventário, backup, plano de recuperação e validação.
+- Não migrar ou apagar dados sem inventário, autorização, backup, plano de recuperação e validação.
 - Manter um monólito modular. Não adicionar microsserviços, Kubernetes, Redis ou filas sem requisito demonstrável.
-- Preservar no frontend apenas fluxos úteis e confirmados; distinguir fluxo implementado, parcial, documentado e proposto.
+- Preservar no frontend fluxos úteis e confirmados; distinguir fluxo implementado, parcial, documentado e proposto.
 - Não afirmar ganho de performance sem medição comparável.
 
 ## Alternativas avaliadas
 
-### A. Manter FastAPI e Next.js em repositórios separados
+### A. Manter Next.js e FastAPI em repositórios separados
 
-Reduz a reescrita e preserva duas tecnologias maduras. Exige coordenação de contratos entre linguagens e não resolve por si só a falta de tenant, autorização, sessões ou consistência. Adequada se reduzir risco de migração for mais importante que consolidar a stack.
+Preserva a organização e reduz mudanças imediatas. Continua exigindo coordenação de contratos, documentação, CI e execução local entre dois repositórios. É adequada se a separação de ciclos de publicação for um requisito.
 
-### B. Monorepo TypeScript com Next.js e NestJS — recomendada
+### B. Monorepo Next.js e NestJS
 
-Usa Next.js no frontend e NestJS na API, com módulos de domínio, OpenAPI e cliente TypeScript gerado. Consolida a linguagem e torna visível o contrato entre aplicações. O custo é maior: reimplementação do backend, migração de dados e compatibilização de fluxos. A implementação do backend deve ser clean-room enquanto a licença não estiver esclarecida.
+Consolida a linguagem e permite gerar um cliente TypeScript diretamente de OpenAPI, mas demanda reescrever a API e revalidar todas as regras de negócio. Para o escopo atual, amplia o risco e o trabalho sem resolver problemas que também podem ser corrigidos em FastAPI. Não é a direção escolhida.
 
-### C. Monorepo Next.js e FastAPI
+### C. Monorepo Next.js e FastAPI — recomendada
 
-Centraliza documentação, Compose e CI sem reescrever imediatamente a API. Mantém a duplicidade de linguagens e a necessidade de gerar e distribuir contratos. Pode servir de etapa transitória caso a reescrita seja adiada, mas não é a recomendação final para este portfólio.
+Mantém o backend Python e o frontend Next.js, reúne documentação, Compose e CI e publica o contrato da API pelo OpenAPI gerado pelo FastAPI. O custo é uma toolchain mista: pnpm para o workspace JavaScript/TypeScript e uv para o projeto Python. Essa separação é explícita e cada ecossistema mantém seu lockfile.
+
+A modernização não deve importar código do repositório sem licença. Se a autorização não for obtida, a API no monorepo deve ser implementada de forma independente a partir dos fluxos e regras observáveis.
 
 ## Decisões propostas
 
-### Workspace
+### Monorepo e execução local
 
-Adotar pnpm workspaces com Turborepo. O workspace deve conter web, API, cliente de API gerado e configurações compartilhadas realmente utilizadas. Turborepo coordena lint, testes, geração de contrato e builds; Nx não é necessário para dois aplicativos e poucos pacotes.
+Usar pnpm workspaces e Turborepo para o app web e pacotes JavaScript/TypeScript. Usar uv, pyproject.toml e uv.lock para dependências e ambiente da API Python. O Turbo não será usado como substituto do gerenciador de ambiente Python; os comandos da API serão executados via uv ou Docker Compose.
 
-A estrutura inicial proposta é:
+Estrutura inicial:
 
 - apps/web — Next.js App Router.
-- apps/api — NestJS modular.
-- packages/api-client — cliente TypeScript gerado da especificação OpenAPI.
-- packages/eslint-config e packages/typescript-config — apenas se ambos os aplicativos compartilharem configuração.
-- infra/docker — Dockerfiles e Compose local.
-- docs/architecture, docs/adr, docs/api e docs/diagrams — decisões e documentação.
+- apps/api — FastAPI, SQLAlchemy e Alembic, com pyproject.toml e uv.lock.
+- packages/api-client — tipos OpenAPI e cliente TypeScript gerados.
+- packages/eslint-config e packages/typescript-config — somente se web e cliente realmente compartilharem essas configurações.
+- infra/docker — Dockerfiles e configuração local, ou arquivos equivalentes na raiz se Compose ficar mais simples de descobrir.
+- docs/architecture, docs/adr, docs/api e docs/diagrams — decisões, contrato e documentação.
+- pnpm-workspace.yaml, turbo.json e compose.yaml — workspace JavaScript, tarefas e execução local.
 
-Não criar pacote genérico shared nem biblioteca UI até haver consumidores e responsabilidade definidos.
+Não criar pacote shared genérico nem uma biblioteca de componentes compartilhada sem consumidores e responsabilidades definidos. Componentes de UI permanecem em apps/web.
+
+Docker Compose deve iniciar web, API e PostgreSQL com um comando documentado, usando variáveis de ambiente de exemplo e dados de demonstração reproduzíveis. CI instala e valida os ambientes Node e Python em tarefas próprias, com PostgreSQL para integração.
 
 ### Frameworks e versões
 
-Atualizar o Next para uma versão estável e corrigida, mantendo o App Router. Na auditoria, a tag estável consultada era Next 16.4.0 e React 19.3.0; as versões exatas devem ser revalidadas com documentação e builds antes da implementação. Revisar o webpack customizado, consolidar next.config e substituir o script next lint conforme a versão adotada. O upgrade do Next 16 requer cuidado porque o build passa a usar Turbopack por padrão e a configuração webpack atual é extensa.
+Atualizar o frontend para a linha estável, corrigida e compatível mais recente do Next.js 16, mantendo App Router e TypeScript strict. Em 12/10/2026, Next.js 16.4.0 era a release estável observada e React 19.3.0 estava estável. Como o time do Next anunciou uma atualização de segurança upstream para 14/10/2026, validar de novo a versão corrigida antes de fixar o lockfile e antes da fase de implementação.
 
-Usar NestJS 12 com TypeScript strict. A máquina auditada tem Node 24.13.0; atualizar o runtime para pelo menos 24.15 antes de executar os geradores atuais do Nest.
+Revisar a configuração webpack extensa e testar a migração para o Turbopack padrão do Next 16. Corrigir conflitos entre next.config.js e next.config.mjs; substituir next lint por ESLint executado diretamente. Ativar Cache Components apenas depois de testar cache, revalidação e estados dinâmicos das rotas.
 
-Adotar PostgreSQL como banco do sistema. Docker Compose oferece o ambiente local. Não manter SQLite versionado como fixture; seed e dados de demonstração devem ser gerados explicitamente.
+Atualizar a API para a versão estável compatível mais recente do FastAPI. Em 12/10/2026, a release consultada era 0.142.2. Migrar gradualmente SQLAlchemy 1.4 para SQLAlchemy 2.1 e Alembic 1.20, mantendo Pydantic 2 e tipagem estrita. Atualizar Uvicorn, driver PostgreSQL e dependências antigas/removidas com validação de compatibilidade; substituir a lista de versões antigas em requirements.txt por pyproject.toml e lockfile uv.
 
-### ORM
+Usar Node 24 LTS com patch atualizado. Python 3.15.0 foi lançado em 09/10/2026; testar a API e as dependências compiladas nessa versão antes de adotá-la. Se houver dependência sem suporte confiável, usar a última versão de manutenção do Python 3.14 até o ecossistema necessário estar validado.
 
-Usar Prisma 7 estável, fixado em versão compatível. Prisma favorece schema declarativo, client tipado e onboarding; Drizzle oferece schema TypeScript mais próximo de SQL e migrations mais explícitas. Os dois são adequados para PostgreSQL e transações do MVP; não há benchmark que justifique uma escolha por desempenho. A documentação consultada indicava Prisma 8 como release candidate, portanto não usar essa linha no início.
+### Banco e persistência
 
-### API e BFF
+Adotar PostgreSQL 18, linha suportada e estável na data desta revisão, atualizando para o último minor disponível. Docker Compose oferece o ambiente local. Não manter SQLite versionado como fixture; seeds e dados de demonstração devem ser gerados explicitamente.
 
-Usar REST com OpenAPI como fonte de verdade. NestJS gera o documento OpenAPI; o cliente TypeScript é gerado e validado em CI. Não manter DTOs equivalentes manualmente em frontend e backend.
+Usar SQLAlchemy 2.1 com Alembic compatível, sem trocar para Prisma ou Drizzle: esses ORMs atendem ao stack TypeScript e não são apropriados para uma API FastAPI. Usar o driver psycopg 3 após verificar compatibilidade com o ambiente escolhido. Começar com o padrão de acesso síncrono já usado pelo backend; adotar asyncio somente se houver necessidade técnica comprovada e teste de ponta a ponta.
 
-Não criar serviço BFF independente. Usar Route Handlers do Next como gateway same-origin limitado a sessão e proxy de chamadas do navegador. Esses handlers não carregam regras de negócio: NestJS continua sendo a autoridade de autenticação, autorização e domínio. Não expor tokens administrativos a JavaScript do navegador.
+### API, contrato e BFF
+
+Usar REST com OpenAPI como fonte de verdade. FastAPI publica o schema OpenAPI. Gerar os tipos com openapi-typescript e usar openapi-fetch como cliente pequeno baseado em Fetch. O schema e o cliente são validados em CI; não manter DTOs equivalentes manualmente no frontend e na API.
+
+Não criar serviço BFF independente. Usar Route Handlers do Next como gateway same-origin limitado à sessão e ao proxy das chamadas do navegador. Os handlers não carregam regras de negócio: FastAPI continua sendo a autoridade de autenticação, autorização e domínio. Não expor credenciais administrativas a JavaScript do navegador.
 
 ### Identidade, sessão e multi-tenancy
 
@@ -98,30 +108,40 @@ Separar usuários, restaurantes e memberships. Uma identidade pode pertencer a u
 
 As tabelas de domínio carregam restaurant_id, com índices, unicidades e relações compostas adequadas. Queries e mutations são sempre escopadas pelo tenant autenticado. O plano de testes inclui tentativas de leitura, alteração e exclusão cruzadas entre dois restaurantes.
 
-Para administração, preferir sessão opaca com validade e revogação no PostgreSQL, entregue em cookie HttpOnly, Secure e SameSite. A camada Next encaminha a sessão ao Nest; mutações verificam origem e proteção CSRF apropriada. Para clientes de mesa, usar sessão limitada à mesa e ao restaurante, revogável no fechamento; QR Code não confere permissões administrativas. Aplicar limites de requisição ao login, chamadas e criação de pedidos.
+Para administração, preferir sessão opaca com validade e revogação no PostgreSQL, entregue em cookie HttpOnly, Secure e SameSite. A camada Next encaminha a sessão ao FastAPI; mutações verificam origem e proteção CSRF apropriada. Para clientes de mesa, usar sessão limitada à mesa e ao restaurante, revogável no fechamento; QR Code não concede permissões administrativas. Aplicar limites de requisição ao login, chamadas e criação de pedidos.
 
-RLS no PostgreSQL pode ser avaliada como defesa adicional após o escopo da aplicação estar coberto por testes. Não será a única barreira de tenant.
+RLS no PostgreSQL pode ser avaliada como defesa adicional depois que o escopo da aplicação estiver coberto por testes. Não será a única barreira de tenant.
 
 ### Domínio e consistência
 
 Os módulos de domínio iniciais são restaurantes/memberships, autenticação, cardápio, mesas/sessões, pedidos, chamados e fechamento.
 
-O servidor recalcula totais. Preços persistidos devem usar centavos inteiros ou NUMERIC/Decimal, não Float. Cada item registra snapshot de nome, preço unitário e adicionais no momento do pedido. A criação valida disponibilidade, quantidade, restaurante e sessão da mesa.
+O servidor recalcula totais. Preços persistidos usam centavos inteiros ou NUMERIC/Decimal, não Float. Cada item registra snapshot de nome, preço unitário e adicionais no momento do pedido. A criação valida disponibilidade, quantidade, restaurante e sessão da mesa.
 
 Criar pedido, itens e mudança de estado da mesa dentro de uma transação. Requisições repetidas usam chave de idempotência. Estados permitidos são explícitos e cada alteração gera histórico. O fechamento persiste data, método informado e pedidos fechados atomicamente. Não haverá processamento de pagamento nesta etapa.
 
 Manter polling no início, com intervalos e consultas medidos. Avaliar SSE se o fluxo da cozinha demonstrar necessidade de menor latência. Não adicionar WebSocket sem necessidade bidirecional.
 
-## Migração
+### Interface e bibliotecas visuais
 
-A migração não é um corte único para produção. O backend atual não tem licença declarada e o banco SQLite versionado não foi inspecionado; qualquer migração de dados exige autorização e inventário separados.
+Atualizar Tailwind CSS para a linha estável 4.3, após conferir os navegadores-alvo porque a versão 4 depende de recursos modernos de CSS. Preservar a identidade do Comandinha com tokens próprios, contraste, estados claros e componentes responsivos; a biblioteca fornece primitives e acessibilidade, não uma aparência pronta.
+
+Manter shadcn/ui com Radix UI para os componentes já existentes, evitando migrar toda a aplicação de primitives só para acompanhar o padrão novo do CLI. A documentação atual do shadcn também oferece Base UI como opção padrão para projetos novos e continua suportando Radix; qualquer adoção de Base UI deve ser pontual e manter consistência dentro do fluxo que a usar.
+
+Atualizar lucide-react para ícones, sonner para notificações e substituir tailwindcss-animate depreciado por tw-animate-css quando as animações atuais forem migradas. Manter React Hook Form e Zod nas versões estáveis compatíveis para formulários com validação; não espalhar bibliotecas em formulários simples que podem usar recursos nativos.
+
+Priorizar transições CSS curtas, skeletons e feedback de ações. Respeitar prefers-reduced-motion; não adicionar Framer Motion ou animações extensas sem um caso de uso definido. Revisar dependências duplicadas, incluindo Radix Toast se já houver substituição completa por Sonner.
+
+### Migração
+
+A migração não é um corte único para produção. O backend atual não tem licença declarada e o banco SQLite versionado não foi inspecionado; qualquer migração de código ou dados exige autorização e inventário separados.
 
 Fases propostas:
 
-1. Fundação: branch de trabalho, workspace pnpm/Turbo, Node compatível, Compose com PostgreSQL, CI para lint, typecheck, testes e build.
-2. Modelo e autenticação: schema novo, migrations revisáveis, usuários/memberships/tenant, sessões, políticas de acesso e testes de isolamento.
-3. API: módulos de cardápio, mesas, pedidos, chamados e fechamento; OpenAPI e migrations reproduzíveis.
-4. Frontend: compatibilidade com React/Next estáveis, sessão same-origin, cliente gerado e migração incremental de cada fluxo.
+1. Fundação: branch de trabalho, monorepo, pnpm/Turbo para JavaScript, uv para Python, runtime compatível, Compose com PostgreSQL, configuração de qualidade e CI.
+2. Modelo e autenticação: schema novo, migrations revisáveis, usuários/memberships/tenant, sessões, políticas de acesso e testes de isolamento. Reimplementar o backend de forma independente se a licença não for esclarecida.
+3. API FastAPI: módulos de cardápio, mesas, pedidos, chamados e fechamento; OpenAPI e migrations reproduzíveis.
+4. Frontend: atualização Next/React/Tailwind, revisão de UI, sessão same-origin, cliente gerado e migração incremental de cada fluxo.
 5. Verificação: testes unitários de domínio, integração com PostgreSQL e E2E para login, CRUD de produto, mesa/QR, pedido, estado da cozinha, fechamento e isolamento.
 6. Portfólio e infraestrutura declarada: README, diagramas, ADRs, guia local, segurança e IaC sem apply. O provedor permanece em aberto até decisão explícita.
 
@@ -129,11 +149,12 @@ Fases propostas:
 
 - Um comando documentado inicia web, API e PostgreSQL localmente.
 - Migrations criam banco vazio e seed gera dados de demonstração reproduzíveis.
-- OpenAPI descreve rotas e cliente TypeScript é gerado sem cópia manual de DTOs.
+- OpenAPI descreve as rotas FastAPI e o cliente TypeScript é gerado sem cópia manual de DTOs.
 - O fluxo QR → cardápio → pedido → cozinha → fechamento passa em E2E.
 - Testes provam que usuários de um restaurante não leem nem alteram dados de outro.
-- Sessões têm expiração/revogação; preço e estado são validados no servidor.
-- Lint, typecheck, testes e build passam nos dois aplicativos.
+- Sessões têm expiração e revogação; preço e estado são validados no servidor.
+- ESLint, TypeScript, Ruff, verificação de tipos Python, testes e builds passam nos dois aplicativos.
+- Lockfiles pnpm e uv são determinísticos e validados em CI.
 - Auditoria de dependências não deixa vulnerabilidades críticas sem correção ou justificativa registrada.
 - Nenhum segredo real ou banco com dados reais fica no repositório.
 - Nenhum deploy, provisionamento ou apply ocorre como parte destas fases.
@@ -142,23 +163,27 @@ Fases propostas:
 
 | Risco | Resposta |
 |---|---|
-| Código do backend sem licença | Reimplementação independente; solicitar autorização antes de qualquer reutilização literal. |
+| Código do backend sem licença | Reimplementar de forma independente; pedir autorização antes de qualquer reutilização literal. |
 | Banco versionado conter dados reais | Não abrir ou migrar sem confirmar origem, conteúdo e plano de backup; substituí-lo por seed aprovado. |
-| Quebra de contratos do frontend | Gerar cliente da OpenAPI, migrar domínio por domínio e rodar E2E a cada fluxo. |
+| Toolchain Python e TypeScript | Fixar versões em uv e pnpm, separar jobs de CI e oferecer um comando Compose para execução local. |
 | Isolamento multi-tenant incompleto | Tenant obrigatório no modelo, escopo centralizado e testes cruzados em integração. |
-| Atualização Next/React incompatível | Corrigir dependências críticas, remover ou adaptar configuração webpack e validar build de produção antes de migrar o restante. |
+| Atualização Next/React/Tailwind incompatível | Corrigir dependências, revisar webpack/Turbopack e navegadores-alvo, validar builds e acessibilidade antes de migrar o restante. |
+| Python 3.15 recém-lançado | Testar dependências nativas e CI; usar Python 3.14 se a matriz não estiver madura. |
+| Quebra de contratos do frontend | Gerar o cliente da OpenAPI, migrar domínio por domínio e rodar E2E a cada fluxo. |
 | Projeto crescer além do MVP | Limitar a primeira entrega ao ciclo completo de pedidos e registrar ideias adicionais no roadmap. |
 | Provedor de deploy indefinido | Manter Compose e IaC preparados sem escolher ou provisionar serviços remotos. |
 
 ## Fontes técnicas consultadas
 
-- [React: aviso de segurança para Server Components](https://react.dev/blog/2025/12/03/critical-security-vulnerability-in-react-server-components)
-- [Next.js: guia de upgrade para v16](https://nextjs.org/docs/app/guides/upgrading/version-16)
+- [Next.js: releases e atualização de segurança anunciada](https://nextjs.org/blog)
 - [React 19.3](https://react.dev/blog/2026/09/09/react-19-3)
-- [pnpm workspaces](https://pnpm.io/workspaces)
-- [Turborepo](https://turborepo.dev/docs)
-- [NestJS: primeiros passos](https://docs.nestjs.com/first-steps)
-- [NestJS OpenAPI](https://docs.nestjs.com/openapi/introduction)
-- [Prisma ORM](https://www.prisma.io/docs/orm)
-- [Drizzle migrations](https://orm.drizzle.team/docs/migrations)
+- [FastAPI: notas de release](https://fastapi.tiangolo.com/release-notes/)
+- [Python 3.15.0](https://www.python.org/downloads/release/python-3150/)
+- [SQLAlchemy 2.1](https://docs.sqlalchemy.org/en/21/)
+- [Alembic changelog](https://alembic.sqlalchemy.org/en/latest/changelog.html)
+- [PostgreSQL: política de versões suportadas](https://www.postgresql.org/support/versioning/)
+- [Tailwind CSS: atualizações](https://tailwindcss.com/blog)
+- [shadcn/ui: Base UI como padrão e suporte contínuo ao Radix](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default)
+- [uv: projetos Python e lockfile](https://docs.astral.sh/uv/guides/projects/)
+- [OpenAPI TypeScript e openapi-fetch](https://openapi-ts.dev/openapi-fetch/)
 - [PostgreSQL Row Security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html)
