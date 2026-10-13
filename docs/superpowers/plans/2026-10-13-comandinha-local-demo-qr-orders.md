@@ -123,13 +123,13 @@
 - POST reloads the active table and same-restaurant active/available products inside a transaction, calculates prices from PostgreSQL and persists snapshots. Invalid/inactive table returns 404; invalid item returns 400 or 409 without partial writes.
 - Public order submission uses the public-order throttle at 10 requests per minute per trusted client IP. It requires the BFF service credential but no admin session.
 
-- [ ] **Step 1: Write PostgreSQL HTTP integration cases for a valid menu/order/summary flow, unknown and inactive codes, unavailable and cross-tenant products, forged price fields, duplicate products, quantity/note/payload limits, no partial writes, and absence of PII. Run and verify failures.**
-- [ ] **Step 2: Implement menu query using only active tables and products where isActive=true and available=true; sort categories by displayOrder/name and products by name. Return only the declared response fields.**
-- [ ] **Step 3: Implement createPublicOrder as one Prisma transaction; validate all item IDs and quantities, reject duplicate product IDs, calculate integer cent totals, and store name/price snapshots. Do not accept client price or total fields.**
-- [ ] **Step 4: Implement listPublicOrderSummaries scoped by the resolved table id and limited to 20 newest orders.**
-- [ ] **Step 5: Add the 10-per-minute named throttle keyed by a validated 64-character SHA-256 source header, falling back to request IP in local development. Protect POST with GatewaySecretGuard, not AdminSessionGuard; add DTO limits and OpenAPI decorators.**
-- [ ] **Step 6: Run the full public-dining integration suite. Expected: no client price affects totals, snapshots remain unchanged after product edits, and summaries disclose no notes or personal data.**
-- [ ] **Step 7: Commit as feat: add public QR ordering API.**
+- [x] **Step 1: Write PostgreSQL HTTP integration cases for a valid menu/order/summary flow, unknown and inactive codes, unavailable and cross-tenant products, forged price fields, duplicate products, quantity/note/payload limits, no partial writes, and absence of PII. Run and verify failures.**
+- [x] **Step 2: Implement menu query using only active tables and products where isActive=true and available=true; sort categories by displayOrder/name and products by name. Return only the declared response fields.**
+- [x] **Step 3: Implement createPublicOrder as one Prisma transaction; validate all item IDs and quantities, reject duplicate product IDs, calculate integer cent totals, and store name/price snapshots. Do not accept client price or total fields.**
+- [x] **Step 4: Implement listPublicOrderSummaries scoped by the resolved table id and limited to 20 newest orders.**
+- [x] **Step 5: Add the 10-per-minute named throttle keyed by a validated 64-character SHA-256 source header, falling back to request IP in local development. Protect POST with GatewaySecretGuard, not AdminSessionGuard; add DTO limits and OpenAPI decorators.**
+- [x] **Step 6: Run the full public-dining integration suite. Expected: no client price affects totals, snapshots remain unchanged after product edits, and summaries disclose no notes or personal data.**
+- [x] **Step 7: Commit as feat: add public QR ordering API.**
 
 ### Task 5: Seed local completo e documentação de uso
 
