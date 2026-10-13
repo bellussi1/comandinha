@@ -5,6 +5,7 @@ allowBuilds:
   '@parcel/watcher@2.6.0': true
   '@prisma/engines@7.10.0': true
   '@scarf/scarf': false
+  esbuild@0.28.2: true
   prisma@7.10.0: true
   sharp@0.33.5: true
   unrs-resolver@1.12.2: true
@@ -19,3 +20,6 @@ minimumReleaseAgeExclude:
   - '@vitest/mocker@5.0.4'
   - '@vitest/spy@5.0.4'
   - vitest@5.0.4
+peerDependencyRules:
+  allowedVersions:
+    "openapi-typescript@7.13.0>typescript": 6.0.3

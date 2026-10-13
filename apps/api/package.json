@@ -20,9 +20,11 @@
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "pnpm prisma:generate && vitest run --config ./vitest.config.e2e.ts",
+    "test:integration": "pnpm prisma:generate && vitest run --config ./vitest.config.integration.ts",
     "typecheck": "pnpm prisma:generate && tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "openapi:export": "pnpm prisma:generate && tsx scripts/export-openapi.ts"
   },
   "dependencies": {
     "@nestjs/common": "12.1.3",

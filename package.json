@@ -8,14 +8,18 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env scripts/dev.mjs",
     "infra:down": "docker compose down",
+    "api:client:generate": "pnpm --filter @comandinha/api openapi:export && pnpm --filter @comandinha/api-client generate",
+    "api:client:check": "pnpm --filter @comandinha/api prisma:generate && node scripts/check-api-client.mjs",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test",
-    "test:integration": "turbo run test:e2e",
+    "test": "pnpm test:dev-script && pnpm test:client-script && turbo run test",
+    "test:integration": "node --env-file-if-exists=.env node_modules/turbo/bin/turbo run test:integration",
     "test:dev-script": "node --test scripts/dev.test.mjs",
+    "test:client-script": "node --test scripts/check-api-client.test.mjs",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
+    "tsx": "4.23.15",
     "turbo": "2.11.7"
   }
 }

@@ -201,27 +201,27 @@ Commit as `feat(api): add PostgreSQL readiness and local database`.
 - Produces: generated `paths` type containing `/health/live` and `/health/ready`; API consumers import it from `@comandinha/api-client`.
 - Produces: `pnpm api:client:generate` writes generated types and `pnpm api:client:check` exits nonzero when regeneration changes tracked output.
 
-- [ ] **Step 1: Define and test the generated-file comparison**
+- [x] **Step 1: Define and test the generated-file comparison**
 
 Create `scripts/check-api-client.test.mjs` with Node's built-in test runner and temporary files. Test that identical generated and checked-in output passes, while a stale checked-in file fails. Run it before implementing the comparison helper and confirm the stale-file assertion fails.
 
-- [ ] **Step 2: Export the Nest OpenAPI document deterministically**
+- [x] **Step 2: Export the Nest OpenAPI document deterministically**
 
 Create an export script using the Nest app module and SwaggerModule, write `apps/api/openapi.json`, and close the app after generation. The output must include liveness and readiness endpoints.
 
-- [ ] **Step 3: Generate and expose API client types**
+- [x] **Step 3: Generate and expose API client types**
 
 Use `openapi-typescript` 7.13.0 to create `packages/api-client/src/generated/schema.d.ts`. Expose a small `createApiClient(baseUrl: string)` wrapper using `openapi-fetch` 0.17.0; keep authentication and business logic out of the package.
 
-- [ ] **Step 4: Make stale generated output fail CI**
+- [x] **Step 4: Make stale generated output fail CI**
 
 Implement `api:client:check` by generating to a temporary file and comparing with the committed type file through the tested helper. Add CI jobs for frozen pnpm install, Node.js 24.21.0, pnpm 12.11.2, lint, typecheck, unit tests, PostgreSQL integration tests, client drift check, builds, and the Playwright smoke test; do not add deployment jobs or secrets. PostgreSQL CI credentials must be disposable test-only values.
 
-- [ ] **Step 5: Run all repository checks**
+- [x] **Step 5: Run all repository checks**
 
 Run `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:integration`, `pnpm api:client:check`, `pnpm build`, and the Playwright smoke test. Expected: all pass on Node 24.21.0 with PostgreSQL 18.
 
-- [ ] **Step 6: Commit generated client and CI**
+- [x] **Step 6: Commit generated client and CI**
 
 Commit as `ci: validate monorepo contracts and builds`.
 
