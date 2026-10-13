@@ -1,0 +1,204 @@
+import { expect, test } from '@playwright/test';
+
+const categoryId = 'fa3103b4-39dd-4e5d-9204-d2b3da8a6f87';
+const productId = 'cb62d0d2-3b99-4e1d-9b13-b68d0f94a8e3';
+const session = {
+  user: { id: 'user-id', name: 'Enzo Bellussi', email: 'enzo@example.com' },
+  restaurant: { id: 'restaurant-id', name: 'Casa do Enzo', slug: 'casa-do-enzo' },
+  membership: { id: 'membership-id', role: 'OWNER' },
+  expiresAt: '2027-10-13T12:00:00.000Z',
+};
+
+test('owner logs in, maintains the catalog, restores an archived product, and logs out', async ({ page }) => {
+  const categories: Array<Record<string, unknown>> = [];
+  const products: Array<Record<string, unknown>> = [];
+  const catalogRequests: Array<{ method: string; path: string; body?: unknown }> = [];
+  const browserErrors: string[] = [];
+  const loginCalls: string[] = [];
+
+  page.on('pageerror', (error) => browserErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error') browserErrors.push(message.text());
+  });
+
+  await page.route('**/api/auth/login', async (route) => {
+    loginCalls.push(`${route.request().method()} ${route.request().url()}`);
+    await route.fulfill({ status: 200, json: session });
+  });
+  await page.route('**/api/auth/session', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+    await route.fulfill({ status: 200, json: session });
+  });
+  await page.route('**/api/admin/catalog/**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname.replace('/api/admin/catalog', '');
+    const method = request.method();
+    const body = request.postDataJSON();
+    catalogRequests.push({ method, path, ...(body ? { body } : {}) });
+
+    if (path === '/categories' && method === 'GET') {
+      await route.fulfill({ status: 200, json: categories });
+      return;
+    }
+    if (path === '/categories' && method === 'POST') {
+      const category = {
+        id: categoryId,
+        restaurantId: 'restaurant-id',
+        name: body.name,
+        nameNormalized: String(body.name).trim().toLowerCase(),
+        displayOrder: body.displayOrder ?? 0,
+        description: body.description ?? null,
+        imageUrl: null,
+        productCount: 0,
+        createdAt: session.expiresAt,
+        updatedAt: session.expiresAt,
+      };
+      categories.push(category);
+      await route.fulfill({ status: 201, json: category });
+      return;
+    }
+    if (path === '/products' && method === 'GET') {
+      const visibleProducts = url.searchParams.get('includeArchived') === 'true'
+        ? products
+        : products.filter((product) => product.isActive);
+      await route.fulfill({ status: 200, json: visibleProducts });
+      return;
+    }
+    if (path === '/products' && method === 'POST') {
+      const product = {
+        id: productId,
+        restaurantId: 'restaurant-id',
+        categoryId: body.categoryId,
+        name: body.name,
+        description: body.description ?? null,
+        priceInCents: body.priceInCents,
+        imageUrl: body.imageUrl ?? null,
+        available: body.available ?? true,
+        featured: body.featured ?? false,
+        dietaryTags: body.dietaryTags ?? [],
+        prepTimeMinutes: body.prepTimeMinutes ?? null,
+        isActive: true,
+        createdAt: session.expiresAt,
+        updatedAt: session.expiresAt,
+      };
+      products.push(product);
+      const category = categories.find((entry) => entry.id === body.categoryId);
+      if (category) category.productCount = Number(category.productCount) + 1;
+      await route.fulfill({ status: 201, json: product });
+      return;
+    }
+
+    const productMatch = /^\/products\/([^/]+)$/.exec(path);
+    const product = productMatch
+      ? products.find((entry) => entry.id === productMatch[1])
+      : undefined;
+    if (!product) {
+      await route.fulfill({ status: 404, json: { message: 'Not found' } });
+      return;
+    }
+    if (method === 'PATCH') {
+      Object.assign(product, body);
+      await route.fulfill({ status: 200, json: product });
+      return;
+    }
+    if (method === 'DELETE') {
+      product.isActive = false;
+      await route.fulfill({ status: 204, body: '' });
+      return;
+    }
+    await route.fulfill({ status: 405, json: { message: 'Method not allowed' } });
+  });
+
+  await page.goto('/painel/login');
+  await page.getByLabel('E-mail').fill('enzo@example.com');
+  await page.getByLabel('Senha').fill('password-123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  try {
+    await expect(page).toHaveURL(/\/painel\/catalogo$/);
+  } catch (error) {
+    throw new Error(
+      `${String(error)}\nLogin route calls: ${loginCalls.join(', ') || 'none'}\nBrowser errors: ${browserErrors.join(' | ') || 'none'}`,
+    );
+  }
+  await expect(
+    page.getByRole('complementary', { name: 'Navegação do painel' }).getByText('Casa do Enzo'),
+  ).toBeVisible();
+
+  await page.getByRole('tab', { name: /Categorias/ }).click();
+  await page.getByRole('button', { name: 'Nova categoria' }).click();
+  await page.getByLabel('Nome da categoria').fill('Bebidas');
+  await page.getByRole('button', { name: 'Salvar categoria' }).click();
+  await expect(page.getByText('Bebidas')).toBeVisible();
+
+  await page.getByRole('tab', { name: /Produtos/ }).click();
+  await page.getByRole('button', { name: 'Novo produto' }).click();
+  await page.getByLabel('Nome do produto').fill('Suco de laranja');
+  await page.getByLabel('Categoria').selectOption(categoryId);
+  await page.getByLabel('Preço (R$)').fill('12,34');
+  await page.getByRole('button', { name: 'Salvar produto' }).click();
+  await expect(page.getByText('Suco de laranja')).toBeVisible();
+  await expect(page.getByText('R$ 12,34')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Marcar Suco de laranja indisponível' }).click();
+  await expect(page.getByText('Indisponível')).toBeVisible();
+  await page.getByRole('button', { name: 'Arquivar Suco de laranja' }).click();
+  await expect(page.getByText('Suco de laranja')).not.toBeVisible();
+
+  await page.getByRole('button', { name: 'Mostrar arquivados' }).click();
+  await expect(page.getByText('Suco de laranja')).toBeVisible();
+  await page.getByRole('button', { name: 'Restaurar Suco de laranja' }).click();
+  await expect(page.getByText('Suco de laranja')).toBeVisible();
+
+  expect(catalogRequests).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ method: 'POST', path: '/categories' }),
+      expect.objectContaining({
+        method: 'POST',
+        path: '/products',
+        body: expect.objectContaining({ priceInCents: 1234 }),
+      }),
+      expect.objectContaining({ method: 'PATCH', path: `/products/${productId}` }),
+      expect.objectContaining({ method: 'DELETE', path: `/products/${productId}` }),
+      expect.objectContaining({
+        method: 'PATCH',
+        path: `/products/${productId}`,
+        body: expect.objectContaining({ isActive: true }),
+      }),
+    ]),
+  );
+
+  for (const viewport of [
+    { width: 360, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(page.getByRole('heading', { name: 'Cardápio com ordem.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Novo produto' })).toBeVisible();
+    const dimensions = await page.evaluate(() => ({
+      pageWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    }));
+    expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+    await page.screenshot({
+      path: `test-results/painel-catalog-${viewport.width}x${viewport.height}.png`,
+      fullPage: true,
+    });
+  }
+
+  await page.getByLabel('Buscar produto ou categoria').focus();
+  await expect(page.getByLabel('Buscar produto ou categoria')).toBeFocused();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(
+    await page.locator('.painel-product-card').first().evaluate((element) =>
+      getComputedStyle(element).animationName,
+    ),
+  ).toBe('none');
+
+  await page.getByRole('button', { name: 'Sair' }).click();
+  await expect(page).toHaveURL(/\/painel\/login$/);
+});
