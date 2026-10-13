@@ -54,6 +54,16 @@ describe('parseSeedConfig', () => {
     ).toThrow('Demo seed can only target a loopback database URL.');
   });
 
+  it('refuses a remote host override on a loopback database URL', () => {
+    expect(() =>
+      parseSeedConfig({
+        ...validEnvironment,
+        DATABASE_URL:
+          'postgresql://app:secret@127.0.0.1:5432/comandinha?host=db.example.com',
+      }),
+    ).toThrow('Demo seed can only target a loopback database URL.');
+  });
+
   it('rejects a password shorter than twelve characters', () => {
     expect(() =>
       parseSeedConfig({

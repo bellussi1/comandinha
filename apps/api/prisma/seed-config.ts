@@ -39,7 +39,12 @@ export function parseSeedConfig(environment: NodeJS.ProcessEnv): SeedConfig {
     hostname === 'localhost' ||
     hostname === '::1' ||
     (isIP(hostname) === 4 && hostname.startsWith('127.'));
-  if (!['postgres:', 'postgresql:'].includes(database.protocol) || !isLoopbackHost) {
+  const hasHostOverride = database.searchParams.has('host');
+  if (
+    !['postgres:', 'postgresql:'].includes(database.protocol) ||
+    !isLoopbackHost ||
+    hasHostOverride
+  ) {
     throw new Error('Demo seed can only target a loopback database URL.');
   }
 
