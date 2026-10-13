@@ -82,8 +82,28 @@ Liveness e readiness verificam a infraestrutura; não são funcionalidades do pr
 
 - `http://localhost:3000/painel/login` usa as sessões administrativas do NestJS. Em desenvolvimento local, entre com o e-mail e a senha configurados em `DEMO_OWNER_EMAIL` e `DEMO_OWNER_PASSWORD` no `.env`, após aplicar as migrações e executar o seed local.
 - `http://localhost:3000/painel/catalogo` gerencia categorias e produtos no PostgreSQL novo. `OWNER` e `ADMIN` podem alterar o catálogo; `STAFF` pode consultá-lo.
-- O catálogo novo continua separado do cardápio público e dos fluxos existentes. Nenhum dado do sistema legado foi copiado ou migrado, e as alterações feitas em `/painel/catalogo` ainda não aparecem no cardápio público.
+- `http://localhost:3000/painel/mesas` gerencia mesas, ativa/desativa o acesso e exibe o QR e o link público de cada mesa.
+- `http://localhost:3000/painel/pedidos` acompanha os pedidos recebidos pelo QR e permite avançar o status de preparo e entrega.
+- O catálogo local abastece o cardápio QR novo. Os dados do sistema legado não foram copiados ou migrados para o PostgreSQL novo.
 - `/admin` permanece como área administrativa legada durante a migração. Seus fluxos continuam usando a autenticação e a API existentes até serem substituídos por novas áreas do painel.
+
+### Fluxo local de demonstração
+
+O seed local cria ou atualiza o restaurante e o proprietário configurados no `.env`, além de três mesas, quatro categorias e oito produtos de demonstração. Para executar o fluxo completo:
+
+1. Copie `.env.example` para `.env` e preencha `DEMO_OWNER_NAME`, `DEMO_OWNER_EMAIL`, `DEMO_OWNER_PASSWORD` (mínimo de 12 caracteres), `DEMO_RESTAURANT_NAME` e `DEMO_RESTAURANT_SLUG`. Defina `ALLOW_LOCAL_DEMO_SEED=true` somente para esse banco local.
+2. Inicie o ambiente com `pnpm dev`. Em outro terminal, aplique a migração e crie os dados de demonstração:
+
+   ```powershell
+   pnpm --filter @comandinha/api prisma:migrate
+   pnpm --filter @comandinha/api seed
+   ```
+
+3. Entre em `http://localhost:3000/painel/login` com `DEMO_OWNER_EMAIL` e `DEMO_OWNER_PASSWORD`.
+4. Abra `/painel/mesas`, escolha **Ver QR** e abra o link público exibido. A rota `/q/{code}` mostra o cardápio da mesa; adicione um produto, revise o carrinho e envie o pedido.
+5. Abra `/painel/pedidos` e avance o pedido por **Iniciar preparo**, **Marcar como pronto** e **Entregar**. O cardápio público acompanha o status do pedido enquanto a página está aberta.
+
+O fluxo de demonstração cobre catálogo, QR, carrinho e pedidos. Pagamento e chamada de garçom permanecem nos fluxos existentes enquanto a migração continua.
 
 ## Comandos
 
@@ -95,6 +115,7 @@ Liveness e readiness verificam a infraestrutura; não são funcionalidades do pr
 | `pnpm --filter @comandinha/api test:e2e` | Executa os testes HTTP de saúde e do contrato OpenAPI |
 | `pnpm --filter @comandinha/web exec playwright install chromium` | Instala o navegador usado pelo smoke test |
 | `pnpm --filter @comandinha/web exec playwright test e2e/painel-catalog.spec.ts` | Valida login, catálogo, arquivamento/restauração e logout do painel novo |
+| `pnpm --filter @comandinha/web test:e2e` | Executa toda a suíte Playwright, incluindo QR, carrinho, pedido, acompanhamento e compatibilidade com as rotas legadas |
 | `pnpm test:integration` | Executa integração com PostgreSQL e smoke test Playwright |
 | `pnpm build` | Gera os builds de produção para validação local |
 | `pnpm api:client:generate` | Atualiza o contrato e os tipos TypeScript do cliente |
@@ -140,9 +161,9 @@ O login limita cinco tentativas por combinação de conta e origem confiável no
 
 ## Limitações atuais
 
-- A API já oferece autenticação multi-tenant e endpoints para categorias e produtos, mas o restante do domínio ainda precisa ser migrado.
+- A nova API oferece autenticação multi-tenant, catálogo, mesas e pedidos; pagamento, fechamento de conta e chamada de garçom ainda dependem dos fluxos legados.
 - A tela nova de login está em `/painel/login`; o login e os fluxos em `/admin` permanecem ligados à API legada enquanto a migração acontece.
-- O catálogo novo ainda não é consumido pelo cardápio público. Mesas, pedidos, divisão de conta e outros fluxos administrativos também precisam ser reconstruídos e integrados à API.
+- O cardápio em `/q/{code}` usa o catálogo e o banco novos. Os dados do legado não são sincronizados automaticamente.
 - Nenhuma conta, categoria, produto ou outro dado legado foi importado para o novo banco PostgreSQL.
 - O backend legado é apenas referência: seu código e seu banco de dados não foram incorporados. O repositório legado não declara licença.
 - Não há deploy, infraestrutura de produção, dados de clientes ou alegação de prontidão operacional neste marco.
