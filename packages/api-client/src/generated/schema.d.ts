@@ -147,6 +147,145 @@ export interface paths {
         patch: operations["CatalogProductsController_update"];
         trace?: never;
     };
+    "/tables": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista as mesas do restaurante da sessão */
+        get: operations["TablesController_list"];
+        put?: never;
+        /** Cria uma mesa e o código público do QR */
+        post: operations["TablesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tables/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta uma mesa do restaurante da sessão */
+        get: operations["TablesController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Renomeia ou ativa/desativa uma mesa */
+        patch: operations["TablesController_update"];
+        trace?: never;
+    };
+    "/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista pedidos do restaurante da sessão */
+        get: operations["OrdersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Conta pedidos por status no restaurante da sessão */
+        get: operations["OrdersController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta um pedido do restaurante da sessão */
+        get: operations["OrdersController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orders/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Avança ou cancela um pedido conforme o fluxo permitido */
+        patch: operations["OrdersController_updateStatus"];
+        trace?: never;
+    };
+    "/public/tables/{code}/menu": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o cardápio público de uma mesa ativa */
+        get: operations["PublicDiningController_getMenu"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/tables/{code}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista os pedidos recentes desta mesa sem dados pessoais */
+        get: operations["PublicDiningController_listOrders"];
+        put?: never;
+        /** Cria um pedido público usando o preço atual do cardápio */
+        post: operations["PublicDiningController_createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -305,6 +444,135 @@ export interface components {
             prepTimeMinutes?: number | null;
             /** @description Permite restaurar um produto arquivado. */
             isActive?: boolean;
+        };
+        TableResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            restaurantId: string;
+            name: string;
+            publicCode: string;
+            isActive: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            activeOrderCount: number;
+        };
+        CreateTableDto: {
+            /** @example Mesa 01 */
+            name: string;
+        };
+        UpdateTableDto: {
+            name?: string;
+            isActive?: boolean;
+        };
+        /** @enum {string} */
+        OrderStatus: "PENDING" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
+        OrderTableSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        OrderItemResponseDto: {
+            /** Format: uuid */
+            id: string;
+            nameSnapshot: string;
+            unitPriceInCents: number;
+            quantity: number;
+            notes?: string | null;
+            lineTotalInCents: number;
+        };
+        OrderResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            restaurantId: string;
+            /** Format: uuid */
+            tableId: string;
+            status: components["schemas"]["OrderStatus"];
+            notes?: string | null;
+            totalInCents: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            table: components["schemas"]["OrderTableSummaryDto"];
+            items: components["schemas"]["OrderItemResponseDto"][];
+        };
+        OrderSummaryResponseDto: {
+            PENDING: number;
+            PREPARING: number;
+            READY: number;
+            DELIVERED: number;
+            CANCELLED: number;
+        };
+        UpdateOrderStatusDto: {
+            status: components["schemas"]["OrderStatus"];
+        };
+        PublicRestaurantSummaryDto: {
+            name: string;
+        };
+        PublicTableSummaryDto: {
+            name: string;
+        };
+        PublicMenuProductDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string | null;
+            priceInCents: number;
+            /** Format: uri */
+            imageUrl: string | null;
+            featured: boolean;
+            dietaryTags: string[];
+            prepTimeMinutes: number | null;
+        };
+        PublicMenuCategoryDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            description: string | null;
+            products: components["schemas"]["PublicMenuProductDto"][];
+        };
+        PublicDiningMenuDto: {
+            restaurant: components["schemas"]["PublicRestaurantSummaryDto"];
+            table: components["schemas"]["PublicTableSummaryDto"];
+            categories: components["schemas"]["PublicMenuCategoryDto"][];
+        };
+        CreatePublicOrderItemDto: {
+            /** Format: uuid */
+            productId: string;
+            quantity: number;
+            notes?: string;
+        };
+        CreatePublicOrderDto: {
+            items: components["schemas"]["CreatePublicOrderItemDto"][];
+            notes?: string;
+        };
+        PublicOrderItemSnapshotDto: {
+            nameSnapshot: string;
+            quantity: number;
+            unitPriceInCents: number;
+            lineTotalInCents: number;
+        };
+        PublicOrderResponseDto: {
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["OrderStatus"];
+            totalInCents: number;
+            /** Format: date-time */
+            createdAt: string;
+            items: components["schemas"]["PublicOrderItemSnapshotDto"][];
+        };
+        PublicOrderSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["OrderStatus"];
+            totalInCents: number;
+            /** Format: date-time */
+            createdAt: string;
+            items: components["schemas"]["PublicOrderItemSnapshotDto"][];
         };
     };
     responses: never;
@@ -959,6 +1227,471 @@ export interface operations {
             };
             /** @description Produto ou categoria não encontrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TablesController_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponseDto"][];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TablesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTableDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem criar mesas. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Já existe uma mesa com esse nome. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TablesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TablesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTableDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TableResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem alterar mesas. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Já existe uma mesa com esse nome. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrdersController_list: {
+        parameters: {
+            query?: {
+                status?: "PENDING" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponseDto"][];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrdersController_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderSummaryResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrdersController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pedido não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrdersController_updateStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrderStatusDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Pedido não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Transição de status não permitida. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicDiningController_getMenu: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Código de mesa base64url com 43 caracteres. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicDiningMenuDto"];
+                };
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicDiningController_listOrders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Código de mesa base64url com 43 caracteres. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrderSummaryDto"][];
+                };
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicDiningController_createOrder: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description Hash SHA-256 da origem confiável encaminhado pelo BFF. */
+                "x-comandinha-client-key"?: string;
+                "x-comandinha-gateway-secret": string;
+            };
+            path: {
+                /** @description Código de mesa base64url com 43 caracteres. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreatePublicOrderDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrderResponseDto"];
+                };
+            };
+            /** @description Itens, quantidades ou observações inválidas. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Gateway não autorizado. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Limite de pedidos excedido. */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
