@@ -1,16 +1,16 @@
 .painel-root {
-  --painel-plum: #40223a;
-  --painel-plum-deep: #321b2e;
-  --painel-coral: #f07868;
-  --painel-amber: #d8ad61;
-  --painel-paper: #f7f5f1;
-  --painel-ink: #262127;
-  --painel-muted: #7b747b;
-  --painel-line: #e9e4df;
+  --painel-plum: var(--comandinha-color-plum);
+  --painel-plum-deep: var(--comandinha-color-plum-deep);
+  --painel-coral: var(--comandinha-color-coral);
+  --painel-amber: var(--comandinha-color-amber);
+  --painel-paper: var(--comandinha-color-paper);
+  --painel-ink: var(--comandinha-color-ink);
+  --painel-muted: var(--comandinha-color-muted);
+  --painel-line: var(--comandinha-color-line);
   min-height: 100vh;
   color: var(--painel-ink);
   background: var(--painel-paper);
-  font-family: var(--font-roboto), Arial, sans-serif;
+  font-family: var(--comandinha-font-body);
 }
 
 .painel-mobile-navigation {
@@ -33,14 +33,14 @@
 .painel-root a:focus-visible,
 .painel-root input:focus-visible,
 .painel-root select:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--painel-coral) 65%, white);
+  outline: 3px solid var(--comandinha-color-focus);
   outline-offset: 3px;
 }
 
 .painel-eyebrow {
   display: block;
   color: var(--painel-muted);
-  font-size: 0.64rem;
+  font-size: var(--comandinha-type-label);
   font-weight: 700;
   letter-spacing: 0.14em;
   line-height: 1.5;
@@ -1488,7 +1488,7 @@
 
 .painel-toggle-card small {
   color: #817780;
-  font-size: 0.64rem;
+  font-size: var(--comandinha-type-label);
 }
 
 .painel-toggle-card input {
@@ -2752,4 +2752,8 @@
 .painel-root .painel-icon-action.is-active {
   color: var(--painel-plum);
   background: #f8eeeb;
+}
+
+.painel-login-story :focus-visible {
+  outline-color: var(--painel-amber);
 }

@@ -1,21 +1,20 @@
 .public-menu-page {
-  --menu-plum: #40223a;
-  --menu-plum-deep: #321b2e;
-  --menu-coral: #f07868;
-  --menu-amber: #d8ad61;
-  --menu-paper: #f7f5f1;
-  --menu-ink: #29232a;
-  --menu-muted: #777078;
-  --menu-line: #e8e1dc;
+  --menu-plum: var(--comandinha-color-plum);
+  --menu-plum-deep: var(--comandinha-color-plum-deep);
+  --menu-coral: var(--comandinha-color-coral);
+  --menu-amber: var(--comandinha-color-amber);
+  --menu-paper: var(--comandinha-color-paper);
+  --menu-ink: var(--comandinha-color-ink);
+  --menu-muted: var(--comandinha-color-muted);
+  --menu-line: var(--comandinha-color-line);
   min-height: 100vh;
   padding: 1.1rem 0 calc(7.4rem + env(safe-area-inset-bottom));
   color: var(--menu-ink);
   background:
     radial-gradient(ellipse at 10% 0%, rgb(240 120 104 / 7%), transparent 34rem),
     var(--menu-paper);
-  font-family: var(--font-roboto), Arial, sans-serif;
+  font-family: var(--comandinha-font-body);
 }
-
 .public-menu-page * {
   box-sizing: border-box;
 }
@@ -31,7 +30,7 @@
 .public-menu-page a:focus-visible,
 .public-menu-page input:focus-visible,
 .public-menu-page textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--menu-coral) 70%, white);
+  outline: 3px solid var(--comandinha-color-focus);
   outline-offset: 3px;
 }
 
@@ -72,8 +71,8 @@
 
 .public-menu-eyebrow {
   display: block;
-  color: #8c808b;
-  font-size: 0.58rem;
+  color: var(--menu-muted);
+  font-size: var(--comandinha-type-label);
   font-weight: 800;
   letter-spacing: 0.14em;
   line-height: 1.5;
@@ -104,7 +103,7 @@
   margin-left: auto;
   border-left: 1px solid var(--menu-line);
   padding-left: 0.75rem;
-  color: #8a7e88;
+  color: var(--menu-muted);
   font-size: 0.55rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -116,7 +115,7 @@
 }
 
 .public-menu-intro .public-menu-eyebrow {
-  color: #a06a59;
+  color: var(--comandinha-color-warm-text);
 }
 
 .public-menu-intro h2 {

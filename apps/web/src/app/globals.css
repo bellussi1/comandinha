@@ -152,3 +152,45 @@
     @apply bg-background text-foreground;
   }
 }
+:where(.painel-root, .public-menu-page) {
+  --comandinha-color-plum: #40223a;
+  --comandinha-color-plum-deep: #321b2e;
+  --comandinha-color-coral: #f07868;
+  --comandinha-color-amber: #d8ad61;
+  --comandinha-color-paper: #f7f5f1;
+  --comandinha-color-surface: #ffffff;
+  --comandinha-color-ink: #262127;
+  --comandinha-color-muted: #6b636b;
+  --comandinha-color-warm-text: #76514b;
+  --comandinha-color-muted-on-dark: #d8ced6;
+  --comandinha-color-line: #e6e0da;
+  --comandinha-color-focus: #a84840;
+
+  --comandinha-font-body: var(--font-roboto), Arial, sans-serif;
+  --comandinha-font-display: Georgia, "Times New Roman", serif;
+
+  --comandinha-type-label: 0.72rem;
+  --comandinha-type-small: 0.875rem;
+  --comandinha-type-body: 1rem;
+  --comandinha-type-lead: 1.125rem;
+
+  --comandinha-space-1: 0.25rem;
+  --comandinha-space-2: 0.5rem;
+  --comandinha-space-3: 0.75rem;
+  --comandinha-space-4: 1rem;
+  --comandinha-space-6: 1.5rem;
+  --comandinha-space-8: 2rem;
+  --comandinha-space-12: 3rem;
+
+  --comandinha-radius-sm: 0.5rem;
+  --comandinha-radius-md: 0.75rem;
+  --comandinha-radius-lg: 1rem;
+  --comandinha-radius-pill: 999px;
+
+  --comandinha-shadow-card: 0 8px 28px rgb(51 34 48 / 5%);
+  --comandinha-shadow-raised: 0 14px 34px rgb(51 34 48 / 10%);
+
+  --comandinha-motion-fast: 120ms;
+  --comandinha-motion-base: 200ms;
+  --comandinha-motion-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
