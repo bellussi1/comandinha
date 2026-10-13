@@ -173,12 +173,12 @@
 - Public menu BFF allows GET without a session. Public orders BFF allows GET and POST; POST requires a trusted mutation origin, the same body-size limit, strict field allowlists, no admin cookie forwarding, and the configured service gateway secret. Before forwarding POST, it limits 10 attempts per minute using the trusted client IP rules already used by the login gateway, and sends only its own SHA-256 client key to Nest.
 - Every proxy uses a 5-second timeout, rejects redirects, validates table codes as 43 base64url characters and returns safe errors without leaking upstream internals.
 
-- [ ] **Step 1: Read the Next.js route handler guide from apps/web/node_modules/next/dist/docs as required by apps/web/AGENTS.md, then write Jest tests for trusted-source rate limits and route behavior: unauthenticated admin access, trusted-origin enforcement, method/body allowlists, bad code/ID/query rejection, 16 KiB limit, safe errors, public menu without credentials, and public order POST with the service credential and generated client key only. Run and verify failures.**
-- [ ] **Step 2: Generate the OpenAPI contract and client types with pnpm api:client:generate; inspect the generated paths and request/response types.**
-- [ ] **Step 3: Implement typed server proxy functions using the existing catalog-api.ts/auth-cookie.ts conventions, with endpoint-specific allowlists and response headers.**
-- [ ] **Step 4: Add the four Next route handlers and route tests; do not expose the service credential, Authorization header, source key or admin session cookie in browser responses.**
-- [ ] **Step 5: Run route tests, pnpm api:client:check and web typecheck. Expected: generated client matches OpenAPI and all disallowed requests stop at the BFF.**
-- [ ] **Step 6: Commit as feat: add table and order API gateways.**
+- [x] **Step 1: Read the Next.js route handler guide from apps/web/node_modules/next/dist/docs as required by apps/web/AGENTS.md, then write Jest tests for trusted-source rate limits and route behavior: unauthenticated admin access, trusted-origin enforcement, method/body allowlists, bad code/ID/query rejection, 16 KiB limit, safe errors, public menu without credentials, and public order POST with the service credential and generated client key only. Run and verify failures.**
+- [x] **Step 2: Generate the OpenAPI contract and client types with pnpm api:client:generate; inspect the generated paths and request/response types.**
+- [x] **Step 3: Implement typed server proxy functions using the existing catalog-api.ts/auth-cookie.ts conventions, with endpoint-specific allowlists and response headers.**
+- [x] **Step 4: Add the four Next route handlers and route tests; do not expose the service credential, Authorization header, source key or admin session cookie in browser responses.**
+- [x] **Step 5: Run route tests, pnpm api:client:check and web typecheck. Expected: generated client matches OpenAPI and all disallowed requests stop at the BFF.**
+- [x] **Step 6: Commit as feat: add table and order API gateways.**
 
 ### Task 7: Painel novo para visão geral, mesas e pedidos
 
