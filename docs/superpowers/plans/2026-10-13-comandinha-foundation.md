@@ -33,7 +33,7 @@
 ## File Map
 
 - Root workspace files: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `turbo.json`, `.npmrc`, `.node-version`, `.gitignore`, `compose.yaml`, and `.env.example`.
-- Existing frontend moves intact into `apps/web/`: `src/**`, `public/**`, `components.json`, `jest.config.ts`, `jest.setup.ts`, `next.config.mjs`, `postcss.config.mjs`, `tailwind.config.js` during migration, `tsconfig.json`, and the app's `package.json`.
+- Existing frontend moves intact into `apps/web/`: `src/**`, `public/**`, `components.json`, `.eslintrc.json`, `jest.config.ts`, `jest.setup.ts`, `jsconfig.json`, `next.config.mjs`, `postcss.config.mjs`, `tailwind.config.js` during migration, `tsconfig.json`, and the app's `package.json`.
 - Frontend modernization files: `apps/web/package.json`, `apps/web/next.config.mjs`, `apps/web/postcss.config.mjs`, `apps/web/src/app/globals.css`, and `apps/web/components.json`; remove the obsolete `apps/web/next.config.js` and `apps/web/tailwind.config.js` after their needed settings are migrated.
 - API files: `apps/api/package.json`, `apps/api/nest-cli.json`, `apps/api/tsconfig.json`, `apps/api/src/main.ts`, `apps/api/src/app.module.ts`, `apps/api/src/health/health.module.ts`, `apps/api/src/health/health.controller.ts`, `apps/api/src/health/health.service.ts`, `apps/api/src/database/prisma.service.ts`, and API tests under `apps/api/test/`.
 - Persistence and local services: `apps/api/prisma.config.ts`, `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/**`, and `compose.yaml`.
@@ -46,7 +46,7 @@
 
 **Files:**
 - Create: `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `.npmrc`, `.node-version`
-- Move: root Next app files and directories to `apps/web/` as listed in the File Map
+- Move: root Next app files and directories to `apps/web/` as listed in the File Map, including `.eslintrc.json`, `jsconfig.json`, and `jest.setup.ts`
 - Modify: `.gitignore`, `apps/web/package.json`, `apps/web/tsconfig.json`, `apps/web/jest.config.ts`
 - Remove: root `package-lock.json` after the pnpm lockfile is generated
 
@@ -54,25 +54,25 @@
 - Produces: workspace package `@comandinha/web`; root commands `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm lint`, and `pnpm typecheck`. Initially, `pnpm dev` runs the workspace dev tasks; Task 4 wraps it with PostgreSQL startup.
 - Produces: root commands `pnpm infra:down`, `pnpm test:integration`, `pnpm api:client:generate`, and `pnpm api:client:check` as their owning tasks are completed.
 - Root package pins `packageManager` to `pnpm@12.11.2` and engines to `node >=24.15.0`.
-- Turborepo tasks use `dev` as persistent, `build` depending on upstream builds, and cache outputs for `.next/**`, `dist/**`, and `coverage/**`.
+- Turborepo tasks use `dev` as persistent, `build` depending on upstream builds, and cache outputs for `.next/**` and `dist/**`. Add `coverage/**` only when a workspace test task produces coverage artifacts.
 
-- [ ] **Step 1: Capture the existing frontend baseline in the worktree**
+- [x] **Step 1: Capture the existing frontend baseline in the worktree**
 
 Run `npm ci`, `npm test -- --ci`, and `npm run build` from the existing repository root. Record any baseline failures before moving files; do not repair unrelated behavior in this task.
 
-- [ ] **Step 2: Create root workspace configuration and move the web package**
+- [x] **Step 2: Create root workspace configuration and move the web package**
 
 Move the existing Next source, assets, and app configuration under `apps/web/`. Keep `.claude/` and project-level Git files at the root. Rename the web package to `@comandinha/web`, add the pinned root package manager/runtime metadata, and define Turborepo tasks. In this task, root `pnpm dev` runs `turbo run dev --parallel`.
 
-- [ ] **Step 3: Generate and inspect the pnpm lockfile**
+- [x] **Step 3: Generate and inspect the pnpm lockfile**
 
 Run `pnpm install` with Node 24.21.0 and pnpm 12.11.2. Remove the npm lockfile only after `pnpm-lock.yaml` contains the `@comandinha/web` importer.
 
-- [ ] **Step 4: Verify workspace commands and moved frontend tests**
+- [x] **Step 4: Verify workspace commands and moved frontend tests**
 
-Run `pnpm --filter @comandinha/web test -- --ci`, `pnpm --filter @comandinha/web typecheck`, and `pnpm --filter @comandinha/web build` from the repository root. Expected: existing test behavior is preserved and Next resolves all source aliases from `apps/web`.
+Run `pnpm --filter @comandinha/web test --ci`, `pnpm --filter @comandinha/web typecheck`, and `pnpm --filter @comandinha/web build` from the repository root. Expected: existing test behavior is preserved and Next resolves all source aliases from `apps/web`.
 
-- [ ] **Step 5: Commit the workspace relocation**
+- [x] **Step 5: Commit the workspace relocation**
 
 Commit as `build: bootstrap pnpm monorepo workspace`.
 
@@ -106,7 +106,7 @@ Replace `next lint` with direct ESLint, remove obsolete `autoprefixer` if Tailwi
 
 - [ ] **Step 5: Verify framework migration**
 
-Run `pnpm --filter @comandinha/web test -- --ci`, `pnpm --filter @comandinha/web typecheck`, `pnpm --filter @comandinha/web lint`, `pnpm --filter @comandinha/web build`, and `pnpm --filter @comandinha/web exec playwright test e2e/foundation.spec.ts`. Expected: all existing unit tests pass, production build uses Turbopack, and the public entry point returns HTTP 200.
+Run `pnpm --filter @comandinha/web test --ci`, `pnpm --filter @comandinha/web typecheck`, `pnpm --filter @comandinha/web lint`, `pnpm --filter @comandinha/web build`, and `pnpm --filter @comandinha/web exec playwright test e2e/foundation.spec.ts`. Expected: all existing unit tests pass, production build uses Turbopack, and the public entry point returns HTTP 200.
 
 - [ ] **Step 6: Commit the web foundation**
 

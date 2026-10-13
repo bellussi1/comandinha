@@ -6,6 +6,16 @@ import {
 } from '../calculadores';
 import type { ItemCarrinho, Pedido, ItemDivisao } from '@/src/types';
 
+const criarItemDivisao = (
+  item: Pick<ItemDivisao, 'id' | 'nome' | 'preco' | 'quantidade' | 'pessoas'>
+): ItemDivisao => ({
+  descricao: '',
+  categoria: 'teste',
+  imagem: '/placeholder.svg',
+  disponivel: true,
+  ...item,
+});
+
 describe('calculadores', () => {
   describe('calcularTotalItems', () => {
     it('deve calcular total de itens vazio corretamente', () => {
@@ -132,13 +142,13 @@ describe('calculadores', () => {
   describe('verificarItensSemDivisao', () => {
     it('deve retornar true quando há itens sem pessoa atribuída', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Item 1',
           preco: 10,
           quantidade: 1,
           pessoas: [],
-        },
+        }),
       ];
 
       const resultado = verificarItensSemDivisao(itens);
@@ -147,20 +157,20 @@ describe('calculadores', () => {
 
     it('deve retornar false quando todos os itens têm pessoas atribuídas', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Item 1',
           preco: 10,
           quantidade: 1,
           pessoas: [0, 1],
-        },
-        {
+        }),
+        criarItemDivisao({
           id: '2',
           nome: 'Item 2',
           preco: 20,
           quantidade: 1,
           pessoas: [0],
-        },
+        }),
       ];
 
       const resultado = verificarItensSemDivisao(itens);
@@ -176,13 +186,13 @@ describe('calculadores', () => {
   describe('calcularDivisaoConta', () => {
     it('deve dividir conta igualmente entre pessoas', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Pizza',
           preco: 60,
           quantidade: 1,
           pessoas: [0, 1, 2], // 3 pessoas dividem
-        },
+        }),
       ];
 
       const resultado = calcularDivisaoConta(itens, 3, 0.1);
@@ -204,20 +214,20 @@ describe('calculadores', () => {
 
     it('deve calcular corretamente quando itens são divididos de forma diferente', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Hambúrguer',
           preco: 30,
           quantidade: 1,
           pessoas: [0], // Pessoa 0 paga sozinha
-        },
-        {
+        }),
+        criarItemDivisao({
           id: '2',
           nome: 'Refrigerante',
           preco: 10,
           quantidade: 2,
           pessoas: [1, 2], // Pessoas 1 e 2 dividem
-        },
+        }),
       ];
 
       const resultado = calcularDivisaoConta(itens, 3, 0.1);
@@ -241,20 +251,20 @@ describe('calculadores', () => {
 
     it('deve ignorar itens sem pessoas atribuídas', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Item 1',
           preco: 50,
           quantidade: 1,
           pessoas: [0],
-        },
-        {
+        }),
+        criarItemDivisao({
           id: '2',
           nome: 'Item sem divisão',
           preco: 100,
           quantidade: 1,
           pessoas: [],
-        },
+        }),
       ];
 
       const resultado = calcularDivisaoConta(itens, 2, 0);
@@ -267,13 +277,13 @@ describe('calculadores', () => {
 
     it('deve calcular corretamente sem taxa de serviço', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Pizza',
           preco: 40,
           quantidade: 1,
           pessoas: [0, 1],
-        },
+        }),
       ];
 
       const resultado = calcularDivisaoConta(itens, 2, 0);
@@ -285,13 +295,13 @@ describe('calculadores', () => {
 
     it('deve lidar com múltiplas quantidades', () => {
       const itens: ItemDivisao[] = [
-        {
+        criarItemDivisao({
           id: '1',
           nome: 'Cerveja',
           preco: 5,
           quantidade: 4, // 4 cervejas = 20 total
           pessoas: [0, 1], // Dividido entre 2 pessoas
-        },
+        }),
       ];
 
       const resultado = calcularDivisaoConta(itens, 2, 0);

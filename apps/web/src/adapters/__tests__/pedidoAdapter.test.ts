@@ -10,6 +10,7 @@ describe('pedidoAdapter', () => {
           nome: 'Hambúrguer',
           quantidade: 2,
           precoUnitario: 25.90,
+          subtotal: 51.80,
           observacoes: 'Sem cebola',
         },
         {
@@ -17,6 +18,7 @@ describe('pedidoAdapter', () => {
           nome: 'Refrigerante',
           quantidade: 1,
           precoUnitario: 5.50,
+          subtotal: 5.50,
           observacoes: null,
         },
       ];
@@ -60,6 +62,7 @@ describe('pedidoAdapter', () => {
           nome: 'Produto',
           quantidade: 1,
           precoUnitario: 10.0,
+          subtotal: 10.0,
           observacoes: null,
         },
       ];
@@ -75,6 +78,8 @@ describe('pedidoAdapter', () => {
         pedidoId: 123,
         timestamp: '2024-01-15T10:30:00.000Z',
         status: 'pendente',
+        valorTotal: 45.0,
+        estimativaEntrega: '30 minutos',
         observacoesGerais: 'Pedido urgente',
         itens: [
           {
@@ -82,6 +87,7 @@ describe('pedidoAdapter', () => {
             nome: 'Pizza',
             quantidade: 1,
             precoUnitario: 45.00,
+            subtotal: 45.00,
             observacoes: 'Bem assada',
           },
         ],
@@ -116,6 +122,8 @@ describe('pedidoAdapter', () => {
         pedidoId: 123,
         timestamp: '2024-01-15T10:30:00.000Z',
         status: 'pendente',
+        valorTotal: 0,
+        estimativaEntrega: '30 minutos',
         observacoesGerais: null,
         itens: [],
       };
@@ -129,6 +137,8 @@ describe('pedidoAdapter', () => {
         pedidoId: 123,
         timestamp: '2024-01-15T10:30:00.000Z',
         status: 'pendente',
+        valorTotal: 0,
+        estimativaEntrega: '30 minutos',
         observacoesGerais: null,
         itens: [],
       };
