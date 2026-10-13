@@ -20,6 +20,9 @@ test('passes local application environment only to dev tasks', () => {
     'NEXT_PUBLIC_USE_MOCK',
   ];
   const devOnlyEnvironment = requiredDevEnvironment.filter((name) => name !== 'DATABASE_URL');
+  const prismaCliTasks = ['build', 'test', 'typecheck', 'test:e2e', 'test:integration'].map(
+    (taskName) => `@comandinha/api#${taskName}`,
+  );
 
   assert.deepEqual(
     requiredDevEnvironment.filter((name) => !turboConfig.tasks.dev.passThroughEnv?.includes(name)),
@@ -30,7 +33,7 @@ test('passes local application environment only to dev tasks', () => {
     ...(turboConfig.globalPassThroughEnv ?? []),
   ];
   const otherTaskEnvironment = Object.entries(turboConfig.tasks)
-    .filter(([taskName]) => taskName !== 'dev' && taskName !== '@comandinha/api#typecheck')
+    .filter(([taskName]) => taskName !== 'dev' && !prismaCliTasks.includes(taskName))
     .flatMap(([, task]) => [...(task.env ?? []), ...(task.passThroughEnv ?? [])]);
 
   assert.equal(
@@ -40,8 +43,11 @@ test('passes local application environment only to dev tasks', () => {
     false,
   );
   assert.equal(globallyExposedEnvironment.includes('DATABASE_URL'), false);
+  assert.equal(otherTaskEnvironment.includes('DATABASE_URL'), false);
   assert.equal(
-    turboConfig.tasks['@comandinha/api#typecheck']?.passThroughEnv?.includes('DATABASE_URL'),
+    prismaCliTasks.every((taskName) =>
+      turboConfig.tasks[taskName]?.passThroughEnv?.includes('DATABASE_URL'),
+    ),
     true,
   );
 });

@@ -35,8 +35,25 @@
     "typecheck": {
       "dependsOn": ["^build", "^typecheck"]
     },
+    "@comandinha/api#build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "passThroughEnv": ["DATABASE_URL"]
+    },
+    "@comandinha/api#test": {
+      "dependsOn": ["^test"],
+      "passThroughEnv": ["DATABASE_URL"]
+    },
     "@comandinha/api#typecheck": {
       "dependsOn": ["^build", "^typecheck"],
+      "passThroughEnv": ["DATABASE_URL"]
+    },
+    "@comandinha/api#test:e2e": {
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL"]
+    },
+    "@comandinha/api#test:integration": {
+      "cache": false,
       "passThroughEnv": ["DATABASE_URL"]
     }
   }
