@@ -261,7 +261,10 @@ export function TablesWorkspace() {
       )}
 
       <Dialog open={form !== null} onOpenChange={(open) => !open && setForm(null)}>
-        <DialogContent className="painel-table-editor-dialog">
+        <DialogContent
+          className="painel-table-editor-dialog"
+          overlayClassName="painel-table-editor-overlay"
+        >
           <DialogHeader>
             <span className="painel-eyebrow">GESTÃO DO SALÃO</span>
             <DialogTitle>{form?.table ? "Renomear mesa" : "Adicionar mesa"}</DialogTitle>

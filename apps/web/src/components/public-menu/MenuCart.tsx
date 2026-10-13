@@ -75,7 +75,10 @@ export function MenuCart({
       </div>
 
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
-        <DialogContent className="public-menu-cart-dialog">
+        <DialogContent
+          className="public-menu-cart-dialog"
+          overlayClassName="public-menu-cart-overlay"
+        >
           <DialogHeader className="public-menu-cart-dialog-header">
             <span className="public-menu-eyebrow">MESA COMANDA DIGITAL</span>
             <DialogTitle>Seu carrinho</DialogTitle>

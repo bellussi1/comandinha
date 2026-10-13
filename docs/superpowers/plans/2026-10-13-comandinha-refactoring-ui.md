@@ -80,11 +80,11 @@
 - Preserve the QR URL, product selection, cart, order submission, and order tracking contracts.
 - Keep the cart action reachable on small screens, with product, price, and availability hierarchy clear at a glance.
 
-- [ ] Add or extend assertions for mobile overflow, focus, and reduced motion; run them before styling changes.
-- [ ] Refine the restaurant header, category navigation, product list, cart, and tracking states with shared tokens.
-- [ ] Verify that order actions and status remain clear by text and icon as well as color.
-- [ ] Run focused public-menu Jest tests and the QR order Playwright flow.
-- [ ] Commit as `refactor(web): refine QR menu visual hierarchy`.
+- [x] Add or extend assertions for mobile overflow, focus, and reduced motion; run them before styling changes.
+- [x] Refine the restaurant header, category navigation, product list, cart, and tracking states with shared tokens.
+- [x] Verify that order actions and status remain clear by text and icon as well as color.
+- [x] Run focused public-menu Jest tests and the QR order Playwright flow.
+- [x] Commit as `refactor(web): refine QR menu visual hierarchy`.
 
 ### Task 4: Verify responsive and accessible presentation
 

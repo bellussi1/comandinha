@@ -89,8 +89,24 @@ test('public menu supporting text and accent meet WCAG AA contrast', async ({ pa
     await route.fulfill({ status: 200, json: [] });
   });
 
+  await page.setViewportSize({ width: 320, height: 800 });
   await page.goto(`/q/${code}`);
   await expect(page.getByRole('heading', { name: 'Casa do Enzo' })).toBeVisible();
+  const dimensions = await page.evaluate(() => ({
+    pageWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }));
+  expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+
+  const addButton = page.getByRole('button', { name: 'Adicionar Suco de laranja ao carrinho' });
+  await addButton.focus();
+  await expect(addButton).toHaveCSS('outline-style', 'solid');
+  await expect(addButton).toHaveCSS('outline-width', '3px');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const productAnimationDuration = await page.locator('.public-menu-product').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  expect(productAnimationDuration).toBeLessThanOrEqual(0.001);
 
   const colors = await page.locator('.public-menu-page').evaluate((root) => {
     const surface = getComputedStyle(root).getPropertyValue('--menu-paper').trim();

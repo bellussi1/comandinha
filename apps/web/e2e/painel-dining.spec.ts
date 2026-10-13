@@ -219,6 +219,20 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
     'color',
     'rgb(64, 34, 58)',
   );
+  await expect(page.getByRole('button', { name: 'Baixar QR em SVG' })).toHaveCSS(
+    'background-color',
+    'rgb(64, 34, 58)',
+  );
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const qrDialogDuration = await page.getByRole('dialog', { name: 'QR da Mesa 01' }).evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  const qrOverlayDuration = await page.locator('.painel-qr-overlay').evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  expect(qrDialogDuration).toBeLessThanOrEqual(0.001);
+  expect(qrOverlayDuration).toBeLessThanOrEqual(0.001);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 
   const publicLinkInput = page.getByLabel('Link público');
   await publicLinkInput.focus();
@@ -249,6 +263,27 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   await page.getByRole('button', { name: /Abrir carrinho/ }).click();
   const cart = page.getByRole('dialog', { name: 'Seu carrinho' });
   await expect(cart).toBeVisible();
+  await expect(cart.getByRole('heading', { name: 'Seu carrinho' })).toHaveCSS(
+    'color',
+    'rgb(64, 34, 58)',
+  );
+  await expect(page.getByRole('button', { name: 'Enviar pedido' })).toHaveCSS(
+    'background-color',
+    'rgb(64, 34, 58)',
+  );
+  const productNotes = page.getByLabel('Observação para Smash clássico');
+  await productNotes.focus();
+  await expect(productNotes).toHaveCSS('outline-style', 'solid');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const cartAnimationDuration = await cart.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  const dialogOverlay = page.locator('.public-menu-cart-overlay');
+  const overlayAnimationDuration = await dialogOverlay.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  expect(cartAnimationDuration).toBeLessThanOrEqual(0.001);
+  expect(overlayAnimationDuration).toBeLessThanOrEqual(0.001);
   const cartBounds = await cart.boundingBox();
   expect(cartBounds).not.toBeNull();
   expect(cartBounds!.x).toBeGreaterThanOrEqual(0);

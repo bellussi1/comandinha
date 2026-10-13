@@ -790,7 +790,9 @@
   }
 }
 
-.painel-root .painel-action-button {
+.painel-root .painel-action-button,
+.painel-table-editor-dialog .painel-action-button,
+.painel-qr-dialog .painel-action-button {
   border: 1px solid var(--painel-plum);
   border-radius: 0.72rem;
   color: #fffaf5;
@@ -803,7 +805,9 @@
     transform 160ms ease;
 }
 
-.painel-root .painel-action-button:hover:not(:disabled) {
+.painel-root .painel-action-button:hover:not(:disabled),
+.painel-table-editor-dialog .painel-action-button:hover:not(:disabled),
+.painel-qr-dialog .painel-action-button:hover:not(:disabled) {
   border-color: var(--painel-plum-deep);
   background: var(--painel-plum-deep);
   box-shadow: 0 8px 18px rgb(64 34 58 / 18%);
@@ -1519,6 +1523,7 @@
 }
 
 .painel-confirm-dialog,
+.painel-table-editor-dialog,
 .painel-qr-dialog {
   --painel-plum: var(--comandinha-color-plum);
   --painel-plum-deep: var(--comandinha-color-plum-deep);
@@ -1533,6 +1538,7 @@
 }
 
 .painel-confirm-dialog :is(button, a, input, select, textarea):focus-visible,
+.painel-table-editor-dialog :is(button, a, input, select, textarea):focus-visible,
 .painel-qr-dialog :is(button, a, input, select, textarea):focus-visible {
   outline: 3px solid var(--comandinha-color-focus);
   outline-offset: 3px;
@@ -2057,7 +2063,9 @@
   font-size: 0.8rem;
 }
 
-.painel-root .painel-action-button {
+.painel-root .painel-action-button,
+.painel-table-editor-dialog .painel-action-button,
+.painel-qr-dialog .painel-action-button {
   min-height: 2.75rem;
   border: 1px solid var(--painel-plum);
   border-radius: 0.8rem;
@@ -2070,7 +2078,9 @@
     box-shadow var(--comandinha-motion-fast) var(--comandinha-motion-ease);
 }
 
-.painel-root .painel-action-button:hover:not(:disabled) {
+.painel-root .painel-action-button:hover:not(:disabled),
+.painel-table-editor-dialog .painel-action-button:hover:not(:disabled),
+.painel-qr-dialog .painel-action-button:hover:not(:disabled) {
   transform: translateY(-1px);
   background: var(--painel-plum-deep);
   box-shadow: 0 8px 18px rgb(64 34 58 / 16%);
@@ -2767,6 +2777,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .painel-confirm-dialog,
+  .painel-table-editor-dialog,
+  .painel-qr-dialog,
+  .painel-table-editor-overlay,
+  .painel-qr-overlay {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+
   .painel-table-card,
   .painel-order-card,
   .painel-dashboard-metric,
@@ -2777,7 +2796,9 @@
   .painel-dashboard-shortcut:hover,
   .painel-table-card:hover,
   .painel-order-card:hover,
-  .painel-root .painel-action-button:hover:not(:disabled) {
+  .painel-root .painel-action-button:hover:not(:disabled),
+  .painel-table-editor-dialog .painel-action-button:hover:not(:disabled),
+  .painel-qr-dialog .painel-action-button:hover:not(:disabled) {
     transform: none;
   }
 }

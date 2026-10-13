@@ -66,7 +66,7 @@ export function TableQrDialog({ table, publicUrl, onOpenChange }: TableQrDialogP
       }}
       open={table !== null}
     >
-      <DialogContent className="painel-qr-dialog">
+      <DialogContent className="painel-qr-dialog" overlayClassName="painel-qr-overlay">
         <DialogHeader>
           <span className="painel-eyebrow">ACESSO PELO QR</span>
           <DialogTitle>QR da {table?.name ?? "mesa"}</DialogTitle>

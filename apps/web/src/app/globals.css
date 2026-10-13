@@ -152,7 +152,14 @@
     @apply bg-background text-foreground;
   }
 }
-:where(.painel-root, .public-menu-page, .painel-confirm-dialog, .painel-qr-dialog) {
+:where(
+  .painel-root,
+  .public-menu-page,
+  .painel-confirm-dialog,
+  .painel-table-editor-dialog,
+  .painel-qr-dialog,
+  .public-menu-cart-dialog
+) {
   --comandinha-color-plum: #40223a;
   --comandinha-color-plum-deep: #321b2e;
   --comandinha-color-coral: #f07868;
