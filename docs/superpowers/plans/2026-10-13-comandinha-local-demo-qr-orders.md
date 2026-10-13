@@ -173,7 +173,7 @@
 - Public menu BFF allows GET without a session. Public orders BFF allows GET and POST; POST requires a trusted mutation origin, the same body-size limit, strict field allowlists, no admin cookie forwarding, and the configured service gateway secret. Before forwarding POST, it limits 10 attempts per minute using the trusted client IP rules already used by the login gateway, and sends only its own SHA-256 client key to Nest.
 - Every proxy uses a 5-second timeout, rejects redirects, validates table codes as 43 base64url characters and returns safe errors without leaking upstream internals.
 
-- [ ] **Step 1: Write Jest tests for trusted-source rate limits and route behavior: unauthenticated admin access, trusted-origin enforcement, method/body allowlists, bad code/ID/query rejection, 16 KiB limit, safe errors, public menu without credentials, and public order POST with the service credential and generated client key only. Run and verify failures.**
+- [ ] **Step 1: Read the Next.js route handler guide from apps/web/node_modules/next/dist/docs as required by apps/web/AGENTS.md, then write Jest tests for trusted-source rate limits and route behavior: unauthenticated admin access, trusted-origin enforcement, method/body allowlists, bad code/ID/query rejection, 16 KiB limit, safe errors, public menu without credentials, and public order POST with the service credential and generated client key only. Run and verify failures.**
 - [ ] **Step 2: Generate the OpenAPI contract and client types with pnpm api:client:generate; inspect the generated paths and request/response types.**
 - [ ] **Step 3: Implement typed server proxy functions using the existing catalog-api.ts/auth-cookie.ts conventions, with endpoint-specific allowlists and response headers.**
 - [ ] **Step 4: Add the four Next route handlers and route tests; do not expose the service credential, Authorization header, source key or admin session cookie in browser responses.**
@@ -203,7 +203,7 @@
 - OverviewWorkspace shows active table count and order counts from /orders/summary with shortcuts to catalog, tables and orders.
 - OrdersWorkspace filters by all supported statuses and exposes only valid next actions from the allowed transition table.
 
-- [ ] **Step 1: Read the current Next.js server/client component and route handler guides from apps/web/node_modules/next/dist/docs, as required by apps/web/AGENTS.md.**
+- [ ] **Step 1: Read the current Next.js server/client component guide from apps/web/node_modules/next/dist/docs, as required by apps/web/AGENTS.md.**
 - [ ] **Step 2: Write failing component tests for table lifecycle, permissions, QR link/download, order loading/error/empty states, status filters and invalid-transition actions. Run and verify failures.**
 - [ ] **Step 3: Implement typed browser services and table/order workspaces, using existing Base UI/Radix primitives and lucide-react icons.**
 - [ ] **Step 4: Add /painel/mesas and /painel/pedidos, connect nav links and role-aware access, and replace overview with counts and shortcuts. Load summary data through existing BFFs; keep the page usable when there are no records.**
