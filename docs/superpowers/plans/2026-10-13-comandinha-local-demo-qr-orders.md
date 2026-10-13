@@ -121,13 +121,13 @@
 - GET /public/tables/{code}/orders returns at most 20 newest summaries with id, status, totalInCents, createdAt and item snapshots; it never returns customer identity or notes.
 - Product quantity is 1–20; request has 1–50 items; order and item notes are at most 200 characters. Duplicate product IDs return 400 to avoid ambiguous notes.
 - POST reloads the active table and same-restaurant active/available products inside a transaction, calculates prices from PostgreSQL and persists snapshots. Invalid/inactive table returns 404; invalid item returns 400 or 409 without partial writes.
-- Public order submission uses the public-order throttle at 10 requests per minute per IP. The endpoint has no admin session requirement.
+- Public order submission uses the public-order throttle at 10 requests per minute per trusted client IP. It requires the BFF service credential but no admin session.
 
 - [ ] **Step 1: Write PostgreSQL HTTP integration cases for a valid menu/order/summary flow, unknown and inactive codes, unavailable and cross-tenant products, forged price fields, duplicate products, quantity/note/payload limits, no partial writes, and absence of PII. Run and verify failures.**
 - [ ] **Step 2: Implement menu query using only active tables and products where isActive=true and available=true; sort categories by displayOrder/name and products by name. Return only the declared response fields.**
 - [ ] **Step 3: Implement createPublicOrder as one Prisma transaction; validate all item IDs and quantities, reject duplicate product IDs, calculate integer cent totals, and store name/price snapshots. Do not accept client price or total fields.**
 - [ ] **Step 4: Implement listPublicOrderSummaries scoped by the resolved table id and limited to 20 newest orders.**
-- [ ] **Step 5: Add the 10-per-minute named throttle, DTO limits and OpenAPI decorators.**
+- [ ] **Step 5: Add the 10-per-minute named throttle keyed by a validated 64-character SHA-256 source header, falling back to request IP in local development. Protect POST with GatewaySecretGuard, not AdminSessionGuard; add DTO limits and OpenAPI decorators.**
 - [ ] **Step 6: Run the full public-dining integration suite. Expected: no client price affects totals, snapshots remain unchanged after product edits, and summaries disclose no notes or personal data.**
 - [ ] **Step 7: Commit as feat: add public QR ordering API.**
 
@@ -157,6 +157,7 @@
 **Files:**
 - Modify: apps/api/openapi.json and packages/api-client/src/generated/schema.d.ts through the repository generation command only
 - Create: apps/web/src/lib/server/tables-api.ts and apps/web/src/lib/server/orders-api.ts
+- Create: apps/web/src/lib/server/public-order-rate-limit.ts and its test
 - Create: apps/web/src/app/api/admin/tables/[...segments]/route.ts and its route tests
 - Create: apps/web/src/app/api/admin/orders/[...segments]/route.ts and its route tests
 - Create: apps/web/src/app/api/public/tables/[code]/menu/route.ts and its route tests
@@ -169,13 +170,13 @@
 **Interfaces:**
 - Admin BFF forwards only documented methods, query fields and body fields; it reads the HttpOnly admin-session cookie server-side and sends the token only to API_INTERNAL_URL.
 - Admin mutations require isTrustedMutationOrigin, use no-store, reject unexpected bodies and cap request bodies at 16 KiB.
-- Public menu BFF allows GET without a session. Public orders BFF allows GET and POST; POST requires a trusted mutation origin, the same body-size limit, strict field allowlists and no admin cookie forwarding.
+- Public menu BFF allows GET without a session. Public orders BFF allows GET and POST; POST requires a trusted mutation origin, the same body-size limit, strict field allowlists, no admin cookie forwarding, and the configured service gateway secret. Before forwarding POST, it limits 10 attempts per minute using the trusted client IP rules already used by the login gateway, and sends only its own SHA-256 client key to Nest.
 - Every proxy uses a 5-second timeout, rejects redirects, validates table codes as 43 base64url characters and returns safe errors without leaking upstream internals.
 
-- [ ] **Step 1: Write Jest route tests for unauthenticated admin access, trusted-origin enforcement, method/body allowlists, bad code/ID/query rejection, 16 KiB limit, safe error responses and public requests without credentials. Run and verify failures.**
+- [ ] **Step 1: Write Jest tests for trusted-source rate limits and route behavior: unauthenticated admin access, trusted-origin enforcement, method/body allowlists, bad code/ID/query rejection, 16 KiB limit, safe errors, public menu without credentials, and public order POST with the service credential and generated client key only. Run and verify failures.**
 - [ ] **Step 2: Generate the OpenAPI contract and client types with pnpm api:client:generate; inspect the generated paths and request/response types.**
 - [ ] **Step 3: Implement typed server proxy functions using the existing catalog-api.ts/auth-cookie.ts conventions, with endpoint-specific allowlists and response headers.**
-- [ ] **Step 4: Add the four Next route handlers and route tests; do not expose Authorization or the session cookie in the browser response.**
+- [ ] **Step 4: Add the four Next route handlers and route tests; do not expose the service credential, Authorization header, source key or admin session cookie in browser responses.**
 - [ ] **Step 5: Run route tests, pnpm api:client:check and web typecheck. Expected: generated client matches OpenAPI and all disallowed requests stop at the BFF.**
 - [ ] **Step 6: Commit as feat: add table and order API gateways.**
 
