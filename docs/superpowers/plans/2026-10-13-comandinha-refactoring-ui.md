@@ -93,9 +93,11 @@
 - Test: `apps/web/e2e/painel-dining.spec.ts`
 - Reuse: existing Playwright setup and screenshots.
 
-- [ ] Exercise login, overview, catalog, tables, orders, and QR menu at 320×800, 360×800, 768×1024, and 1440×900 where each flow supports the viewport.
-- [ ] Confirm there is no horizontal overflow, focus remains visible, reduced motion is honored, and key actions stay usable.
-- [ ] Run `pnpm --filter @comandinha/web exec jest --runInBand`, both focused Playwright specs, `pnpm --filter @comandinha/web typecheck`, `pnpm --filter @comandinha/web lint`, and `pnpm --filter @comandinha/web build`.
-- [ ] Commit any verification-only test additions atomically.
+- [x] Exercise login, overview, catalog, tables, orders, and QR menu at 320×800, 360×800, 768×1024, and 1440×900 where each flow supports the viewport.
+- [x] Confirm there is no horizontal overflow, focus remains visible, reduced motion is honored, and key actions stay usable.
+- [x] Run `pnpm --filter @comandinha/web exec jest --runInBand`, both focused Playwright specs, `pnpm --filter @comandinha/web typecheck`, `pnpm --filter @comandinha/web lint`, and `pnpm --filter @comandinha/web build`.
+- [x] Commit any verification-only test additions atomically.
 - [ ] Review the final diff and update the existing authorized PR branch only after all checks pass.
+
+Verification results: Jest passed (24 suites / 211 tests); the focused Playwright coverage passed (5 / 5) on one worker against an isolated Next.js development server; typecheck passed; ESLint exited successfully with 24 existing warnings and no errors; an isolated Webpack production build completed all 24 static-page generation steps and emitted the expected route table. A parallel Playwright run against the active development server triggered a Fast Refresh reload and one flow timed out while validating its session; the affected flow passed alone and the full focused suite passed serially. The app build was not changed after the production build verification.
 
