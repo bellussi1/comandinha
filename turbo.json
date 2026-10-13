@@ -1,10 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalPassThroughEnv": ["API_PORT", "DATABASE_URL"],
   "tasks": {
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "API_PORT",
+        "DATABASE_URL",
+        "API_INTERNAL_URL",
+        "APP_ORIGIN",
+        "AUTH_GATEWAY_SECRET",
+        "TRUSTED_CLIENT_IP_HEADER",
+        "NEXT_PUBLIC_API_URL",
+        "NEXT_PUBLIC_WEBSOCKET_URL",
+        "NEXT_PUBLIC_USE_MOCK"
+      ]
     },
     "build": {
       "dependsOn": ["^build"],

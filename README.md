@@ -32,9 +32,18 @@ O monorepo possui uma base NestJS/PostgreSQL, identidade administrativa com memb
 Na raiz do repositório, copie a configuração de exemplo e instale as dependências:
 
 ```powershell
+nvm use 24.21.0
 Copy-Item .env.example .env
 pnpm install --frozen-lockfile
 ```
+
+Antes de iniciar, defina `API_INTERNAL_URL` para a porta configurada em `API_PORT`, mantenha `APP_ORIGIN` em `http://localhost:3000` e substitua `AUTH_GATEWAY_SECRET` por um valor aleatório exclusivo com pelo menos 32 caracteres. Gere um segredo local com:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+```
+
+O Turbo repassa essas variáveis apenas às tarefas de desenvolvimento.
 
 Inicie o banco e as aplicações com um comando:
 

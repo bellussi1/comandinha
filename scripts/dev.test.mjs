@@ -1,7 +1,44 @@
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { startLocalDevelopment } from './dev.mjs';
+
+test('passes local application environment only to dev tasks', () => {
+  const turboConfig = JSON.parse(
+    readFileSync(new URL('../turbo.json', import.meta.url), 'utf8'),
+  );
+  const requiredDevEnvironment = [
+    'API_PORT',
+    'DATABASE_URL',
+    'API_INTERNAL_URL',
+    'APP_ORIGIN',
+    'AUTH_GATEWAY_SECRET',
+    'TRUSTED_CLIENT_IP_HEADER',
+    'NEXT_PUBLIC_API_URL',
+    'NEXT_PUBLIC_WEBSOCKET_URL',
+    'NEXT_PUBLIC_USE_MOCK',
+  ];
+
+  assert.deepEqual(
+    requiredDevEnvironment.filter((name) => !turboConfig.tasks.dev.passThroughEnv?.includes(name)),
+    [],
+  );
+  const globallyExposedEnvironment = [
+    ...(turboConfig.globalEnv ?? []),
+    ...(turboConfig.globalPassThroughEnv ?? []),
+  ];
+  const otherTaskEnvironment = Object.entries(turboConfig.tasks)
+    .filter(([taskName]) => taskName !== 'dev')
+    .flatMap(([, task]) => [...(task.env ?? []), ...(task.passThroughEnv ?? [])]);
+
+  assert.equal(
+    requiredDevEnvironment.some((name) =>
+      [...globallyExposedEnvironment, ...otherTaskEnvironment].includes(name),
+    ),
+    false,
+  );
+});
 
 function createChild() {
   return Object.assign(new EventEmitter(), {
