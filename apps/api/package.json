@@ -24,6 +24,7 @@
     "typecheck": "pnpm prisma:generate && tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
+    "seed": "prisma db seed",
     "openapi:export": "pnpm prisma:generate && tsx scripts/export-openapi.ts"
   },
   "dependencies": {

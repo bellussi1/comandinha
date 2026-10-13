@@ -132,6 +132,8 @@ Usar lucide-react 1.55.0 para ícones. Para formulários administrativos complex
 
 Priorizar transições CSS curtas, skeletons e feedback de ações. Para animações de entrada/saída ou gestos que CSS não resolva bem, usar Motion 14.1.0 de forma pontual e respeitar prefers-reduced-motion; não adicionar efeitos extensos de scroll por padrão. Substituir tailwindcss-animate depreciado por tw-animate-css quando as animações existentes forem migradas. Revisar dependências duplicadas, incluindo Radix Toast se já houver substituição completa por Sonner. Manter componentes em apps/web; criar packages/ui somente quando houver outro consumidor real.
 
+Aplicar a estratégia responsiva conforme o contexto: experiências de cliente, QR e atendimento às mesas são mobile-first em todas as etapas, começando por telas estreitas e ampliando progressivamente para tablet e desktop. O painel administrativo pode ser desktop-first para favorecer o trabalho operacional, mas seus fluxos principais também precisam funcionar em celular, sem navegação inacessível, formulários cortados ou rolagem horizontal desnecessária. Validar cada fluxo nos tamanhos mobile, tablet e desktop; animações devem respeitar prefers-reduced-motion.
+
 ### Migração
 
 A migração não é um corte único para produção. O backend atual não tem licença declarada e o banco SQLite versionado não foi inspecionado; qualquer migração de código ou dados exige autorização e inventário separados.
@@ -141,7 +143,7 @@ Fases propostas:
 1. Fundação: branch de trabalho, monorepo pnpm/Turbo, Node LTS, Compose com PostgreSQL, configurações compartilhadas, CI e documentação local.
 2. Modelo e autenticação: schema Prisma novo, migrations revisáveis, usuários/memberships/tenant, sessões, políticas de acesso e testes de isolamento. Reimplementar regras da API sem copiar código sem licença.
 3. API NestJS: módulos de cardápio, mesas, pedidos, chamados e fechamento; OpenAPI, migrations reproduzíveis e testes de integração.
-4. Frontend: atualização Next/React/Tailwind, adoção incremental de shadcn/Base UI, sessão same-origin, cliente gerado e migração de cada fluxo.
+4. Frontend: atualização Next/React/Tailwind, adoção incremental de shadcn/Base UI, sessão same-origin, cliente gerado e migração/refatoração visual de cada fluxo; experiências de cliente sempre mobile-first, painel administrativo desktop-first com adaptação completa para telas menores.
 5. Verificação: testes unitários de domínio, integração com PostgreSQL e E2E para login, CRUD de produto, mesa/QR, pedido, estado da cozinha, fechamento e isolamento.
 6. Portfólio e infraestrutura declarada: README, diagramas, ADRs, guia local, segurança e IaC sem apply. O provedor permanece em aberto até decisão explícita.
 
@@ -151,6 +153,7 @@ Fases propostas:
 - Migrations criam banco vazio e seed gera dados de demonstração reproduzíveis.
 - OpenAPI descreve as rotas NestJS e o cliente TypeScript é gerado sem cópia manual de DTOs.
 - O fluxo QR → cardápio → pedido → cozinha → fechamento passa em E2E.
+- Os fluxos de cliente são projetados mobile-first e passam por verificação em viewport mobile; a operação administrativa permanece usável nos viewports mobile, tablet e desktop.
 - Testes provam que usuários de um restaurante não leem nem alteram dados de outro.
 - Sessões têm expiração e revogação; preço e estado são validados no servidor.
 - ESLint, TypeScript, testes e builds passam nos dois aplicativos.
