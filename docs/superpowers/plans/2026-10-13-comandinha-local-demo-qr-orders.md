@@ -203,13 +203,13 @@
 - OverviewWorkspace shows active table count and order counts from /orders/summary with shortcuts to catalog, tables and orders.
 - OrdersWorkspace filters by all supported statuses and exposes only valid next actions from the allowed transition table.
 
-- [ ] **Step 1: Read the current Next.js server/client component guide from apps/web/node_modules/next/dist/docs, as required by apps/web/AGENTS.md.**
-- [ ] **Step 2: Write failing component tests for table lifecycle, permissions, QR link/download, order loading/error/empty states, status filters and invalid-transition actions. Run and verify failures.**
-- [ ] **Step 3: Implement typed browser services and table/order workspaces, using existing Base UI/Radix primitives and lucide-react icons.**
-- [ ] **Step 4: Add /painel/mesas and /painel/pedidos, connect nav links and role-aware access, and replace overview with counts and shortcuts. Load summary data through existing BFFs; keep the page usable when there are no records.**
-- [ ] **Step 5: Add responsive styles for mobile and desktop, accessible dialogs/focus states, and prefers-reduced-motion behavior. Use QRCodeSVG with high contrast and sufficient quiet zone.**
-- [ ] **Step 6: Run component tests, web lint and typecheck. Expected: OWNER/ADMIN mutations render; STAFF sees read-only tables and valid order controls; 360px viewport has no horizontal overflow.**
-- [ ] **Step 7: Commit as feat: add table and order management screens.**
+- [x] **Step 1: Read the current Next.js server/client component guide from apps/web/node_modules/next/dist/docs, as required by apps/web/AGENTS.md.**
+- [x] **Step 2: Write failing component tests for table lifecycle, permissions, QR link/download, order loading/error/empty states, status filters and invalid-transition actions. Run and verify failures.**
+- [x] **Step 3: Implement typed browser services and table/order workspaces, using existing Base UI/Radix primitives and lucide-react icons.**
+- [x] **Step 4: Add /painel/mesas and /painel/pedidos, connect nav links and role-aware access, and replace overview with counts and shortcuts. Load summary data through existing BFFs; keep the page usable when there are no records.**
+- [x] **Step 5: Add responsive styles for mobile and desktop, accessible dialogs/focus states, and prefers-reduced-motion behavior. Use QRCodeSVG with high contrast and sufficient quiet zone.**
+- [x] **Step 6: Run component tests, web lint and typecheck. Expected: OWNER/ADMIN mutations render; STAFF sees read-only tables and valid order controls; 360px viewport has no horizontal overflow.**
+- [x] **Step 7: Commit as feat: add table and order management screens.**
 
 ### Task 8: Cardápio QR público, carrinho e acompanhamento
 
