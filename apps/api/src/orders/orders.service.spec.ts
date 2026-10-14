@@ -27,6 +27,43 @@ describe('OrdersService.list', () => {
   });
 });
 
+describe('OrdersService.getPublicOrderSummary', () => {
+  it('scopes the order lookup to the active table from the QR code', async () => {
+    const summary = {
+      id: 'order-id',
+      status: OrderStatus.PENDING,
+      totalInCents: 1200,
+      createdAt: new Date('2026-10-14T00:00:00.000Z'),
+      items: [],
+    };
+    const findFirst = vi.fn().mockResolvedValue(summary);
+    const prisma = {
+      restaurantTable: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'table-id',
+          restaurantId: 'restaurant-id',
+        }),
+      },
+      order: { findFirst },
+    } as unknown as PrismaService;
+    const service = new OrdersService(prisma);
+
+    await expect(
+      service.getPublicOrderSummary('A'.repeat(43), 'order-id'),
+    ).resolves.toEqual(summary);
+
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: 'order-id',
+          restaurantId: 'restaurant-id',
+          tableId: 'table-id',
+        },
+      }),
+    );
+  });
+});
+
 describe('OrdersService.updateStatus', () => {
   it('rejects the update when another transaction changes the status first', async () => {
     const transaction = {

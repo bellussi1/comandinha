@@ -481,6 +481,51 @@ describe('public QR menu and ordering with PostgreSQL', () => {
     expect(summaries.every((summary) => !('notes' in summary))).toBe(true);
   });
 
+  it('tracks an older order directly and scopes lookup to the QR table', async () => {
+    const table = await prisma.restaurantTable.findUniqueOrThrow({
+      where: { publicCode: tableCode },
+    });
+    const oldOrderId = randomUUID();
+    const now = Date.now();
+    await prisma.order.createMany({
+      data: Array.from({ length: 21 }, (_, index) => ({
+        id: index === 0 ? oldOrderId : randomUUID(),
+        restaurantId: restaurantAId,
+        tableId: table.id,
+        status: OrderStatus.PREPARING,
+        totalInCents: 100,
+        createdAt: new Date(now + index * 1000),
+        updatedAt: new Date(now + index * 1000),
+      })),
+    });
+
+    const olderOrder = await request(
+      `/public/tables/${tableCode}/orders/${oldOrderId}`,
+    );
+    expect(olderOrder.status).toBe(200);
+    expect(await olderOrder.json()).toMatchObject({
+      id: oldOrderId,
+      status: OrderStatus.PREPARING,
+      items: [],
+    });
+
+    const inactiveTable = await prisma.restaurantTable.findUniqueOrThrow({
+      where: { publicCode: inactiveTableCode },
+    });
+    const otherTableOrder = await prisma.order.create({
+      data: {
+        restaurantId: restaurantAId,
+        tableId: inactiveTable.id,
+        status: OrderStatus.PENDING,
+        totalInCents: 100,
+      },
+    });
+    const wrongTableOrder = await request(
+      `/public/tables/${tableCode}/orders/${otherTableOrder.id}`,
+    );
+    expect(wrongTableOrder.status).toBe(404);
+  });
+
   it('applies the ten-per-minute limit to a validated gateway client key', async () => {
     const clientKey = randomBytes(32).toString('hex');
     const results = await Promise.all(
@@ -522,6 +567,9 @@ describe('public QR menu and ordering with PostgreSQL', () => {
     };
     expect(openApi.paths).toHaveProperty('/public/tables/{code}/menu');
     expect(openApi.paths).toHaveProperty('/public/tables/{code}/orders');
+    expect(openApi.paths).toHaveProperty(
+      '/public/tables/{code}/orders/{orderId}',
+    );
     expect(
       openApi.paths['/public/tables/{code}/menu'].get.responses,
     ).toHaveProperty('200');

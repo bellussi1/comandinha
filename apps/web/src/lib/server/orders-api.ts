@@ -28,6 +28,8 @@ type PublicOrder =
   ApiPaths["/public/tables/{code}/orders"]["post"]["responses"][201]["content"]["application/json"];
 type PublicOrderSummary =
   ApiPaths["/public/tables/{code}/orders"]["get"]["responses"][200]["content"]["application/json"];
+type PublicOrderSummaryById =
+  ApiPaths["/public/tables/{code}/orders/{orderId}"]["get"]["responses"][200]["content"]["application/json"];
 type PublicOrderBody =
   ApiPaths["/public/tables/{code}/orders"]["post"]["requestBody"]["content"]["application/json"];
 
@@ -55,6 +57,7 @@ const safeOrderMessages = new Set([
   "The order status changed before this update.",
 ]);
 const safePublicOrderMessages = new Set([
+  "Order not found.",
   "Table not found.",
   "One or more products are invalid.",
   "One or more products are unavailable.",
@@ -313,12 +316,19 @@ function isPublicOrderBody(value: unknown): value is PublicOrderBody {
 export async function proxyPublicTableOrdersRequest(
   request: Request,
   code: string,
+  orderId?: string,
 ): Promise<Response> {
   if (!publicCodePattern.test(code))
     return gatewayError(400, "O código da mesa é inválido.");
+  if (orderId !== undefined && !uuidPattern.test(orderId))
+    return gatewayError(400, "O identificador do pedido é inválido.");
 
   const method = request.method.toUpperCase();
-  if (method !== "GET" && method !== "POST") {
+  if (
+    orderId !== undefined
+      ? method !== "GET"
+      : method !== "GET" && method !== "POST"
+  ) {
     return gatewayError(405, "Método não permitido para esta rota.");
   }
   if (new URL(request.url).searchParams.size > 0) {
@@ -391,7 +401,10 @@ export async function proxyPublicTableOrdersRequest(
   }
 
   const result = await fetchApi(
-    new URL(`/public/tables/${code}/orders`, `${apiOrigin}/`),
+    new URL(
+      `/public/tables/${code}/orders${orderId ? `/${orderId}` : ""}`,
+      `${apiOrigin}/`,
+    ),
     {
       method,
       headers,
@@ -399,13 +412,27 @@ export async function proxyPublicTableOrdersRequest(
     },
   );
   if (result.kind === "network-error")
-    return gatewayError(502, "Não foi possível enviar o pedido agora.");
+    return gatewayError(
+      502,
+      isMutation
+        ? "Não foi possível enviar o pedido agora."
+        : "Não foi possível carregar o pedido agora.",
+    );
   if (result.kind === "invalid-json")
-    return gatewayError(502, "A resposta de pedidos é inválida.");
+    return gatewayError(
+      502,
+      isMutation
+        ? "A resposta de pedidos é inválida."
+        : "A resposta do pedido é inválida.",
+    );
   if (result.kind === "no-content")
     return gatewayError(502, "A resposta de pedidos é inválida.");
 
-  const success = result.body as PublicMenu | PublicOrder | PublicOrderSummary;
+  const success = result.body as
+    | PublicMenu
+    | PublicOrder
+    | PublicOrderSummary
+    | PublicOrderSummaryById;
   return gatewayJsonResponse(
     result.response.ok
       ? success

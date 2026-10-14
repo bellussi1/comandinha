@@ -9,6 +9,8 @@ export type PublicOrderResponse =
   ApiPaths["/public/tables/{code}/orders"]["post"]["responses"][201]["content"]["application/json"];
 export type PublicOrderSummary =
   ApiPaths["/public/tables/{code}/orders"]["get"]["responses"][200]["content"]["application/json"][number];
+export type PublicOrderSummaryById =
+  ApiPaths["/public/tables/{code}/orders/{orderId}"]["get"]["responses"][200]["content"]["application/json"];
 export type PublicOrderStatus = PublicOrderSummary["status"];
 
 export class PublicDiningRequestError extends Error {
@@ -55,6 +57,7 @@ async function requestPublicJson<T>(
         : "Não foi possível carregar os dados agora. Tente novamente.";
     const localizedMessages: Record<string, string> = {
       "Table not found.": "Este cardápio não está disponível. Confira o código QR da mesa.",
+      "Order not found.": "Este pedido não está disponível para esta mesa.",
       "One or more products are invalid.":
         "Um ou mais itens mudaram no cardápio. Revise seu pedido e tente novamente.",
       "One or more products are unavailable.":
@@ -93,4 +96,13 @@ export function submitPublicOrder(
 
 export function listPublicOrderSummaries(code: string): Promise<PublicOrderSummary[]> {
   return requestPublicJson(tablePath(code, "orders"));
+}
+
+export function getPublicOrderSummary(
+  code: string,
+  orderId: string,
+): Promise<PublicOrderSummaryById> {
+  return requestPublicJson(
+    `${tablePath(code, "orders")}/${encodeURIComponent(orderId)}`,
+  );
 }

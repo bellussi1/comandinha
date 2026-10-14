@@ -11,12 +11,14 @@ jest.mock("@/src/lib/server/public-order-rate-limit", () => ({
 import { isTrustedMutationOrigin } from "@/src/lib/server/auth-response";
 import { consumePublicOrderAttempt } from "@/src/lib/server/public-order-rate-limit";
 import { GET, POST } from "../route";
+import { GET as getTrackedOrder } from "../[orderId]/route";
 
 const code = "B".repeat(43);
 const gatewaySecret = "local-test-gateway-secret-with-at-least-32-characters";
 const origin = "http://localhost:3000";
 const clientKey = "a".repeat(64);
 const requestId = "8d6ac078-e3f7-49b2-a5ef-3cb0710fa08e";
+const orderId = "ad97f868-d026-4ca8-a765-dd34acdb643f";
 const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
 const originalFetch = global.fetch;
 
@@ -40,6 +42,16 @@ function request(
 
 function context(tableCode = code) {
   return { params: Promise.resolve({ code: tableCode }) };
+}
+
+function trackedOrderRequest(id = orderId) {
+  return new Request(
+    `http://localhost:3000/api/public/tables/${code}/orders/${id}`,
+  );
+}
+
+function trackedOrderContext(tableCode = code, id = orderId) {
+  return { params: Promise.resolve({ code: tableCode, orderId: id }) };
 }
 
 beforeEach(() => {
@@ -68,6 +80,26 @@ describe("public table orders gateway", () => {
     const [target, init] = fetchMock.mock.calls[0];
     expect(target).toEqual(
       new URL(`http://127.0.0.1:3001/public/tables/${code}/orders`),
+    );
+    expect(init?.method).toBe("GET");
+    expect([...new Headers(init?.headers).keys()]).toEqual([]);
+  });
+
+  it("fetches a specific public order by ID without exposing gateway credentials", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ id: orderId, status: "PREPARING", items: [] }),
+    );
+    const response = await getTrackedOrder(
+      trackedOrderRequest(),
+      trackedOrderContext(),
+    );
+
+    expect(response.status).toBe(200);
+    const [target, init] = fetchMock.mock.calls[0];
+    expect(target).toEqual(
+      new URL(
+        `http://127.0.0.1:3001/public/tables/${code}/orders/${orderId}`,
+      ),
     );
     expect(init?.method).toBe("GET");
     expect([...new Headers(init?.headers).keys()]).toEqual([]);

@@ -12,14 +12,13 @@ type CreateOrderPayload =
 type PublicOrderResponse =
   ApiPaths["/public/tables/{code}/orders"]["post"]["responses"][201]["content"]["application/json"];
 type PublicOrderSummary =
-  ApiPaths["/public/tables/{code}/orders"]["get"]["responses"][200]["content"]["application/json"][number];
+  ApiPaths["/public/tables/{code}/orders/{orderId}"]["get"]["responses"][200]["content"]["application/json"];
 
 const tableCode = "A".repeat(43);
 const otherTableCode = "B".repeat(43);
 const burgerId = "0f7b1db9-cba9-4d4b-a5ea-ae798e56b53a";
 const teaId = "f2d9a989-21f1-42c8-a110-74a1c12ccf24";
 const orderId = "ad97f868-d026-4ca8-a765-dd34acdb643f";
-const otherOrderId = "dc50d663-70e7-4601-8e18-71e889dcc58d";
 
 const menu: PublicMenuResponse = {
   restaurant: { name: "Casa do Enzo" },
@@ -84,7 +83,7 @@ const pendingSummary: PublicOrderSummary = {
 jest.mock("../../../services/public-dining", () => ({
   getPublicMenu: jest.fn(),
   submitPublicOrder: jest.fn(),
-  listPublicOrderSummaries: jest.fn(),
+  getPublicOrderSummary: jest.fn(),
 }));
 
 const service = jest.mocked(dining);
@@ -107,7 +106,7 @@ describe("PublicMenu", () => {
     setVisible("visible");
     service.getPublicMenu.mockResolvedValue(menu);
     service.submitPublicOrder.mockResolvedValue(createdOrder);
-    service.listPublicOrderSummaries.mockResolvedValue([pendingSummary]);
+    service.getPublicOrderSummary.mockResolvedValue(pendingSummary);
   });
 
   afterEach(() => {
@@ -301,11 +300,7 @@ describe("PublicMenu", () => {
     ).toBeInTheDocument();
   });
 
-  it("stores the created order id and tracks only that order", async () => {
-    service.listPublicOrderSummaries.mockResolvedValueOnce([
-      { ...pendingSummary, id: otherOrderId, status: "CANCELLED" },
-      pendingSummary,
-    ]);
+  it("stores the created order id and requests its scoped tracking summary", async () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(
@@ -327,7 +322,7 @@ describe("PublicMenu", () => {
     expect(localStorage.getItem(`comandinha:qr-last-order:${tableCode}`)).toBe(
       orderId,
     );
-    expect(screen.queryByText("Pedido cancelado")).not.toBeInTheDocument();
+    expect(service.getPublicOrderSummary).toHaveBeenCalledWith(tableCode, orderId);
     expect(service.submitPublicOrder).toHaveBeenCalledWith(tableCode, {
       requestId: expect.any(String),
       items: [{ productId: burgerId, quantity: 1, notes: "Sem cebola" }],
@@ -360,7 +355,7 @@ describe("OrderTracking", () => {
   beforeEach(() => {
     jest.resetAllMocks();
     setVisible("visible");
-    service.listPublicOrderSummaries.mockResolvedValue([pendingSummary]);
+    service.getPublicOrderSummary.mockResolvedValue(pendingSummary);
   });
 
   afterEach(() => {
@@ -369,9 +364,9 @@ describe("OrderTracking", () => {
 
   it("polls only while visible and stops after a terminal status", async () => {
     jest.useFakeTimers();
-    service.listPublicOrderSummaries
-      .mockResolvedValueOnce([pendingSummary])
-      .mockResolvedValueOnce([{ ...pendingSummary, status: "DELIVERED" }]);
+    service.getPublicOrderSummary
+      .mockResolvedValueOnce(pendingSummary)
+      .mockResolvedValueOnce({ ...pendingSummary, status: "DELIVERED" });
     render(<OrderTracking code={tableCode} orderId={orderId} />);
 
     await act(async () => {
@@ -390,7 +385,7 @@ describe("OrderTracking", () => {
     await act(async () => {
       await jest.advanceTimersByTimeAsync(30_000);
     });
-    expect(service.listPublicOrderSummaries).toHaveBeenCalledTimes(2);
+    expect(service.getPublicOrderSummary).toHaveBeenCalledTimes(2);
   });
 
   it("does not poll while the page is hidden and resumes when visible", async () => {
@@ -400,7 +395,7 @@ describe("OrderTracking", () => {
     await act(async () => {
       await jest.advanceTimersByTimeAsync(20_000);
     });
-    expect(service.listPublicOrderSummaries).not.toHaveBeenCalled();
+    expect(service.getPublicOrderSummary).not.toHaveBeenCalled();
 
     setVisible("visible");
     await act(async () => {
@@ -408,7 +403,7 @@ describe("OrderTracking", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(service.listPublicOrderSummaries).toHaveBeenCalledTimes(1);
+    expect(service.getPublicOrderSummary).toHaveBeenCalledTimes(1);
   });
 
   it("clears its polling timer when the tracking panel unmounts", async () => {
@@ -418,12 +413,12 @@ describe("OrderTracking", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(service.listPublicOrderSummaries).toHaveBeenCalledTimes(1);
+    expect(service.getPublicOrderSummary).toHaveBeenCalledTimes(1);
 
     view.unmount();
     await act(async () => {
       await jest.advanceTimersByTimeAsync(30_000);
     });
-    expect(service.listPublicOrderSummaries).toHaveBeenCalledTimes(1);
+    expect(service.getPublicOrderSummary).toHaveBeenCalledTimes(1);
   });
 });

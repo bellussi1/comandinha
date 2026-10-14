@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { CircleAlert, Clock3, LoaderCircle, PackageCheck, Utensils } from "lucide-react";
 import {
-  listPublicOrderSummaries,
+  getPublicOrderSummary,
   type PublicOrderStatus,
-  type PublicOrderSummary,
+  type PublicOrderSummaryById,
 } from "@/src/services/public-dining";
 
 type OrderTrackingProps = {
@@ -34,7 +34,7 @@ function isTerminal(status: PublicOrderStatus): boolean {
 }
 
 export function OrderTracking({ code, orderId }: OrderTrackingProps) {
-  const [summary, setSummary] = useState<PublicOrderSummary | null>(null);
+  const [summary, setSummary] = useState<PublicOrderSummaryById | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,9 +63,8 @@ export function OrderTracking({ code, orderId }: OrderTrackingProps) {
 
       requestRunning = true;
       try {
-        const orders = await listPublicOrderSummaries(code);
+        const trackedOrder = await getPublicOrderSummary(code, orderId);
         if (!active || stopped) return;
-        const trackedOrder = orders.find((order) => order.id === orderId) ?? null;
         setSummary(trackedOrder);
         setError(null);
         setIsLoading(false);

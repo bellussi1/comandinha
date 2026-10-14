@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
@@ -108,5 +116,24 @@ export class PublicDiningController {
   @ApiNotFoundResponse({ description: 'Mesa não encontrada.' })
   listOrders(@Param('code') code: string) {
     return this.ordersService.listPublicOrderSummaries(code);
+  }
+
+  @Get('orders/:orderId')
+  @ApiOperation({
+    summary: 'Acompanha um pedido específico desta mesa sem dados pessoais',
+  })
+  @ApiParam({
+    name: 'code',
+    type: String,
+    description: 'Código de mesa base64url com 43 caracteres.',
+  })
+  @ApiParam({ name: 'orderId', type: String, format: 'uuid' })
+  @ApiOkResponse({ type: PublicOrderSummaryDto })
+  @ApiNotFoundResponse({ description: 'Mesa ou pedido não encontrado.' })
+  getOrder(
+    @Param('code') code: string,
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+  ) {
+    return this.ordersService.getPublicOrderSummary(code, orderId);
   }
 }

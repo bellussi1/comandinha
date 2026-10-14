@@ -339,14 +339,7 @@ export class OrdersService {
   }
 
   async listPublicOrderSummaries(publicCode: string) {
-    if (!publicTableCodePattern.test(publicCode)) {
-      throw new NotFoundException('Table not found.');
-    }
-    const table = await this.prisma.restaurantTable.findFirst({
-      where: { publicCode, isActive: true },
-      select: { id: true, restaurantId: true },
-    });
-    if (!table) throw new NotFoundException('Table not found.');
+    const table = await this.findActivePublicTable(publicCode);
 
     return this.prisma.order.findMany({
       where: { restaurantId: table.restaurantId, tableId: table.id },
@@ -368,5 +361,45 @@ export class OrdersService {
         },
       },
     });
+  }
+
+  async getPublicOrderSummary(publicCode: string, orderId: string) {
+    const table = await this.findActivePublicTable(publicCode);
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        restaurantId: table.restaurantId,
+        tableId: table.id,
+      },
+      select: {
+        id: true,
+        status: true,
+        totalInCents: true,
+        createdAt: true,
+        items: {
+          select: {
+            nameSnapshot: true,
+            quantity: true,
+            unitPriceInCents: true,
+            lineTotalInCents: true,
+          },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        },
+      },
+    });
+    if (!order) throw new NotFoundException('Order not found.');
+    return order;
+  }
+
+  private async findActivePublicTable(publicCode: string) {
+    if (!publicTableCodePattern.test(publicCode)) {
+      throw new NotFoundException('Table not found.');
+    }
+    const table = await this.prisma.restaurantTable.findFirst({
+      where: { publicCode, isActive: true },
+      select: { id: true, restaurantId: true },
+    });
+    if (!table) throw new NotFoundException('Table not found.');
+    return table;
   }
 }

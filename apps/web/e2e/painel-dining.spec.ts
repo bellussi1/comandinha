@@ -184,8 +184,11 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
       await route.fulfill({ status: 200, json: menu });
       return;
     }
-    if (url.pathname === `/api/public/tables/${tableCode}/orders` && method === 'GET') {
-      await route.fulfill({ status: 200, json: orderCreated ? [publicSummary()] : [] });
+    if (url.pathname === `/api/public/tables/${tableCode}/orders/${orderId}` && method === 'GET') {
+      await route.fulfill({
+        status: orderCreated ? 200 : 404,
+        json: orderCreated ? publicSummary() : { message: 'Order not found.' },
+      });
       return;
     }
     if (url.pathname === `/api/public/tables/${tableCode}/orders` && method === 'POST') {

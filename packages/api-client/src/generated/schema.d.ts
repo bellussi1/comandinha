@@ -190,7 +190,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista pedidos do restaurante da sessão */
+        /** Lista até 100 pedidos mais recentes do restaurante da sessão */
         get: operations["OrdersController_list"];
         put?: never;
         post?: never;
@@ -280,6 +280,23 @@ export interface paths {
         put?: never;
         /** Cria um pedido público usando o preço atual do cardápio */
         post: operations["PublicDiningController_createOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/tables/{code}/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Acompanha um pedido específico desta mesa sem dados pessoais */
+        get: operations["PublicDiningController_getOrder"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1694,6 +1711,36 @@ export interface operations {
             };
             /** @description Limite de pedidos excedido. */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    PublicDiningController_getOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                orderId: string;
+                /** @description Código de mesa base64url com 43 caracteres. */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicOrderSummaryDto"];
+                };
+            };
+            /** @description Mesa ou pedido não encontrado. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

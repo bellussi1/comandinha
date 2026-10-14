@@ -947,7 +947,7 @@
             "admin-session": []
           }
         ],
-        "summary": "Lista pedidos do restaurante da sessão",
+        "summary": "Lista até 100 pedidos mais recentes do restaurante da sessão",
         "tags": [
           "orders"
         ]
@@ -1228,6 +1228,50 @@
           }
         },
         "summary": "Lista os pedidos recentes desta mesa sem dados pessoais",
+        "tags": [
+          "public dining"
+        ]
+      }
+    },
+    "/public/tables/{code}/orders/{orderId}": {
+      "get": {
+        "operationId": "PublicDiningController_getOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Código de mesa base64url com 43 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderSummaryDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mesa ou pedido não encontrado."
+          }
+        },
+        "summary": "Acompanha um pedido específico desta mesa sem dados pessoais",
         "tags": [
           "public dining"
         ]
