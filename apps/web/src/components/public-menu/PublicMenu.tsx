@@ -55,6 +55,37 @@ function pendingOrderStorageKey(code: string): string {
   return `comandinha:qr-pending-order:${code}`;
 }
 
+function orderItemsFor(lines: CartLine[]) {
+  return lines.map((line) => ({
+    productId: line.productId,
+    quantity: line.quantity,
+    ...(line.notes?.trim() ? { notes: line.notes.trim().slice(0, 200) } : {}),
+  }));
+}
+
+function clearPendingOrderIfMatches(
+  code: string,
+  fingerprint: string,
+  requestId: string,
+) {
+  const storageKey = pendingOrderStorageKey(code);
+  try {
+    const stored: unknown = JSON.parse(readStorage(storageKey, "null"));
+    if (
+      typeof stored === "object" &&
+      stored !== null &&
+      "fingerprint" in stored &&
+      stored.fingerprint === fingerprint &&
+      "requestId" in stored &&
+      stored.requestId === requestId
+    ) {
+      writeStorage(storageKey, null);
+    }
+  } catch {
+    // Keep malformed storage untouched; a later retry will replace it.
+  }
+}
+
 function requestIdFor(
   code: string,
   payload: Omit<PublicOrderPayload, "requestId">,
@@ -302,20 +333,18 @@ function PublicMenuExperience({ code }: { code: string }) {
     submissionRef.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
-    const payload = {
-      items: lines.map((line) => ({
-        productId: line.productId,
-        quantity: line.quantity,
-        ...(line.notes?.trim()
-          ? { notes: line.notes.trim().slice(0, 200) }
-          : {}),
-      })),
-    };
+    const payload = { items: orderItemsFor(lines) };
+    const fingerprint = JSON.stringify(payload);
     try {
       const requestId = requestIdFor(code, payload);
       const response = await submitPublicOrder(code, { ...payload, requestId });
-      writeStorage(cartKey, null);
-      writeStorage(pendingOrderStorageKey(code), null);
+      const currentCart = orderItemsFor(
+        parseCart(readStorage(cartKey, EMPTY_CART)),
+      );
+      if (JSON.stringify({ items: currentCart }) === fingerprint) {
+        writeStorage(cartKey, null);
+      }
+      clearPendingOrderIfMatches(code, fingerprint, requestId);
       writeStorage(lastOrderKey, response.id);
       setCartOpen(false);
       setCartNotice(null);

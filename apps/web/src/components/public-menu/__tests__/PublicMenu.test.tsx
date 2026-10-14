@@ -329,6 +329,55 @@ describe("PublicMenu", () => {
     });
   });
 
+  it("preserves cart and retry state changed by another tab during submission", async () => {
+    let finishOrder!: (value: PublicOrderResponse) => void;
+    service.submitPublicOrder.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishOrder = resolve;
+      }),
+    );
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: /Abrir carrinho/ }));
+    await user.click(screen.getByRole("button", { name: "Enviar pedido" }));
+
+    const otherTabCart = [
+      { productId: teaId, quantity: 2, notes: "Sem gelo" },
+    ];
+    const otherTabRequestId = "11111111-1111-4111-8111-111111111111";
+    localStorage.setItem(
+      `comandinha:qr-cart:${tableCode}`,
+      JSON.stringify(otherTabCart),
+    );
+    localStorage.setItem(
+      `comandinha:qr-pending-order:${tableCode}`,
+      JSON.stringify({
+        fingerprint: JSON.stringify({ items: otherTabCart }),
+        requestId: otherTabRequestId,
+      }),
+    );
+
+    await act(async () => {
+      finishOrder(createdOrder);
+    });
+
+    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toBe(
+      JSON.stringify(otherTabCart),
+    );
+    expect(
+      JSON.parse(
+        localStorage.getItem(`comandinha:qr-pending-order:${tableCode}`) ??
+          "null",
+      ),
+    ).toMatchObject({ requestId: otherTabRequestId });
+  });
+
   it("shows loading and a retry action when the menu request fails", async () => {
     service.getPublicMenu.mockReturnValueOnce(new Promise(() => undefined));
     const loading = renderMenu();
