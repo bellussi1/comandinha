@@ -72,6 +72,7 @@ test('public menu supporting text and accent meet WCAG AA contrast', async ({ pa
         json: {
           restaurant: { name: 'Casa do Enzo' },
           table: { name: 'Mesa 01' },
+          acceptingOrders: true,
           categories: [
             {
               id: 'drinks',
