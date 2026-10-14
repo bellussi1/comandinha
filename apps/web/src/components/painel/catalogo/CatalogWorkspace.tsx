@@ -62,7 +62,7 @@ const money = new Intl.NumberFormat("pt-BR", {
 function messageFor(error: unknown, fallback: string): string {
   if (error instanceof CatalogRequestError && error.status === 409) {
     if (error.message.toLowerCase().includes("still contains products")) {
-      return "Esta categoria ainda possui produtos. Mova ou arquive os produtos antes de excluir a categoria.";
+      return "Esta categoria ainda possui produtos. Mova os produtos para outra categoria antes de excluí-la.";
     }
     if (error.message.toLowerCase().includes("category with this name")) {
       return "Já existe uma categoria com esse nome.";
@@ -100,6 +100,8 @@ export function CatalogWorkspace() {
   >(null);
   const [categoryToDelete, setCategoryToDelete] =
     useState<CatalogCategory | null>(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const isDeletingCategoryRef = useRef(false);
 
   const fetchCatalogSnapshot = useCallback(async () => {
     const [nextCategories, nextProducts] = await Promise.all([
@@ -281,7 +283,9 @@ export function CatalogWorkspace() {
   }
 
   async function deleteCategory() {
-    if (!categoryToDelete) return;
+    if (!categoryToDelete || isDeletingCategoryRef.current) return;
+    isDeletingCategoryRef.current = true;
+    setIsDeletingCategory(true);
     setActionError(null);
     try {
       await removeCatalogCategory(categoryToDelete.id);
@@ -292,6 +296,9 @@ export function CatalogWorkspace() {
       setActionError(
         messageFor(error, "Não foi possível excluir a categoria."),
       );
+    } finally {
+      isDeletingCategoryRef.current = false;
+      setIsDeletingCategory(false);
     }
   }
 
@@ -736,7 +743,9 @@ export function CatalogWorkspace() {
         <AlertDialog
           open={categoryToDelete !== null}
           onOpenChange={(open) => {
-            if (!open) setCategoryToDelete(null);
+            if (!open && !isDeletingCategoryRef.current) {
+              setCategoryToDelete(null);
+            }
           }}
         >
           <AlertDialogContent
@@ -751,15 +760,30 @@ export function CatalogWorkspace() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={isDeletingCategory}>
+                Cancelar
+              </AlertDialogCancel>
               <AlertDialogAction
+                aria-busy={isDeletingCategory}
                 className="painel-confirm-delete"
+                disabled={isDeletingCategory}
                 onClick={(event) => {
                   event.preventDefault();
                   void deleteCategory();
                 }}
               >
-                Excluir categoria
+                {isDeletingCategory ? (
+                  <>
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="painel-spin"
+                      size={16}
+                    />
+                    Excluindo...
+                  </>
+                ) : (
+                  "Excluir categoria"
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

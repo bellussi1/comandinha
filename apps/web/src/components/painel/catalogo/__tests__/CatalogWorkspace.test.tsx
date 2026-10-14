@@ -374,6 +374,39 @@ describe("CatalogWorkspace", () => {
     expect(service.removeCatalogCategory).toHaveBeenCalledWith(category.id);
   });
 
+  it("locks category deletion controls while the request is pending", async () => {
+    const user = userEvent.setup();
+    let finishDelete!: () => void;
+    seedCatalog([]);
+    service.removeCatalogCategory.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishDelete = resolve;
+        }),
+    );
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("tab", { name: /Categorias/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Excluir Bebidas" }),
+    );
+    const confirm = screen.getByRole("button", { name: "Excluir categoria" });
+    await user.click(confirm);
+
+    expect(service.removeCatalogCategory).toHaveBeenCalledTimes(1);
+    expect(confirm).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+    await user.click(confirm);
+    expect(service.removeCatalogCategory).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      finishDelete();
+    });
+    await waitFor(() =>
+      expect(service.removeCatalogCategory).toHaveBeenCalledTimes(1),
+    );
+  });
+
   it("keeps STAFF read-only while preserving product visibility", async () => {
     seedCatalog();
     renderWorkspace(staffSession);
