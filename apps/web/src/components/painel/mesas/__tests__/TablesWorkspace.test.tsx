@@ -77,6 +77,41 @@ describe('TablesWorkspace', () => {
     expect(await screen.findByText('Salão')).toBeInTheDocument();
   });
 
+  it('keeps the table editor and name after a failed save, then retries successfully', async () => {
+    const user = userEvent.setup();
+    const createdTable = { ...table, id: 'table-2', name: 'Mesa 04' };
+    let finishRetry: ((value: Table) => void) | undefined;
+    service.listTables
+      .mockResolvedValueOnce([table])
+      .mockResolvedValueOnce([table, createdTable]);
+    service.createTable
+      .mockRejectedValueOnce(new Error('Falha temporária ao criar mesa'))
+      .mockImplementationOnce(() => new Promise<Table>((resolve) => {
+        finishRetry = resolve;
+      }));
+    renderWorkspace();
+
+    await user.click(await screen.findByRole('button', { name: 'Nova mesa' }));
+    const nameInput = await screen.findByLabelText('Nome da mesa');
+    await user.type(nameInput, 'Mesa 04');
+    await user.click(screen.getByRole('button', { name: 'Criar mesa' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha temporária ao criar mesa');
+    expect(nameInput).toHaveValue('Mesa 04');
+    const retryButton = screen.getByRole('button', { name: 'Criar mesa' });
+    expect(retryButton).toBeEnabled();
+
+    await user.click(retryButton);
+    await waitFor(() => expect(retryButton).toBeDisabled());
+    expect(service.createTable).toHaveBeenCalledTimes(2);
+    expect(nameInput).toHaveValue('Mesa 04');
+    expect(finishRetry).toBeDefined();
+    finishRetry!(createdTable);
+
+    expect(await screen.findByRole('heading', { name: 'Mesa 04' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Adicionar mesa' })).not.toBeInTheDocument();
+  });
+
   it('shows loading, empty and retryable error states', async () => {
     service.listTables.mockReturnValueOnce(new Promise(() => undefined));
     const loading = renderWorkspace();

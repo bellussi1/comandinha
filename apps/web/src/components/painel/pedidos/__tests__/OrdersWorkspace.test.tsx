@@ -85,6 +85,41 @@ describe('OrdersWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Entregar pedido da Mesa 01' })).not.toBeInTheDocument();
   });
 
+  it('keeps the order and allows retry after a failed status update', async () => {
+    const user = userEvent.setup();
+    const preparingOrder = { ...order, status: 'PREPARING' as const };
+    let finishRetry: ((value: Order) => void) | undefined;
+    service.listOrders
+      .mockResolvedValueOnce([order])
+      .mockResolvedValueOnce([preparingOrder]);
+    service.updateOrderStatus
+      .mockRejectedValueOnce(new Error('Falha temporária ao atualizar pedido'))
+      .mockImplementationOnce(() => new Promise<Order>((resolve) => {
+        finishRetry = resolve;
+      }));
+    renderWorkspace();
+
+    const retryButton = await screen.findByRole('button', {
+      name: 'Iniciar preparo do pedido da Mesa 01',
+    });
+    await user.click(retryButton);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha temporária ao atualizar pedido');
+    expect(screen.getByRole('heading', { name: 'Mesa 01' })).toBeInTheDocument();
+    expect(screen.getByText('Pendente')).toBeInTheDocument();
+    expect(retryButton).toBeEnabled();
+
+    await user.click(retryButton);
+    await waitFor(() => expect(retryButton).toBeDisabled());
+    expect(service.updateOrderStatus).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole('heading', { name: 'Mesa 01' })).toBeInTheDocument();
+    expect(screen.getByText('Pendente')).toBeInTheDocument();
+    expect(finishRetry).toBeDefined();
+    finishRetry!(preparingOrder);
+
+    expect(await screen.findByText('Em preparo')).toBeInTheDocument();
+  });
+
   it('renders loading, empty and recoverable error states', async () => {
     service.listOrders.mockReturnValueOnce(new Promise(() => undefined));
     const loading = renderWorkspace();
