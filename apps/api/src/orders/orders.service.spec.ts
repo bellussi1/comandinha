@@ -3,9 +3,29 @@ import { describe, expect, it, vi } from 'vitest';
 import type { AdminPrincipal } from '../auth/admin-principal.js';
 import type { PrismaService } from '../database/prisma.service.js';
 import { OrderStatus } from '../generated/prisma/client.js';
-import type { UpdateOrderStatusDto } from './orders.dto.js';
+import type { OrdersQueryDto, UpdateOrderStatusDto } from './orders.dto.js';
 import type { CreatePublicOrderDto } from '../public-dining/public-dining.dto.js';
 import { OrdersService } from './orders.service.js';
+
+describe('OrdersService.list', () => {
+  it('bounds each admin order query to the 100 most recent matches', async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const prisma = { order: { findMany } } as unknown as PrismaService;
+    const service = new OrdersService(prisma);
+
+    await service.list(
+      { restaurantId: 'restaurant-id' } as AdminPrincipal,
+      {} as OrdersQueryDto,
+    );
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        take: 100,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      }),
+    );
+  });
+});
 
 describe('OrdersService.updateStatus', () => {
   it('rejects the update when another transaction changes the status first', async () => {

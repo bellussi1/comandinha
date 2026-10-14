@@ -271,6 +271,9 @@ export function OrdersWorkspace() {
           </button>
         ))}
       </div>
+      <p className="painel-order-limit-note">
+        Até 100 pedidos mais recentes por filtro.
+      </p>
 
       {loadError ? (
         <div className="painel-dining-state" role="alert">

@@ -2530,6 +2530,12 @@
   background: #f3eaf1;
 }
 
+.painel-order-limit-note {
+  margin: -0.35rem 0 0;
+  color: #756b75;
+  font-size: 0.72rem;
+}
+
 .painel-order-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));

@@ -20,6 +20,7 @@ const allOrderStatuses = [
 ];
 const publicTableCodePattern = /^[A-Za-z0-9_-]{43}$/;
 const maximumIntegerCents = 2_147_483_647;
+const maximumAdminOrderResults = 100;
 
 type PublicOrderSnapshot = {
   id: string;
@@ -61,6 +62,7 @@ export class OrdersService {
         restaurantId: principal.restaurantId,
         ...(query.status ? { status: query.status } : {}),
       },
+      take: maximumAdminOrderResults,
       include: {
         table: { select: { id: true, name: true } },
         items: {

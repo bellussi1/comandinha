@@ -285,6 +285,14 @@ describe("OrdersWorkspace", () => {
     expect(await screen.findByText("Smash clássico")).toBeInTheDocument();
   });
 
+  it("explains that each status filter shows the most recent 100 orders", async () => {
+    renderWorkspace();
+
+    expect(
+      await screen.findByText("Até 100 pedidos mais recentes por filtro."),
+    ).toBeInTheDocument();
+  });
+
   it("renders loading, empty and recoverable error states", async () => {
     service.listOrders.mockReturnValueOnce(new Promise(() => undefined));
     const loading = renderWorkspace();
