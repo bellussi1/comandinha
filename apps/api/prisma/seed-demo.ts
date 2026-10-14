@@ -1,18 +1,19 @@
 import { randomBytes } from 'node:crypto';
 import type { PrismaClient } from '../src/generated/prisma/client.js';
+import { normalizeCategoryName } from '../src/catalog/catalog-access.js';
 
 const demoTables = ['Mesa 01', 'Mesa 02', 'Mesa 03'] as const;
 
 const demoCategories = [
   {
     name: 'Hambúrgueres',
-    nameNormalized: 'hamburgueres',
+    nameNormalized: normalizeCategoryName('Hambúrgueres'),
     description: 'Hambúrgueres preparados na casa.',
     displayOrder: 0,
   },
   {
     name: 'Porções',
-    nameNormalized: 'porcoes',
+    nameNormalized: normalizeCategoryName('Porções'),
     description: 'Porções para compartilhar.',
     displayOrder: 1,
   },
@@ -30,27 +31,32 @@ const demoCategories = [
   },
 ] as const;
 
+const legacyCategoryKeys: Record<string, string> = {
+  Hambúrgueres: 'hamburgueres',
+  Porções: 'porcoes',
+};
+
 const demoProducts = [
   {
-    categoryNameNormalized: 'hamburgueres',
+    categoryNameNormalized: normalizeCategoryName('Hambúrgueres'),
     name: 'Smash clássico',
     description: 'Pão, carne smash, queijo e molho da casa.',
     priceInCents: 2990,
   },
   {
-    categoryNameNormalized: 'hamburgueres',
+    categoryNameNormalized: normalizeCategoryName('Hambúrgueres'),
     name: 'Cheeseburger da casa',
     description: 'Carne, queijo, cebola caramelizada e molho especial.',
     priceInCents: 3490,
   },
   {
-    categoryNameNormalized: 'porcoes',
+    categoryNameNormalized: normalizeCategoryName('Porções'),
     name: 'Batata rústica',
     description: 'Batatas temperadas e assadas com ervas.',
     priceInCents: 1800,
   },
   {
-    categoryNameNormalized: 'porcoes',
+    categoryNameNormalized: normalizeCategoryName('Porções'),
     name: 'Anéis de cebola',
     description: 'Anéis de cebola empanados e crocantes.',
     priceInCents: 1600,
@@ -99,27 +105,53 @@ export async function seedDemo(
     }
 
     for (const category of demoCategories) {
-      await transaction.catalogCategory.upsert({
-        where: {
-          restaurantId_nameNormalized: {
-            restaurantId,
-            nameNormalized: category.nameNormalized,
+      const legacyKey = legacyCategoryKeys[category.name];
+      const legacyCategory = legacyKey
+        ? await transaction.catalogCategory.findFirst({
+            where: {
+              restaurantId,
+              name: category.name,
+              nameNormalized: legacyKey,
+            },
+            select: { id: true },
+          })
+        : null;
+
+      if (legacyCategory) {
+        await transaction.catalogCategory.update({
+          where: { id: legacyCategory.id },
+          data: {
+            ...category,
+            nameNormalized: normalizeCategoryName(category.name),
           },
-        },
-        create: { restaurantId, ...category },
-        update: {
-          name: category.name,
-          description: category.description,
-          displayOrder: category.displayOrder,
-        },
-      });
+        });
+      } else {
+        await transaction.catalogCategory.upsert({
+          where: {
+            restaurantId_nameNormalized: {
+              restaurantId,
+              nameNormalized: normalizeCategoryName(category.name),
+            },
+          },
+          create: {
+            restaurantId,
+            ...category,
+            nameNormalized: normalizeCategoryName(category.name),
+          },
+          update: {
+            name: category.name,
+            description: category.description,
+            displayOrder: category.displayOrder,
+          },
+        });
+      }
     }
 
     const categories = await transaction.catalogCategory.findMany({
       where: {
         restaurantId,
         nameNormalized: {
-          in: demoCategories.map(({ nameNormalized }) => nameNormalized),
+          in: demoCategories.map(({ name }) => normalizeCategoryName(name)),
         },
       },
       select: { id: true, nameNormalized: true },

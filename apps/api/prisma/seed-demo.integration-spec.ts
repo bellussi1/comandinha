@@ -174,6 +174,15 @@ describe('local demo seed with PostgreSQL', () => {
       ),
     ).toBe(true);
     expect(demoCategories).toHaveLength(4);
+    expect(demoCategories).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: 'Hambúrgueres',
+          nameNormalized: 'hambúrgueres',
+        }),
+        expect.objectContaining({ name: 'Porções', nameNormalized: 'porções' }),
+      ]),
+    );
     expect(demoProducts).toHaveLength(8);
     await expect(
       prisma.catalogProduct.findUniqueOrThrow({
