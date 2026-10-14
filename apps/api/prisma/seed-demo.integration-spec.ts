@@ -45,6 +45,8 @@ let customTableId: string;
 let customCategoryId: string;
 let customProductId: string;
 let editedProductId: string;
+let canonicalDemoCategoryId: string;
+let canonicalCategoryProductId: string;
 
 beforeAll(async () => {
   await prisma.$connect();
@@ -64,7 +66,7 @@ beforeAll(async () => {
   });
   customTableId = customTable.id;
 
-  const [customCategory, editedDemoCategory] = await Promise.all([
+  const [customCategory, editedDemoCategory, canonicalDemoCategory] = await Promise.all([
     prisma.catalogCategory.create({
       data: {
         restaurantId: restaurantAId,
@@ -81,10 +83,19 @@ beforeAll(async () => {
         displayOrder: 99,
       },
     }),
+    prisma.catalogCategory.create({
+      data: {
+        restaurantId: restaurantAId,
+        name: 'Hambúrgueres',
+        nameNormalized: 'hambúrgueres',
+        displayOrder: 98,
+      },
+    }),
   ]);
   customCategoryId = customCategory.id;
+  canonicalDemoCategoryId = canonicalDemoCategory.id;
 
-  const [customProduct, editedDemoProduct] = await Promise.all([
+  const [customProduct, editedDemoProduct, canonicalCategoryProduct] = await Promise.all([
     prisma.catalogProduct.create({
       data: {
         restaurantId: restaurantAId,
@@ -104,9 +115,19 @@ beforeAll(async () => {
         priceInCents: 3333,
       },
     }),
-  ]);
+      prisma.catalogProduct.create({
+        data: {
+          restaurantId: restaurantAId,
+          categoryId: canonicalDemoCategory.id,
+          name: 'Produto da categoria canônica',
+          description: 'Registro preservado durante a reconciliação.',
+          priceInCents: 5555,
+        },
+      }),
+    ]);
   customProductId = customProduct.id;
   editedProductId = editedDemoProduct.id;
+  canonicalCategoryProductId = canonicalCategoryProduct.id;
 });
 
 afterAll(async () => {
@@ -174,6 +195,34 @@ describe('local demo seed with PostgreSQL', () => {
       ),
     ).toBe(true);
     expect(demoCategories).toHaveLength(4);
+    expect(
+      await prisma.catalogCategory.count({
+        where: {
+          restaurantId: restaurantAId,
+          nameNormalized: 'hamburgueres',
+        },
+      }),
+    ).toBe(0);
+    await expect(
+      prisma.catalogCategory.findUniqueOrThrow({
+        where: {
+          restaurantId_nameNormalized: {
+            restaurantId: restaurantAId,
+            nameNormalized: 'hambúrgueres',
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ id: canonicalDemoCategoryId });
+    await expect(
+      prisma.catalogProduct.findUniqueOrThrow({
+        where: { id: canonicalCategoryProductId },
+      }),
+    ).resolves.toMatchObject({ categoryId: canonicalDemoCategoryId });
+    await expect(
+      prisma.catalogProduct.findUniqueOrThrow({
+        where: { id: editedProductId },
+      }),
+    ).resolves.toMatchObject({ categoryId: canonicalDemoCategoryId });
     expect(demoCategories).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

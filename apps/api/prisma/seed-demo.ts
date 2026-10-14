@@ -105,7 +105,14 @@ export async function seedDemo(
     }
 
     for (const category of demoCategories) {
+      const nameNormalized = normalizeCategoryName(category.name);
       const legacyKey = legacyCategoryKeys[category.name];
+      const canonicalCategory = await transaction.catalogCategory.findUnique({
+        where: {
+          restaurantId_nameNormalized: { restaurantId, nameNormalized },
+        },
+        select: { id: true },
+      });
       const legacyCategory = legacyKey
         ? await transaction.catalogCategory.findFirst({
             where: {
@@ -117,26 +124,38 @@ export async function seedDemo(
           })
         : null;
 
-      if (legacyCategory) {
-        await transaction.catalogCategory.update({
+      if (
+        legacyCategory &&
+        canonicalCategory &&
+        legacyCategory.id !== canonicalCategory.id
+      ) {
+        await transaction.catalogProduct.updateMany({
+          where: { restaurantId, categoryId: legacyCategory.id },
+          data: { categoryId: canonicalCategory.id },
+        });
+        await transaction.catalogCategory.delete({
           where: { id: legacyCategory.id },
+        });
+      }
+
+      const existingCategory = canonicalCategory ?? legacyCategory;
+      if (existingCategory) {
+        await transaction.catalogCategory.update({
+          where: { id: existingCategory.id },
           data: {
             ...category,
-            nameNormalized: normalizeCategoryName(category.name),
+            nameNormalized,
           },
         });
       } else {
         await transaction.catalogCategory.upsert({
           where: {
-            restaurantId_nameNormalized: {
-              restaurantId,
-              nameNormalized: normalizeCategoryName(category.name),
-            },
+            restaurantId_nameNormalized: { restaurantId, nameNormalized },
           },
           create: {
             restaurantId,
             ...category,
-            nameNormalized: normalizeCategoryName(category.name),
+            nameNormalized,
           },
           update: {
             name: category.name,

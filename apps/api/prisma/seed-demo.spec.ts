@@ -14,6 +14,7 @@ describe('seedDemo category key migration', () => {
     const transaction = {
       restaurantTable: { upsert: vi.fn() },
       catalogCategory: {
+        findUnique: vi.fn().mockResolvedValue(null),
         findFirst: vi.fn(
           async ({ where }: { where: { nameNormalized: string } }) => {
             if (where.nameNormalized === 'hamburgueres')
@@ -24,11 +25,13 @@ describe('seedDemo category key migration', () => {
           },
         ),
         update: vi.fn(),
+        delete: vi.fn(),
         upsert: vi.fn(),
         findMany: vi.fn().mockResolvedValue(categoryIds),
       },
       catalogProduct: {
         findFirst: vi.fn().mockResolvedValue({ id: 'existing-demo-product' }),
+        updateMany: vi.fn(),
         create: vi.fn(),
       },
     };
