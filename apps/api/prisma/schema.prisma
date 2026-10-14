@@ -18,6 +18,7 @@ model Restaurant {
   catalogProducts   CatalogProduct[]
   tables            RestaurantTable[]
   orders            Order[]
+  diningSessions    DiningSession[]
 }
 
 enum MembershipRole {
@@ -117,16 +118,42 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum DiningSessionStatus {
+  OPEN
+  CLOSED
+}
+
+model DiningSession {
+  id                 String              @id @default(uuid()) @db.Uuid
+  restaurantId       String              @db.Uuid
+  tableId            String              @db.Uuid
+  status             DiningSessionStatus @default(OPEN)
+  openedAt           DateTime            @default(now())
+  closedAt           DateTime?
+  closedTotalInCents Int?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  restaurant         Restaurant          @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table              RestaurantTable     @relation(fields: [tableId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
+  orders             Order[]
+
+  @@unique([id, restaurantId])
+  @@unique([id, tableId, restaurantId])
+  @@index([restaurantId, status, openedAt])
+  @@index([tableId, status, openedAt])
+}
+
 model RestaurantTable {
-  id           String     @id @default(uuid()) @db.Uuid
-  restaurantId String     @db.Uuid
-  name         String     @db.VarChar(80)
-  publicCode   String     @unique @db.VarChar(64)
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  orders       Order[]
+  id             String          @id @default(uuid()) @db.Uuid
+  restaurantId   String          @db.Uuid
+  name           String          @db.VarChar(80)
+  publicCode     String          @unique @db.VarChar(64)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  orders         Order[]
+  diningSessions DiningSession[]
 
   @@unique([id, restaurantId])
   @@unique([restaurantId, name])
@@ -134,23 +161,26 @@ model RestaurantTable {
 }
 
 model Order {
-  id             String          @id @default(uuid()) @db.Uuid
-  restaurantId   String          @db.Uuid
-  tableId        String          @db.Uuid
-  idempotencyKey String?         @db.Uuid
-  status         OrderStatus     @default(PENDING)
-  notes          String?         @db.VarChar(200)
-  totalInCents   Int
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  table          RestaurantTable @relation(fields: [tableId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
-  items          OrderItem[]
+  id              String          @id @default(uuid()) @db.Uuid
+  restaurantId    String          @db.Uuid
+  tableId         String          @db.Uuid
+  diningSessionId String?         @db.Uuid
+  idempotencyKey  String?         @db.Uuid
+  status          OrderStatus     @default(PENDING)
+  notes           String?         @db.VarChar(200)
+  totalInCents    Int
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  restaurant      Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table           RestaurantTable @relation(fields: [tableId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
+  diningSession   DiningSession?  @relation(fields: [diningSessionId, tableId, restaurantId], references: [id, tableId, restaurantId], onDelete: Restrict)
+  items           OrderItem[]
 
   @@unique([id, restaurantId])
   @@unique([tableId, idempotencyKey])
   @@index([restaurantId, status, createdAt])
   @@index([tableId, createdAt])
+  @@index([diningSessionId, restaurantId, status])
 }
 
 model OrderItem {
