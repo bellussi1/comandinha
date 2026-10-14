@@ -1,12 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { Armchair, CircleAlert, Clock3, LoaderCircle, Plus, Star } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import {
+  Armchair,
+  CircleAlert,
+  Clock3,
+  LoaderCircle,
+  Plus,
+  Star,
+} from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import {
   getPublicMenu,
   submitPublicOrder,
   type PublicDiningMenu,
+  type PublicOrderPayload,
   type PublicMenuProduct,
 } from "@/src/services/public-dining";
 import { ProductImage } from "@/src/utils/imageUtils";
@@ -34,6 +49,40 @@ function cartStorageKey(code: string): string {
 
 function lastOrderStorageKey(code: string): string {
   return `comandinha:qr-last-order:${code}`;
+}
+
+function pendingOrderStorageKey(code: string): string {
+  return `comandinha:qr-pending-order:${code}`;
+}
+
+function requestIdFor(
+  code: string,
+  payload: Omit<PublicOrderPayload, "requestId">,
+): string {
+  const fingerprint = JSON.stringify(payload);
+  const storageKey = pendingOrderStorageKey(code);
+  try {
+    const stored: unknown = JSON.parse(readStorage(storageKey, "null"));
+    if (
+      typeof stored === "object" &&
+      stored !== null &&
+      "fingerprint" in stored &&
+      stored.fingerprint === fingerprint &&
+      "requestId" in stored &&
+      typeof stored.requestId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        stored.requestId,
+      )
+    ) {
+      return stored.requestId;
+    }
+  } catch {
+    // A malformed saved key is replaced with a fresh request key.
+  }
+
+  const requestId = window.crypto.randomUUID();
+  writeStorage(storageKey, JSON.stringify({ fingerprint, requestId }));
+  return requestId;
 }
 
 function subscribeStorage(key: string, listener: () => void): () => void {
@@ -83,7 +132,10 @@ function useStoredValue(key: string, fallback: string): string {
     (listener: () => void) => subscribeStorage(key, listener),
     [key],
   );
-  const getSnapshot = useCallback(() => readStorage(key, fallback), [fallback, key]);
+  const getSnapshot = useCallback(
+    () => readStorage(key, fallback),
+    [fallback, key],
+  );
   const getServerSnapshot = useCallback(() => fallback, [fallback]);
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
@@ -138,6 +190,7 @@ function PublicMenuExperience({ code }: { code: string }) {
   const [cartNotice, setCartNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const submissionRef = useRef(false);
 
   const receiveMenu = useCallback((nextMenu: PublicDiningMenu) => {
     setMenu(nextMenu);
@@ -181,8 +234,10 @@ function PublicMenuExperience({ code }: { code: string }) {
   const visibleCategories = useMemo(
     () =>
       selectedCategory === "ALL"
-        ? menu?.categories ?? []
-        : (menu?.categories.filter((category) => category.id === selectedCategory) ?? []),
+        ? (menu?.categories ?? [])
+        : (menu?.categories.filter(
+            (category) => category.id === selectedCategory,
+          ) ?? []),
     [menu, selectedCategory],
   );
 
@@ -197,6 +252,7 @@ function PublicMenuExperience({ code }: { code: string }) {
   }
 
   function addProduct(product: PublicMenuProduct) {
+    if (submissionRef.current) return;
     const existing = lines.find((line) => line.productId === product.id);
     if (!existing && lines.length >= 50) {
       setCartNotice("O pedido pode ter até 50 itens diferentes.");
@@ -219,6 +275,7 @@ function PublicMenuExperience({ code }: { code: string }) {
   }
 
   function changeQuantity(productId: string, quantity: number) {
+    if (submissionRef.current) return;
     writeLines(
       lines.map((line) =>
         line.productId === productId ? { ...line, quantity } : line,
@@ -227,6 +284,7 @@ function PublicMenuExperience({ code }: { code: string }) {
   }
 
   function changeNotes(productId: string, notes: string) {
+    if (submissionRef.current) return;
     writeLines(
       lines.map((line) =>
         line.productId === productId ? { ...line, notes } : line,
@@ -235,30 +293,43 @@ function PublicMenuExperience({ code }: { code: string }) {
   }
 
   function removeProduct(productId: string) {
+    if (submissionRef.current) return;
     writeLines(lines.filter((line) => line.productId !== productId));
   }
 
   async function sendOrder() {
-    if (isSubmitting || !lines.length) return;
+    if (submissionRef.current || !lines.length) return;
+    submissionRef.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
+    const payload = {
+      items: lines.map((line) => ({
+        productId: line.productId,
+        quantity: line.quantity,
+        ...(line.notes?.trim()
+          ? { notes: line.notes.trim().slice(0, 200) }
+          : {}),
+      })),
+    };
     try {
-      const response = await submitPublicOrder(code, {
-        items: lines.map((line) => ({
-          productId: line.productId,
-          quantity: line.quantity,
-          ...(line.notes?.trim() ? { notes: line.notes.trim().slice(0, 200) } : {}),
-        })),
-      });
+      const requestId = requestIdFor(code, payload);
+      const response = await submitPublicOrder(code, { ...payload, requestId });
       writeStorage(cartKey, null);
+      writeStorage(pendingOrderStorageKey(code), null);
       writeStorage(lastOrderKey, response.id);
       setCartOpen(false);
       setCartNotice(null);
     } catch (error) {
       setSubmitError(menuErrorMessage(error));
     } finally {
+      submissionRef.current = false;
       setIsSubmitting(false);
     }
+  }
+
+  function changeCartOpen(open: boolean) {
+    if (submissionRef.current && !open) return;
+    setCartOpen(open);
   }
 
   const itemCount = lines.reduce((total, line) => total + line.quantity, 0);
@@ -275,22 +346,38 @@ function PublicMenuExperience({ code }: { code: string }) {
               <div className="public-menu-restaurant-copy">
                 <span className="public-menu-eyebrow">CARDÁPIO DA CASA</span>
                 <h1>{menu.restaurant.name}</h1>
-                <p><Armchair aria-hidden="true" size={14} /> {menu.table.name}</p>
+                <p>
+                  <Armchair aria-hidden="true" size={14} /> {menu.table.name}
+                </p>
               </div>
               <span className="public-menu-header-note">PEDIDO À MESA</span>
             </header>
 
             {lastOrderId && (
-              <OrderTracking code={code} key={lastOrderId} orderId={lastOrderId} />
+              <OrderTracking
+                code={code}
+                key={lastOrderId}
+                orderId={lastOrderId}
+              />
             )}
 
-            <section aria-labelledby="public-menu-title" className="public-menu-intro">
-              <span className="public-menu-eyebrow">COZINHA · FEITO NA HORA</span>
+            <section
+              aria-labelledby="public-menu-title"
+              className="public-menu-intro"
+            >
+              <span className="public-menu-eyebrow">
+                COZINHA · FEITO NA HORA
+              </span>
               <h2 id="public-menu-title">O que vai ser hoje?</h2>
-              <p>Escolha seus favoritos. O pedido chega direto para a equipe.</p>
+              <p>
+                Escolha seus favoritos. O pedido chega direto para a equipe.
+              </p>
             </section>
 
-            <nav aria-label="Categorias do cardápio" className="public-menu-categories">
+            <nav
+              aria-label="Categorias do cardápio"
+              className="public-menu-categories"
+            >
               <button
                 aria-pressed={selectedCategory === "ALL"}
                 className={selectedCategory === "ALL" ? "is-active" : ""}
@@ -302,7 +389,9 @@ function PublicMenuExperience({ code }: { code: string }) {
               {menu.categories.map((category) => (
                 <button
                   aria-pressed={selectedCategory === category.id}
-                  className={selectedCategory === category.id ? "is-active" : ""}
+                  className={
+                    selectedCategory === category.id ? "is-active" : ""
+                  }
                   key={category.id}
                   onClick={() => setSelectedCategory(category.id)}
                   type="button"
@@ -313,9 +402,13 @@ function PublicMenuExperience({ code }: { code: string }) {
             </nav>
 
             {visibleCategories.length === 0 ||
-            visibleCategories.every((category) => category.products.length === 0) ? (
+            visibleCategories.every(
+              (category) => category.products.length === 0,
+            ) ? (
               <section className="public-menu-empty" aria-live="polite">
-                <span aria-hidden="true"><Star size={22} /></span>
+                <span aria-hidden="true">
+                  <Star size={22} />
+                </span>
                 <h2>O cardápio está sendo preparado.</h2>
                 <p>Volte em instantes para conferir as opções da casa.</p>
               </section>
@@ -326,14 +419,21 @@ function PublicMenuExperience({ code }: { code: string }) {
                     aria-labelledby={`menu-category-${category.id}`}
                     className="public-menu-category"
                     key={category.id}
-                    style={{ "--category-index": categoryIndex } as React.CSSProperties}
+                    style={
+                      {
+                        "--category-index": categoryIndex,
+                      } as React.CSSProperties
+                    }
                   >
                     <div className="public-menu-category-heading">
                       <div>
                         <span className="public-menu-eyebrow">
-                          {String(categoryIndex + 1).padStart(2, "0")} · CARDÁPIO
+                          {String(categoryIndex + 1).padStart(2, "0")} ·
+                          CARDÁPIO
                         </span>
-                        <h2 id={`menu-category-${category.id}`}>{category.name}</h2>
+                        <h2 id={`menu-category-${category.id}`}>
+                          {category.name}
+                        </h2>
                       </div>
                       {category.description && <p>{category.description}</p>}
                     </div>
@@ -342,7 +442,11 @@ function PublicMenuExperience({ code }: { code: string }) {
                         <article
                           className="public-menu-product"
                           key={product.id}
-                          style={{ "--product-index": productIndex } as React.CSSProperties}
+                          style={
+                            {
+                              "--product-index": productIndex,
+                            } as React.CSSProperties
+                          }
                         >
                           {product.imageUrl ? (
                             <div className="public-menu-product-image">
@@ -355,7 +459,10 @@ function PublicMenuExperience({ code }: { code: string }) {
                               />
                             </div>
                           ) : (
-                            <span aria-hidden="true" className="public-menu-product-placeholder">
+                            <span
+                              aria-hidden="true"
+                              className="public-menu-product-placeholder"
+                            >
                               {product.name.trim().charAt(0).toUpperCase()}
                             </span>
                           )}
@@ -368,22 +475,35 @@ function PublicMenuExperience({ code }: { code: string }) {
                                 </span>
                               )}
                             </div>
-                            {product.description && <p>{product.description}</p>}
+                            {product.description && (
+                              <p>{product.description}</p>
+                            )}
                             <div className="public-menu-product-meta">
-                              <strong>{money.format(product.priceInCents / 100)}</strong>
+                              <strong>
+                                {money.format(product.priceInCents / 100)}
+                              </strong>
                               {product.prepTimeMinutes && (
-                                <span><Clock3 aria-hidden="true" size={13} /> {product.prepTimeMinutes} min</span>
+                                <span>
+                                  <Clock3 aria-hidden="true" size={13} />{" "}
+                                  {product.prepTimeMinutes} min
+                                </span>
                               )}
                             </div>
                             {product.dietaryTags.length > 0 && (
-                              <div aria-label="Características do produto" className="public-menu-tags">
-                                {product.dietaryTags.map((tag) => <span key={tag}>{tag}</span>)}
+                              <div
+                                aria-label="Características do produto"
+                                className="public-menu-tags"
+                              >
+                                {product.dietaryTags.map((tag) => (
+                                  <span key={tag}>{tag}</span>
+                                ))}
                               </div>
                             )}
                           </div>
                           <Button
                             aria-label={`Adicionar ${product.name} ao carrinho`}
                             className="public-menu-add-button"
+                            disabled={isSubmitting}
                             onClick={() => addProduct(product)}
                             type="button"
                             variant="outline"
@@ -408,7 +528,11 @@ function PublicMenuExperience({ code }: { code: string }) {
 
         {isLoading && !menu && (
           <div className="public-menu-state" role="status" aria-live="polite">
-            <LoaderCircle aria-hidden="true" className="public-menu-spin" size={23} />
+            <LoaderCircle
+              aria-hidden="true"
+              className="public-menu-spin"
+              size={23}
+            />
             <span>Abrindo o cardápio…</span>
           </div>
         )}
@@ -417,7 +541,11 @@ function PublicMenuExperience({ code }: { code: string }) {
             <CircleAlert aria-hidden="true" size={24} />
             <h1>Este cardápio não abriu.</h1>
             <p>{menuError}</p>
-            <Button onClick={() => void loadMenu()} type="button" variant="outline">
+            <Button
+              onClick={() => void loadMenu()}
+              type="button"
+              variant="outline"
+            >
               Tentar novamente
             </Button>
           </div>
@@ -425,7 +553,22 @@ function PublicMenuExperience({ code }: { code: string }) {
 
         {cartNotice && (
           <p aria-live="polite" className="public-menu-cart-notice">
-            {cartNotice} {itemCount > 0 && <span>{itemCount} {itemCount === 1 ? "item" : "itens"} · {money.format(lines.reduce((sum, line) => sum + (products.find((product) => product.id === line.productId)?.priceInCents ?? 0) * line.quantity, 0) / 100)}</span>}
+            {cartNotice}{" "}
+            {itemCount > 0 && (
+              <span>
+                {itemCount} {itemCount === 1 ? "item" : "itens"} ·{" "}
+                {money.format(
+                  lines.reduce(
+                    (sum, line) =>
+                      sum +
+                      (products.find((product) => product.id === line.productId)
+                        ?.priceInCents ?? 0) *
+                        line.quantity,
+                    0,
+                  ) / 100,
+                )}
+              </span>
+            )}
           </p>
         )}
 
@@ -435,7 +578,7 @@ function PublicMenuExperience({ code }: { code: string }) {
           isSubmitting={isSubmitting}
           lines={lines}
           onNotesChange={changeNotes}
-          onOpenChange={setCartOpen}
+          onOpenChange={changeCartOpen}
           onQuantityChange={changeQuantity}
           onRemove={removeProduct}
           onSubmit={sendOrder}

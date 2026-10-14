@@ -50,7 +50,9 @@ export function MenuCart({
     const product = productById.get(line.productId);
     return total + (product?.priceInCents ?? 0) * line.quantity;
   }, 0);
-  const hasUnavailableProduct = lines.some((line) => !productById.has(line.productId));
+  const hasUnavailableProduct = lines.some(
+    (line) => !productById.has(line.productId),
+  );
 
   return (
     <>
@@ -67,10 +69,14 @@ export function MenuCart({
             <span>{itemCount}</span>
           </span>
           <span className="public-menu-cart-trigger-copy">
-            <strong>Abrir carrinho · {itemCount} {itemCount === 1 ? "item" : "itens"}</strong>
+            <strong>
+              Abrir carrinho · {itemCount} {itemCount === 1 ? "item" : "itens"}
+            </strong>
             <small>Confira seu pedido</small>
           </span>
-          <strong className="public-menu-cart-trigger-total">{money.format(totalInCents / 100)}</strong>
+          <strong className="public-menu-cart-trigger-total">
+            {money.format(totalInCents / 100)}
+          </strong>
         </Button>
       </div>
 
@@ -91,7 +97,11 @@ export function MenuCart({
             <div className="public-menu-cart-empty">
               <ShoppingBag aria-hidden="true" size={27} />
               <p>Seu carrinho está vazio.</p>
-              <Button onClick={() => onOpenChange(false)} type="button" variant="outline">
+              <Button
+                onClick={() => onOpenChange(false)}
+                type="button"
+                variant="outline"
+              >
                 Voltar ao cardápio
               </Button>
             </div>
@@ -101,12 +111,17 @@ export function MenuCart({
                 {lines.map((line) => {
                   const product = productById.get(line.productId);
                   return (
-                    <article className="public-menu-cart-line" key={line.productId}>
+                    <article
+                      className="public-menu-cart-line"
+                      key={line.productId}
+                    >
                       <div className="public-menu-cart-line-heading">
                         <div>
                           <h3>{product?.name ?? "Produto indisponível"}</h3>
                           {product ? (
-                            <p>{money.format(product.priceInCents / 100)} cada</p>
+                            <p>
+                              {money.format(product.priceInCents / 100)} cada
+                            </p>
                           ) : (
                             <p className="public-menu-unavailable">
                               Este item saiu do cardápio. Remova para continuar.
@@ -116,6 +131,7 @@ export function MenuCart({
                         <button
                           aria-label={`Remover ${product?.name ?? "produto indisponível"}`}
                           className="public-menu-remove-item"
+                          disabled={isSubmitting}
                           onClick={() => onRemove(line.productId)}
                           type="button"
                         >
@@ -125,11 +141,19 @@ export function MenuCart({
 
                       {product && (
                         <div className="public-menu-cart-line-bottom">
-                          <div aria-label={`Quantidade de ${product.name}`} className="public-menu-quantity-control">
+                          <div
+                            aria-label={`Quantidade de ${product.name}`}
+                            className="public-menu-quantity-control"
+                          >
                             <button
                               aria-label={`Diminuir ${product.name}`}
                               disabled={line.quantity <= 1 || isSubmitting}
-                              onClick={() => onQuantityChange(line.productId, line.quantity - 1)}
+                              onClick={() =>
+                                onQuantityChange(
+                                  line.productId,
+                                  line.quantity - 1,
+                                )
+                              }
                               type="button"
                             >
                               <Minus aria-hidden="true" size={15} />
@@ -138,14 +162,21 @@ export function MenuCart({
                             <button
                               aria-label={`Aumentar ${product.name}`}
                               disabled={line.quantity >= 20 || isSubmitting}
-                              onClick={() => onQuantityChange(line.productId, line.quantity + 1)}
+                              onClick={() =>
+                                onQuantityChange(
+                                  line.productId,
+                                  line.quantity + 1,
+                                )
+                              }
                               type="button"
                             >
                               <Plus aria-hidden="true" size={15} />
                             </button>
                           </div>
                           <strong className="public-menu-cart-line-total">
-                            {money.format((product.priceInCents * line.quantity) / 100)}
+                            {money.format(
+                              (product.priceInCents * line.quantity) / 100,
+                            )}
                           </strong>
                         </div>
                       )}
@@ -155,8 +186,11 @@ export function MenuCart({
                           <span>Observação para a cozinha (opcional)</span>
                           <textarea
                             aria-label={`Observação para ${product.name}`}
+                            disabled={isSubmitting}
                             maxLength={200}
-                            onChange={(event) => onNotesChange(line.productId, event.target.value)}
+                            onChange={(event) =>
+                              onNotesChange(line.productId, event.target.value)
+                            }
                             placeholder="Ex.: sem cebola"
                             value={line.notes ?? ""}
                           />
@@ -184,7 +218,9 @@ export function MenuCart({
               </div>
               <Button
                 className="public-menu-submit-button"
-                disabled={isSubmitting || lines.length === 0 || hasUnavailableProduct}
+                disabled={
+                  isSubmitting || lines.length === 0 || hasUnavailableProduct
+                }
                 onClick={() => void onSubmit()}
                 type="button"
               >

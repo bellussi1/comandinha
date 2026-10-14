@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ApiPaths } from "@comandinha/api-client";
 import * as dining from "../../../services/public-dining";
@@ -118,19 +118,33 @@ describe("PublicMenu", () => {
     const user = userEvent.setup();
     renderMenu();
 
-    expect(await screen.findByRole("heading", { name: "Casa do Enzo" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Casa do Enzo" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Mesa 01")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Bebidas" }));
-    expect(screen.getByRole("heading", { name: "Chá gelado" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Smash clássico" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Chá gelado" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Smash clássico" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Todas" }));
-    await user.click(screen.getByRole("button", { name: "Adicionar Smash clássico ao carrinho" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: /Abrir carrinho/ }));
 
-    expect(screen.getByRole("dialog", { name: "Seu carrinho" })).toBeInTheDocument();
     expect(
-      screen.getByText("R$ 29,90", { selector: ".public-menu-cart-summary strong" }),
+      screen.getByRole("dialog", { name: "Seu carrinho" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("R$ 29,90", {
+        selector: ".public-menu-cart-summary strong",
+      }),
     ).toBeInTheDocument();
     const stored = localStorage.getItem(`comandinha:qr-cart:${tableCode}`);
     expect(stored).toContain(burgerId);
@@ -141,18 +155,30 @@ describe("PublicMenu", () => {
   it("keeps carts separate when the QR code changes", async () => {
     localStorage.setItem(
       `comandinha:qr-cart:${tableCode}`,
-      JSON.stringify([{ productId: burgerId, quantity: 2, notes: "Sem cebola" }]),
+      JSON.stringify([
+        { productId: burgerId, quantity: 2, notes: "Sem cebola" },
+      ]),
     );
     const view = renderMenu();
 
-    expect(await screen.findByRole("button", { name: /2 itens/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /2 itens/ }),
+    ).toBeInTheDocument();
     view.unmount();
     const restored = renderMenu();
-    expect(await screen.findByRole("button", { name: /2 itens/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /2 itens/ }),
+    ).toBeInTheDocument();
     restored.rerender(<PublicMenu code={otherTableCode} />);
-    expect(await screen.findByRole("button", { name: /0 itens/ })).toBeInTheDocument();
-    expect(localStorage.getItem(`comandinha:qr-cart:${otherTableCode}`)).toBeNull();
-    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toContain(burgerId);
+    expect(
+      await screen.findByRole("button", { name: /0 itens/ }),
+    ).toBeInTheDocument();
+    expect(
+      localStorage.getItem(`comandinha:qr-cart:${otherTableCode}`),
+    ).toBeNull();
+    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toContain(
+      burgerId,
+    );
   });
 
   it("refreshes prices from the menu instead of restoring a saved price", async () => {
@@ -164,7 +190,10 @@ describe("PublicMenu", () => {
       ...menu,
       categories: menu.categories.map((category) => ({
         ...category,
-        products: category.products.map((product) => ({ ...product, priceInCents: 3490 })),
+        products: category.products.map((product) => ({
+          ...product,
+          priceInCents: 3490,
+        })),
       })),
     });
     const user = userEvent.setup();
@@ -172,9 +201,35 @@ describe("PublicMenu", () => {
 
     await user.click(await screen.findByRole("button", { name: /2 itens/ }));
     expect(
-      screen.getByText("R$ 69,80", { selector: ".public-menu-cart-summary strong" }),
+      screen.getByText("R$ 69,80", {
+        selector: ".public-menu-cart-summary strong",
+      }),
     ).toBeInTheDocument();
-    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).not.toContain("3490");
+    expect(
+      localStorage.getItem(`comandinha:qr-cart:${tableCode}`),
+    ).not.toContain("3490");
+  });
+
+  it("loads a product image from an HTTPS CDN outside the legacy allowlist", async () => {
+    service.getPublicMenu.mockResolvedValueOnce({
+      ...menu,
+      categories: menu.categories.map((category) => ({
+        ...category,
+        products: category.products.map((product) =>
+          product.id === burgerId
+            ? {
+                ...product,
+                imageUrl: "https://cdn.example.net/products/smash.webp",
+              }
+            : product,
+        ),
+      })),
+    });
+    renderMenu();
+
+    expect(
+      await screen.findByRole("img", { name: "Smash clássico" }),
+    ).toHaveAttribute("src", "https://cdn.example.net/products/smash.webp");
   });
 
   it("locks submission while pending and keeps every line after a failed request", async () => {
@@ -185,22 +240,65 @@ describe("PublicMenu", () => {
       }),
     );
     const user = userEvent.setup();
-    renderMenu();
-    await user.click(await screen.findByRole("button", { name: "Adicionar Smash clássico ao carrinho" }));
+    const view = renderMenu();
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: /Abrir carrinho/ }));
     const submit = screen.getByRole("button", { name: "Enviar pedido" });
     await user.click(submit);
 
     expect(submit).toBeDisabled();
     expect(service.submitPublicOrder).toHaveBeenCalledWith(tableCode, {
+      requestId: expect.any(String),
       items: [{ productId: burgerId, quantity: 1 }],
     } satisfies CreateOrderPayload);
+    const firstRequestId = service.submitPublicOrder.mock.calls[0][1].requestId;
+    expect(
+      screen.getByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+        hidden: true,
+      }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Remover Smash clássico" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByLabelText("Observação para Smash clássico"),
+    ).toBeDisabled();
+    await user.keyboard("{Escape}");
+    expect(
+      screen.getByRole("dialog", { name: "Seu carrinho" }),
+    ).toBeInTheDocument();
 
     await act(async () => rejectOrder(new Error("Falha temporária")));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Falha temporária");
-    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toContain(burgerId);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Falha temporária",
+    );
+    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toContain(
+      burgerId,
+    );
     expect(screen.getByRole("button", { name: "Enviar pedido" })).toBeEnabled();
-    expect(screen.getByRole("heading", { name: "Smash clássico" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Smash clássico" }),
+    ).toBeInTheDocument();
+
+    view.unmount();
+    renderMenu();
+    await screen.findByRole("button", { name: /Abrir carrinho/ });
+    await user.click(screen.getByRole("button", { name: /Abrir carrinho/ }));
+    await user.click(screen.getByRole("button", { name: "Enviar pedido" }));
+    await waitFor(() =>
+      expect(service.submitPublicOrder).toHaveBeenCalledTimes(2),
+    );
+    expect(service.submitPublicOrder.mock.calls[1][1].requestId).toBe(
+      firstRequestId,
+    );
+    expect(
+      await screen.findByText("Pedido recebido pelo restaurante"),
+    ).toBeInTheDocument();
   });
 
   it("stores the created order id and tracks only that order", async () => {
@@ -210,16 +308,28 @@ describe("PublicMenu", () => {
     ]);
     const user = userEvent.setup();
     renderMenu();
-    await user.click(await screen.findByRole("button", { name: "Adicionar Smash clássico ao carrinho" }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: /Abrir carrinho/ }));
-    await user.type(screen.getByLabelText("Observação para Smash clássico"), "Sem cebola");
+    await user.type(
+      screen.getByLabelText("Observação para Smash clássico"),
+      "Sem cebola",
+    );
     await user.click(screen.getByRole("button", { name: "Enviar pedido" }));
 
-    expect(await screen.findByText("Pedido recebido pelo restaurante")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Pedido recebido pelo restaurante"),
+    ).toBeInTheDocument();
     expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toBeNull();
-    expect(localStorage.getItem(`comandinha:qr-last-order:${tableCode}`)).toBe(orderId);
+    expect(localStorage.getItem(`comandinha:qr-last-order:${tableCode}`)).toBe(
+      orderId,
+    );
     expect(screen.queryByText("Pedido cancelado")).not.toBeInTheDocument();
     expect(service.submitPublicOrder).toHaveBeenCalledWith(tableCode, {
+      requestId: expect.any(String),
       items: [{ productId: burgerId, quantity: 1, notes: "Sem cebola" }],
     });
   });
@@ -236,9 +346,13 @@ describe("PublicMenu", () => {
     const user = userEvent.setup();
     renderMenu();
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Cardápio temporariamente indisponível");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Cardápio temporariamente indisponível",
+    );
     await user.click(screen.getByRole("button", { name: "Tentar novamente" }));
-    expect(await screen.findByRole("heading", { name: "Casa do Enzo" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Casa do Enzo" }),
+    ).toBeInTheDocument();
   });
 });
 
@@ -264,7 +378,9 @@ describe("OrderTracking", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    expect(screen.getByText("Pedido recebido pelo restaurante")).toBeInTheDocument();
+    expect(
+      screen.getByText("Pedido recebido pelo restaurante"),
+    ).toBeInTheDocument();
 
     await act(async () => {
       await jest.advanceTimersByTimeAsync(10_000);

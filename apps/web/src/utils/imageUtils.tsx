@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { customImageLoader, isExternalImage, optimizeImgurUrl, generateImageSrcSet } from "./imageLoader";
+import { isExternalImage, optimizeImgurUrl } from "./imageLoader";
 
 interface ProductImageProps {
   src?: string;
@@ -14,7 +14,8 @@ interface ProductImageProps {
 
 /**
  * Componente unificado para tratamento de imagens de produtos
- * Otimiza imagens externas através do proxy e usa Next.js Image para locais
+ * Carrega URLs externas diretamente no navegador e usa Next.js Image para locais.
+ * Isso permite qualquer CDN HTTPS sem transformar o proxy do servidor em um fetch arbitrário.
  */
 export function ProductImage({
   src,
@@ -24,7 +25,7 @@ export function ProductImage({
   width,
   height,
   priority = false,
-  quality = 75
+  quality = 75,
 }: ProductImageProps) {
   const imageSrc = src?.trimEnd();
 
@@ -35,36 +36,33 @@ export function ProductImage({
         src="/placeholder.svg"
         alt={alt}
         className={className}
-        {...(fill ? { fill: true } : { width: width || 400, height: height || 300 })}
+        {...(fill
+          ? { fill: true }
+          : { width: width || 400, height: height || 300 })}
       />
     );
   }
 
   // Otimizar URLs do Imgur
   let optimizedSrc = imageSrc;
-  if (imageSrc.includes('imgur.com')) {
-    optimizedSrc = optimizeImgurUrl(imageSrc, 'l');
+  if (imageSrc.includes("imgur.com")) {
+    optimizedSrc = optimizeImgurUrl(imageSrc, "l");
   }
 
-  // Se é imagem externa, usar img com srcset otimizado
+  // A URL externa vai direto ao navegador para funcionar com CDNs diversos.
   if (isExternalImage(optimizedSrc)) {
-    const srcSet = generateImageSrcSet(optimizedSrc, [320, 640, 960, 1280]);
-    const sizes = "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
-
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={customImageLoader({ src: optimizedSrc, width: width || 800, quality })}
-        srcSet={srcSet}
-        sizes={sizes}
+        src={optimizedSrc}
         alt={alt}
         className={className}
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "low"}
         decoding="async"
         onError={(e) => {
-          e.currentTarget.src = '/placeholder.svg';
-          e.currentTarget.srcset = '';
+          e.currentTarget.src = "/placeholder.svg";
+          e.currentTarget.srcset = "";
           e.currentTarget.onerror = null;
         }}
         {...(width && height ? { width, height } : {})}
@@ -80,7 +78,9 @@ export function ProductImage({
       className={className}
       priority={priority}
       quality={quality}
-      {...(fill ? { fill: true } : { width: width || 400, height: height || 300 })}
+      {...(fill
+        ? { fill: true }
+        : { width: width || 400, height: height || 300 })}
     />
   );
 }
@@ -90,7 +90,7 @@ export function ProductImage({
  */
 export function processImageUrl(url?: string): string {
   if (!url) return "/placeholder.svg";
-  
+
   const trimmedUrl = url.trimEnd();
   return trimmedUrl || "/placeholder.svg";
 }

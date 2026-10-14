@@ -247,6 +247,7 @@ describe('public QR menu and ordering with PostgreSQL', () => {
       expect(
         (
           await submitOrder(code, {
+            requestId: randomUUID(),
             items: [{ productId: productAId, quantity: 1 }],
           })
         ).status,
@@ -266,13 +267,17 @@ describe('public QR menu and ordering with PostgreSQL', () => {
       (
         await submitOrder(
           tableCode,
-          { items: [{ productId: productAId, quantity: 1 }] },
+          {
+            requestId: randomUUID(),
+            items: [{ productId: productAId, quantity: 1 }],
+          },
           false,
         )
       ).status,
     ).toBe(401);
 
     const forged = await submitOrder(tableCode, {
+      requestId: randomUUID(),
       items: [{ productId: productAId, quantity: 1, priceInCents: 1 }],
       totalInCents: 1,
     });
@@ -293,6 +298,7 @@ describe('public QR menu and ordering with PostgreSQL', () => {
     });
 
     const response = await submitOrder(tableCode, {
+      requestId: randomUUID(),
       notes: 'Sem cebola',
       items: [{ productId: productAId, quantity: 2, notes: 'Bem passado' }],
     });
@@ -350,6 +356,28 @@ describe('public QR menu and ordering with PostgreSQL', () => {
     expect(
       (summaryList[0].items as Array<Record<string, unknown>>)[0],
     ).not.toHaveProperty('notes');
+  });
+
+  it('returns the existing order when the same client request is retried', async () => {
+    const table = await prisma.restaurantTable.findUniqueOrThrow({
+      where: { publicCode: tableCode },
+      select: { id: true },
+    });
+    const requestId = randomUUID();
+    const payload = {
+      requestId,
+      items: [{ productId: productAId, quantity: 1 }],
+    };
+    const before = await countOrdersForTable(table.id);
+
+    const first = await submitOrder(tableCode, payload);
+    expect(first.status).toBe(201);
+    const firstOrder = (await first.json()) as { id: string };
+
+    const retry = await submitOrder(tableCode, payload);
+    expect(retry.status).toBe(201);
+    await expect(retry.json()).resolves.toMatchObject({ id: firstOrder.id });
+    expect(await countOrdersForTable(table.id)).toBe(before + 1);
   });
 
   it('rejects invalid items without creating partial orders', async () => {
@@ -418,7 +446,10 @@ describe('public QR menu and ordering with PostgreSQL', () => {
       },
     ];
     for (const body of invalidBodies) {
-      const response = await submitOrder(tableCode, body);
+      const response = await submitOrder(tableCode, {
+        requestId: randomUUID(),
+        ...body,
+      });
       expect([400, 409]).toContain(response.status);
     }
     expect(await countOrdersForTable(tableId)).toBe(before);
@@ -456,7 +487,7 @@ describe('public QR menu and ordering with PostgreSQL', () => {
       Array.from({ length: 11 }, () =>
         request(`/public/tables/${tableCode}/orders`, {
           method: 'POST',
-          body: { items: [] },
+          body: { requestId: randomUUID(), items: [] },
           gateway: true,
           clientKey,
         }),

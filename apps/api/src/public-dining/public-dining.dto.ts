@@ -37,6 +37,10 @@ export class CreatePublicOrderItemDto {
 }
 
 export class CreatePublicOrderDto {
+  @ApiProperty({ type: String, format: 'uuid' })
+  @IsUUID()
+  requestId!: string;
+
   @ApiProperty({ type: [CreatePublicOrderItemDto], minItems: 1, maxItems: 50 })
   @IsArray()
   @ArrayMinSize(1)

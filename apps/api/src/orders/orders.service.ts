@@ -21,6 +21,36 @@ const allOrderStatuses = [
 const publicTableCodePattern = /^[A-Za-z0-9_-]{43}$/;
 const maximumIntegerCents = 2_147_483_647;
 
+type PublicOrderSnapshot = {
+  id: string;
+  status: OrderStatus;
+  totalInCents: number;
+  createdAt: Date;
+  items: Array<{
+    nameSnapshot: string;
+    quantity: number;
+    unitPriceInCents: number;
+    lineTotalInCents: number;
+  }>;
+};
+
+function toPublicOrderResponse(order: PublicOrderSnapshot) {
+  return {
+    id: order.id,
+    status: order.status,
+    totalInCents: order.totalInCents,
+    createdAt: order.createdAt,
+    items: order.items.map(
+      ({ nameSnapshot, quantity, unitPriceInCents, lineTotalInCents }) => ({
+        nameSnapshot,
+        quantity,
+        unitPriceInCents,
+        lineTotalInCents,
+      }),
+    ),
+  };
+}
+
 @Injectable()
 export class OrdersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -145,127 +175,165 @@ export class OrdersService {
       throw new NotFoundException('Table not found.');
     }
 
-    return this.prisma.$transaction(async (transaction) => {
-      const table = await transaction.restaurantTable.findFirst({
-        where: { publicCode, isActive: true },
-        select: { id: true, restaurantId: true },
-      });
-      if (!table) throw new NotFoundException('Table not found.');
-      if (
-        !Array.isArray(dto.items) ||
-        dto.items.length < 1 ||
-        dto.items.length > 50
-      ) {
-        throw new BadRequestException('An order must contain 1 to 50 items.');
-      }
-      if (dto.notes !== undefined && dto.notes.length > 200) {
-        throw new BadRequestException(
-          'Order notes must be at most 200 characters.',
-        );
-      }
+    let requestTableId: string | undefined;
+    try {
+      return await this.prisma.$transaction(async (transaction) => {
+        const table = await transaction.restaurantTable.findFirst({
+          where: { publicCode },
+          select: { id: true, restaurantId: true, isActive: true },
+        });
+        if (!table) throw new NotFoundException('Table not found.');
+        requestTableId = table.id;
 
-      const productIds = dto.items.map(({ productId }) => productId);
-      if (new Set(productIds).size !== productIds.length) {
-        throw new BadRequestException('Duplicate products are not allowed.');
-      }
-      for (const item of dto.items) {
+        const existingOrder = await transaction.order.findFirst({
+          where: { tableId: table.id, idempotencyKey: dto.requestId },
+          select: {
+            id: true,
+            status: true,
+            totalInCents: true,
+            createdAt: true,
+            items: {
+              select: {
+                nameSnapshot: true,
+                quantity: true,
+                unitPriceInCents: true,
+                lineTotalInCents: true,
+              },
+              orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            },
+          },
+        });
+        if (existingOrder) return toPublicOrderResponse(existingOrder);
+        if (!table.isActive) throw new NotFoundException('Table not found.');
         if (
-          !Number.isInteger(item.quantity) ||
-          item.quantity < 1 ||
-          item.quantity > 20 ||
-          (item.notes !== undefined && item.notes.length > 200)
+          !Array.isArray(dto.items) ||
+          dto.items.length < 1 ||
+          dto.items.length > 50
         ) {
-          throw new BadRequestException('Order item details are invalid.');
+          throw new BadRequestException('An order must contain 1 to 50 items.');
         }
-      }
+        if (dto.notes !== undefined && dto.notes.length > 200) {
+          throw new BadRequestException(
+            'Order notes must be at most 200 characters.',
+          );
+        }
 
-      const products = await transaction.catalogProduct.findMany({
-        where: {
-          restaurantId: table.restaurantId,
-          id: { in: productIds },
-        },
-        select: {
-          id: true,
-          name: true,
-          priceInCents: true,
-          available: true,
-          isActive: true,
-        },
-      });
-      if (products.length !== productIds.length) {
-        throw new BadRequestException('One or more products are invalid.');
-      }
-      if (products.some(({ isActive, available }) => !isActive || !available)) {
-        throw new ConflictException('One or more products are unavailable.');
-      }
+        const productIds = dto.items.map(({ productId }) => productId);
+        if (new Set(productIds).size !== productIds.length) {
+          throw new BadRequestException('Duplicate products are not allowed.');
+        }
+        for (const item of dto.items) {
+          if (
+            !Number.isInteger(item.quantity) ||
+            item.quantity < 1 ||
+            item.quantity > 20 ||
+            (item.notes !== undefined && item.notes.length > 200)
+          ) {
+            throw new BadRequestException('Order item details are invalid.');
+          }
+        }
 
-      const productById = new Map(
-        products.map((product) => [product.id, product]),
-      );
-      const items = dto.items.map((item) => {
-        const product = productById.get(item.productId);
-        if (!product || product.priceInCents < 1) {
+        const products = await transaction.catalogProduct.findMany({
+          where: {
+            restaurantId: table.restaurantId,
+            id: { in: productIds },
+          },
+          select: {
+            id: true,
+            name: true,
+            priceInCents: true,
+            available: true,
+            isActive: true,
+          },
+        });
+        if (products.length !== productIds.length) {
           throw new BadRequestException('One or more products are invalid.');
         }
-        const lineTotalInCents = product.priceInCents * item.quantity;
         if (
-          !Number.isSafeInteger(lineTotalInCents) ||
-          lineTotalInCents > maximumIntegerCents
+          products.some(({ isActive, available }) => !isActive || !available)
         ) {
-          throw new BadRequestException('An order item total is too large.');
+          throw new ConflictException('One or more products are unavailable.');
         }
-        return {
-          productId: product.id,
-          nameSnapshot: product.name,
-          unitPriceInCents: product.priceInCents,
-          quantity: item.quantity,
-          notes: item.notes,
-          lineTotalInCents,
-        };
-      });
-      const totalInCents = items.reduce(
-        (total, item) => total + item.lineTotalInCents,
-        0,
-      );
-      if (
-        !Number.isSafeInteger(totalInCents) ||
-        totalInCents > maximumIntegerCents
-      ) {
-        throw new BadRequestException('The order total is too large.');
-      }
 
-      const order = await transaction.order.create({
-        data: {
-          restaurantId: table.restaurantId,
-          tableId: table.id,
-          status: OrderStatus.PENDING,
-          notes: dto.notes,
-          totalInCents,
-        },
-      });
-      await transaction.orderItem.createMany({
-        data: items.map((item) => ({
-          ...item,
-          restaurantId: table.restaurantId,
-          orderId: order.id,
-        })),
-      });
-
-      return {
-        id: order.id,
-        status: order.status,
-        totalInCents: order.totalInCents,
-        createdAt: order.createdAt,
-        items: items.map(
-          ({ nameSnapshot, quantity, unitPriceInCents, lineTotalInCents }) => ({
-            nameSnapshot,
-            quantity,
-            unitPriceInCents,
+        const productById = new Map(
+          products.map((product) => [product.id, product]),
+        );
+        const items = dto.items.map((item) => {
+          const product = productById.get(item.productId);
+          if (!product || product.priceInCents < 1) {
+            throw new BadRequestException('One or more products are invalid.');
+          }
+          const lineTotalInCents = product.priceInCents * item.quantity;
+          if (
+            !Number.isSafeInteger(lineTotalInCents) ||
+            lineTotalInCents > maximumIntegerCents
+          ) {
+            throw new BadRequestException('An order item total is too large.');
+          }
+          return {
+            productId: product.id,
+            nameSnapshot: product.name,
+            unitPriceInCents: product.priceInCents,
+            quantity: item.quantity,
+            notes: item.notes,
             lineTotalInCents,
-          }),
-        ),
-      };
-    });
+          };
+        });
+        const totalInCents = items.reduce(
+          (total, item) => total + item.lineTotalInCents,
+          0,
+        );
+        if (
+          !Number.isSafeInteger(totalInCents) ||
+          totalInCents > maximumIntegerCents
+        ) {
+          throw new BadRequestException('The order total is too large.');
+        }
+
+        const order = await transaction.order.create({
+          data: {
+            restaurantId: table.restaurantId,
+            tableId: table.id,
+            idempotencyKey: dto.requestId,
+            status: OrderStatus.PENDING,
+            notes: dto.notes,
+            totalInCents,
+          },
+        });
+        await transaction.orderItem.createMany({
+          data: items.map((item) => ({
+            ...item,
+            restaurantId: table.restaurantId,
+            orderId: order.id,
+          })),
+        });
+
+        return toPublicOrderResponse({ ...order, items });
+      });
+    } catch (error) {
+      if (requestTableId) {
+        const existingOrder = await this.prisma.order.findFirst({
+          where: { tableId: requestTableId, idempotencyKey: dto.requestId },
+          select: {
+            id: true,
+            status: true,
+            totalInCents: true,
+            createdAt: true,
+            items: {
+              select: {
+                nameSnapshot: true,
+                quantity: true,
+                unitPriceInCents: true,
+                lineTotalInCents: true,
+              },
+              orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+            },
+          },
+        });
+        if (existingOrder) return toPublicOrderResponse(existingOrder);
+      }
+      throw error;
+    }
   }
 
   async listPublicOrderSummaries(publicCode: string) {

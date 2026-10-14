@@ -255,7 +255,20 @@ export async function proxyAdminOrderRequest(
 }
 
 function isValidPublicOrderBody(value: unknown): value is PublicOrderBody {
-  if (!hasAllowedFields(value, ["items", "notes"], ["items"])) return false;
+  if (
+    !hasAllowedFields(
+      value,
+      ["requestId", "items", "notes"],
+      ["requestId", "items"],
+    )
+  )
+    return false;
+  if (
+    typeof value.requestId !== "string" ||
+    !uuidPattern.test(value.requestId)
+  ) {
+    return false;
+  }
   if (
     "notes" in value &&
     (typeof value.notes !== "string" || value.notes.length > 200)

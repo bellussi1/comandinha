@@ -547,6 +547,8 @@ export interface components {
             notes?: string;
         };
         CreatePublicOrderDto: {
+            /** Format: uuid */
+            requestId: string;
             items: components["schemas"]["CreatePublicOrderItemDto"][];
             notes?: string;
         };

@@ -134,19 +134,21 @@ model RestaurantTable {
 }
 
 model Order {
-  id           String          @id @default(uuid()) @db.Uuid
-  restaurantId String          @db.Uuid
-  tableId      String          @db.Uuid
-  status       OrderStatus     @default(PENDING)
-  notes        String?         @db.VarChar(200)
-  totalInCents Int
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  restaurant   Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  table        RestaurantTable @relation(fields: [tableId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
-  items        OrderItem[]
+  id             String          @id @default(uuid()) @db.Uuid
+  restaurantId   String          @db.Uuid
+  tableId        String          @db.Uuid
+  idempotencyKey String?         @db.Uuid
+  status         OrderStatus     @default(PENDING)
+  notes          String?         @db.VarChar(200)
+  totalInCents   Int
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  restaurant     Restaurant      @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  table          RestaurantTable @relation(fields: [tableId, restaurantId], references: [id, restaurantId], onDelete: Restrict)
+  items          OrderItem[]
 
   @@unique([id, restaurantId])
+  @@unique([tableId, idempotencyKey])
   @@index([restaurantId, status, createdAt])
   @@index([tableId, createdAt])
 }

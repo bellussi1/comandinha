@@ -16,6 +16,7 @@ const code = "B".repeat(43);
 const gatewaySecret = "local-test-gateway-secret-with-at-least-32-characters";
 const origin = "http://localhost:3000";
 const clientKey = "a".repeat(64);
+const requestId = "8d6ac078-e3f7-49b2-a5ef-3cb0710fa08e";
 const fetchMock = jest.fn() as jest.MockedFunction<typeof fetch>;
 const originalFetch = global.fetch;
 
@@ -91,10 +92,23 @@ describe("public table orders gateway", () => {
     );
 
     jest.mocked(isTrustedMutationOrigin).mockReturnValue(true);
+    const missingRequestId = await POST(
+      request({
+        method: "POST",
+        body: JSON.stringify({
+          items: [
+            { productId: "a8bb4d2e-f126-4b11-b85c-6116b6a39701", quantity: 1 },
+          ],
+        }),
+        headers: { origin },
+      }),
+      context(),
+    );
     const unknownField = await POST(
       request({
         method: "POST",
         body: JSON.stringify({
+          requestId,
           items: [
             { productId: "a8bb4d2e-f126-4b11-b85c-6116b6a39701", quantity: 1 },
           ],
@@ -108,6 +122,7 @@ describe("public table orders gateway", () => {
       request({
         method: "POST",
         body: JSON.stringify({
+          requestId,
           items: [
             { productId: "a8bb4d2e-f126-4b11-b85c-6116b6a39701", quantity: 1 },
           ],
@@ -120,6 +135,7 @@ describe("public table orders gateway", () => {
 
     expect(untrusted.status).toBe(403);
     expect(badCode.status).toBe(400);
+    expect(missingRequestId.status).toBe(400);
     expect(unknownField.status).toBe(400);
     expect(oversized.status).toBe(413);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -135,6 +151,7 @@ describe("public table orders gateway", () => {
       request({
         method: "POST",
         body: JSON.stringify({
+          requestId,
           items: [
             { productId: "a8bb4d2e-f126-4b11-b85c-6116b6a39701", quantity: 1 },
           ],
@@ -154,6 +171,7 @@ describe("public table orders gateway", () => {
       Response.json({ id: "order-id", status: "PENDING" }, { status: 201 }),
     );
     const body = {
+      requestId,
       items: [
         { productId: "a8bb4d2e-f126-4b11-b85c-6116b6a39701", quantity: 2 },
       ],
