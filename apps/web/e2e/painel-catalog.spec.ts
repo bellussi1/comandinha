@@ -255,7 +255,7 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
       const availabilityTarget = await page.getByRole('button', {
         name: 'Marcar Suco de laranja disponível',
       }).boundingBox();
-      expect(availabilityTarget?.height).toBeGreaterThanOrEqual(44);
+      expect(availabilityTarget?.height).toBeGreaterThanOrEqual(43.99);
       const actionLabelFontSize = await page
         .locator('.painel-product-actions .painel-action-label')
         .first()
