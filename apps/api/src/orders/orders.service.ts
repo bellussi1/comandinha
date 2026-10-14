@@ -4,8 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { OrderStatus } from '../generated/prisma/client.js';
+import {
+  DiningSessionStatus,
+  OrderStatus,
+} from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { lockDiningTable } from '../tables/dining-sessions.service.js';
 import type { AdminPrincipal } from '../auth/admin-principal.js';
 import type { OrdersQueryDto, UpdateOrderStatusDto } from './orders.dto.js';
 import type { CreatePublicOrderDto } from '../public-dining/public-dining.dto.js';
@@ -180,15 +184,20 @@ export class OrdersService {
     let requestTableId: string | undefined;
     try {
       return await this.prisma.$transaction(async (transaction) => {
-        const table = await transaction.restaurantTable.findFirst({
+        const tableReference = await transaction.restaurantTable.findFirst({
           where: { publicCode },
-          select: { id: true, restaurantId: true, isActive: true },
+          select: { id: true, restaurantId: true },
         });
-        if (!table) throw new NotFoundException('Table not found.');
-        requestTableId = table.id;
+        if (!tableReference) throw new NotFoundException('Table not found.');
+        requestTableId = tableReference.id;
+        const table = await lockDiningTable(
+          transaction,
+          tableReference.restaurantId,
+          tableReference.id,
+        );
 
         const existingOrder = await transaction.order.findFirst({
-          where: { tableId: table.id, idempotencyKey: dto.requestId },
+          where: { tableId: tableReference.id, idempotencyKey: dto.requestId },
           select: {
             id: true,
             status: true,
@@ -207,6 +216,17 @@ export class OrdersService {
         });
         if (existingOrder) return toPublicOrderResponse(existingOrder);
         if (!table.isActive) throw new NotFoundException('Table not found.');
+        const diningSession = await transaction.diningSession.findFirst({
+          where: {
+            restaurantId: tableReference.restaurantId,
+            tableId: tableReference.id,
+            status: DiningSessionStatus.OPEN,
+          },
+          select: { id: true },
+        });
+        if (!diningSession) {
+          throw new ConflictException('This table is not accepting orders.');
+        }
         if (
           !Array.isArray(dto.items) ||
           dto.items.length < 1 ||
@@ -237,7 +257,7 @@ export class OrdersService {
 
         const products = await transaction.catalogProduct.findMany({
           where: {
-            restaurantId: table.restaurantId,
+            restaurantId: tableReference.restaurantId,
             id: { in: productIds },
           },
           select: {
@@ -294,8 +314,9 @@ export class OrdersService {
 
         const order = await transaction.order.create({
           data: {
-            restaurantId: table.restaurantId,
-            tableId: table.id,
+            restaurantId: tableReference.restaurantId,
+            tableId: tableReference.id,
+            diningSessionId: diningSession.id,
             idempotencyKey: dto.requestId,
             status: OrderStatus.PENDING,
             notes: dto.notes,
@@ -305,7 +326,7 @@ export class OrdersService {
         await transaction.orderItem.createMany({
           data: items.map((item) => ({
             ...item,
-            restaurantId: table.restaurantId,
+            restaurantId: tableReference.restaurantId,
             orderId: order.id,
           })),
         });
@@ -340,9 +361,22 @@ export class OrdersService {
 
   async listPublicOrderSummaries(publicCode: string) {
     const table = await this.findActivePublicTable(publicCode);
+    const session = await this.prisma.diningSession.findFirst({
+      where: {
+        restaurantId: table.restaurantId,
+        tableId: table.id,
+        status: DiningSessionStatus.OPEN,
+      },
+      select: { id: true },
+    });
+    if (!session) return [];
 
     return this.prisma.order.findMany({
-      where: { restaurantId: table.restaurantId, tableId: table.id },
+      where: {
+        restaurantId: table.restaurantId,
+        tableId: table.id,
+        diningSessionId: session.id,
+      },
       take: 20,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: {

@@ -45,6 +45,23 @@ const nonTerminalStatuses: OrderStatus[] = [
   OrderStatus.READY,
 ];
 
+export async function lockDiningTable(
+  transaction: Prisma.TransactionClient,
+  restaurantId: string,
+  tableId: string,
+) {
+  const [table] = await transaction.$queryRaw<
+    Array<{ id: string; isActive: boolean }>
+  >`
+    SELECT "id", "isActive"
+    FROM "RestaurantTable"
+    WHERE "id" = ${tableId}::uuid AND "restaurantId" = ${restaurantId}::uuid
+    FOR UPDATE
+  `;
+  if (!table) throw new NotFoundException('Table not found.');
+  return table;
+}
+
 function toSessionResponse(session: SessionWithOrders) {
   const nonCancelledTotal = session.orders.reduce(
     (total, order) =>
@@ -71,7 +88,7 @@ export class DiningSessionsService {
     assertCanManageTables(principal.role);
 
     return this.prisma.$transaction(async (transaction) => {
-      const table = await this.lockTable(
+      const table = await lockDiningTable(
         transaction,
         principal.restaurantId,
         tableId,
@@ -132,7 +149,7 @@ export class DiningSessionsService {
       });
       if (!reference) throw new NotFoundException('Dining session not found.');
 
-      await this.lockTable(
+      await lockDiningTable(
         transaction,
         principal.restaurantId,
         reference.tableId,
@@ -259,22 +276,5 @@ export class DiningSessionsService {
       });
     }
     return summaries;
-  }
-
-  private async lockTable(
-    transaction: Prisma.TransactionClient,
-    restaurantId: string,
-    tableId: string,
-  ) {
-    const [table] = await transaction.$queryRaw<
-      Array<{ id: string; isActive: boolean }>
-    >`
-      SELECT "id", "isActive"
-      FROM "RestaurantTable"
-      WHERE "id" = ${tableId}::uuid AND "restaurantId" = ${restaurantId}::uuid
-      FOR UPDATE
-    `;
-    if (!table) throw new NotFoundException('Table not found.');
-    return table;
   }
 }

@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { DiningSessionStatus } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 
 const publicCodePattern = /^[A-Za-z0-9_-]{43}$/;
@@ -17,6 +18,11 @@ export class PublicDiningService {
       select: {
         name: true,
         restaurant: { select: { id: true, name: true } },
+        diningSessions: {
+          where: { status: DiningSessionStatus.OPEN },
+          select: { id: true },
+          take: 1,
+        },
       },
     });
     if (!table) throw new NotFoundException('Table not found.');
@@ -61,6 +67,7 @@ export class PublicDiningService {
     return {
       restaurant: { name: table.restaurant.name },
       table: { name: table.name },
+      acceptingOrders: table.diningSessions.length > 0,
       categories,
     };
   }

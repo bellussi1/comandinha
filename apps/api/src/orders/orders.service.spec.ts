@@ -119,6 +119,9 @@ describe('OrdersService.createPublicOrder', () => {
       ],
     };
     const transaction = {
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ id: 'table-id', isActive: true }]),
       restaurantTable: {
         findFirst: vi.fn().mockResolvedValue({
           id: 'table-id',
@@ -181,6 +184,9 @@ describe('OrdersService.createPublicOrder', () => {
       ],
     };
     const transaction = {
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValue([{ id: 'table-id', isActive: true }]),
       restaurantTable: {
         findFirst: vi.fn().mockResolvedValue({
           id: 'table-id',
@@ -202,6 +208,9 @@ describe('OrdersService.createPublicOrder', () => {
             isActive: true,
           },
         ]),
+      },
+      diningSession: {
+        findFirst: vi.fn().mockResolvedValue({ id: 'session-id' }),
       },
       orderItem: { createMany: vi.fn() },
     };

@@ -3,8 +3,12 @@ import { ValidationPipe } from '@nestjs/common';
 import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { hashPassword } from '../src/auth/password-hasher.js';
 import { PrismaService } from '../src/database/prisma.service.js';
-import { OrderStatus } from '../src/generated/prisma/client.js';
+import {
+  DiningSessionStatus,
+  OrderStatus,
+} from '../src/generated/prisma/client.js';
 import { configureOpenApi } from '../src/openapi.js';
 import { AppModule } from '../src/app.module.js';
 
@@ -19,6 +23,11 @@ const restaurantB = {
   slug: `public-dining-b-${suffix}`,
   name: 'Public Dining B',
 };
+const ownerAccount = {
+  name: 'Public Dining Owner',
+  email: `public-dining-owner-${suffix}@example.test`,
+  password: 'public-dining-integration-password',
+};
 
 let app: INestApplication | undefined;
 let baseUrl: string;
@@ -29,6 +38,8 @@ let inactiveTableCode: string;
 let productAId: string;
 let unavailableProductId: string;
 let otherTenantProductId: string;
+let primarySessionId: string;
+let ownerToken: string;
 
 async function request(
   path: string,
@@ -37,11 +48,13 @@ async function request(
     body?: unknown;
     gateway?: boolean;
     clientKey?: string;
+    token?: string;
   } = {},
 ): Promise<Response> {
   return fetch(new URL(path, baseUrl), {
     method: options.method ?? 'GET',
     headers: {
+      ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
       ...(options.gateway
         ? { 'x-comandinha-gateway-secret': gatewaySecret }
         : {}),
@@ -78,6 +91,16 @@ beforeAll(async () => {
   ]);
   restaurantAId = firstRestaurant.id;
   restaurantBId = secondRestaurant.id;
+  const owner = await prisma.user.create({
+    data: {
+      name: ownerAccount.name,
+      email: ownerAccount.email,
+      passwordHash: await hashPassword(ownerAccount.password),
+    },
+  });
+  await prisma.membership.create({
+    data: { userId: owner.id, restaurantId: restaurantAId, role: 'OWNER' },
+  });
 
   const [table, inactiveTable] = await Promise.all([
     prisma.restaurantTable.create({
@@ -98,6 +121,10 @@ beforeAll(async () => {
   ]);
   tableCode = table.publicCode;
   inactiveTableCode = inactiveTable.publicCode;
+  const primarySession = await prisma.diningSession.create({
+    data: { restaurantId: restaurantAId, tableId: table.id },
+  });
+  primarySessionId = primarySession.id;
 
   const [categoryA, emptyCategory, categoryB] = await Promise.all([
     prisma.catalogCategory.create({
@@ -196,6 +223,21 @@ beforeAll(async () => {
   configureOpenApi(app);
   await app.listen(0, '127.0.0.1');
   baseUrl = await app.getUrl();
+  const login = await fetch(new URL('/auth/sessions', baseUrl), {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-comandinha-gateway-secret': gatewaySecret,
+      'x-comandinha-client-key': 'c'.repeat(64),
+    },
+    body: JSON.stringify({
+      email: ownerAccount.email,
+      password: ownerAccount.password,
+      restaurantSlug: restaurantA.slug,
+    }),
+  });
+  expect(login.status).toBe(201);
+  ownerToken = ((await login.json()) as { sessionToken: string }).sessionToken;
 });
 
 afterAll(async () => {
@@ -208,6 +250,7 @@ afterAll(async () => {
       where: { id: { in: [restaurantAId, restaurantBId] } },
     });
   }
+  await prisma.user.deleteMany({ where: { email: ownerAccount.email } });
   await prisma.$disconnect();
   delete process.env.AUTH_GATEWAY_SECRET;
 });
@@ -219,6 +262,7 @@ describe('public QR menu and ordering with PostgreSQL', () => {
     await expect(response.json()).resolves.toEqual({
       restaurant: { name: restaurantA.name },
       table: { name: 'Mesa pública' },
+      acceptingOrders: true,
       categories: [
         {
           id: expect.any(String),
@@ -465,6 +509,7 @@ describe('public QR menu and ordering with PostgreSQL', () => {
         id: randomUUID(),
         restaurantId: restaurantAId,
         tableId: table.id,
+        diningSessionId: primarySessionId,
         status: OrderStatus.PENDING,
         notes: `private note ${index}`,
         totalInCents: 100,
@@ -492,6 +537,7 @@ describe('public QR menu and ordering with PostgreSQL', () => {
         id: index === 0 ? oldOrderId : randomUUID(),
         restaurantId: restaurantAId,
         tableId: table.id,
+        diningSessionId: primarySessionId,
         status: OrderStatus.PREPARING,
         totalInCents: 100,
         createdAt: new Date(now + index * 1000),
@@ -542,6 +588,162 @@ describe('public QR menu and ordering with PostgreSQL', () => {
     expect(results.filter(({ status }) => status === 429)).toHaveLength(1);
   });
 
+  it('shows a closed table menu but rejects checkout and lists no current orders', async () => {
+    const table = await prisma.restaurantTable.create({
+      data: {
+        restaurantId: restaurantAId,
+        name: `Mesa sem atendimento ${suffix}`,
+        publicCode: randomBytes(32).toString('base64url'),
+      },
+    });
+    const menu = await request(`/public/tables/${table.publicCode}/menu`);
+    expect(menu.status).toBe(200);
+    await expect(menu.json()).resolves.toMatchObject({
+      table: { name: table.name },
+      acceptingOrders: false,
+    });
+
+    const before = await countOrdersForTable(table.id);
+    const checkout = await submitOrder(table.publicCode, {
+      requestId: randomUUID(),
+      items: [{ productId: productAId, quantity: 1 }],
+    });
+    expect(checkout.status).toBe(409);
+    expect(await countOrdersForTable(table.id)).toBe(before);
+    await expect(
+      (await request(`/public/tables/${table.publicCode}/orders`)).json(),
+    ).resolves.toEqual([]);
+  });
+
+  it('links orders to their session, preserves direct tracking and isolates reopened sessions', async () => {
+    const product = await prisma.catalogProduct.findUniqueOrThrow({
+      where: { id: productAId },
+      select: { priceInCents: true },
+    });
+    const table = await prisma.restaurantTable.create({
+      data: {
+        restaurantId: restaurantAId,
+        name: `Mesa com histórico ${suffix}`,
+        publicCode: randomBytes(32).toString('base64url'),
+      },
+    });
+    const firstSession = await prisma.diningSession.create({
+      data: { restaurantId: restaurantAId, tableId: table.id },
+    });
+    const firstRequestId = randomUUID();
+    const firstPayload = {
+      requestId: firstRequestId,
+      items: [{ productId: productAId, quantity: 1 }],
+    };
+    const firstOrderResponse = await submitOrder(
+      table.publicCode,
+      firstPayload,
+    );
+    expect(firstOrderResponse.status).toBe(201);
+    const firstOrder = (await firstOrderResponse.json()) as { id: string };
+    await expect(
+      prisma.order.findUniqueOrThrow({ where: { id: firstOrder.id } }),
+    ).resolves.toMatchObject({
+      diningSessionId: firstSession.id,
+      totalInCents: product.priceInCents,
+    });
+
+    await prisma.order.update({
+      where: { id: firstOrder.id },
+      data: { status: OrderStatus.DELIVERED },
+    });
+    const close = await request(`/sessions/${firstSession.id}/close`, {
+      method: 'POST',
+      token: ownerToken,
+    });
+    expect(close.status).toBe(200);
+    await expect(close.json()).resolves.toMatchObject({
+      closedTotalInCents: product.priceInCents,
+      status: DiningSessionStatus.CLOSED,
+    });
+
+    const retry = await submitOrder(table.publicCode, firstPayload);
+    expect(retry.status).toBe(201);
+    await expect(retry.json()).resolves.toMatchObject({ id: firstOrder.id });
+    await expect(
+      (await request(`/public/tables/${table.publicCode}/orders`)).json(),
+    ).resolves.toEqual([]);
+    await expect(
+      (
+        await request(
+          `/public/tables/${table.publicCode}/orders/${firstOrder.id}`,
+        )
+      ).json(),
+    ).resolves.toMatchObject({ id: firstOrder.id });
+
+    const secondSession = await prisma.diningSession.create({
+      data: { restaurantId: restaurantAId, tableId: table.id },
+    });
+    const secondOrder = await submitOrder(table.publicCode, {
+      requestId: randomUUID(),
+      items: [{ productId: productAId, quantity: 1 }],
+    });
+    expect(secondOrder.status).toBe(201);
+    const secondOrderBody = (await secondOrder.json()) as { id: string };
+    expect(secondOrderBody.id).not.toBe(firstOrder.id);
+    await expect(
+      prisma.order.findUniqueOrThrow({ where: { id: secondOrderBody.id } }),
+    ).resolves.toMatchObject({ diningSessionId: secondSession.id });
+    await expect(
+      (await request(`/public/tables/${table.publicCode}/orders`)).json(),
+    ).resolves.toMatchObject([
+      expect.objectContaining({ id: secondOrderBody.id }),
+    ]);
+  });
+
+  it('rejects checkout after a session is closed and links concurrent orders to exactly one session', async () => {
+    const table = await prisma.restaurantTable.create({
+      data: {
+        restaurantId: restaurantAId,
+        name: `Mesa em concorrência ${suffix}`,
+        publicCode: randomBytes(32).toString('base64url'),
+      },
+    });
+    const session = await prisma.diningSession.create({
+      data: { restaurantId: restaurantAId, tableId: table.id },
+    });
+    const closePromise = request(`/sessions/${session.id}/close`, {
+      method: 'POST',
+      token: ownerToken,
+    });
+    const orderPromise = submitOrder(table.publicCode, {
+      requestId: randomUUID(),
+      items: [{ productId: productAId, quantity: 1 }],
+    });
+    const [close, order] = await Promise.all([closePromise, orderPromise]);
+
+    if (close.status === 200) {
+      expect(order.status).toBe(409);
+      expect(
+        await prisma.order.count({ where: { diningSessionId: session.id } }),
+      ).toBe(0);
+    } else {
+      expect(close.status).toBe(409);
+      expect(order.status).toBe(201);
+      expect(
+        await prisma.order.count({
+          where: { diningSessionId: session.id, status: OrderStatus.PENDING },
+        }),
+      ).toBe(1);
+    }
+
+    const persisted = await prisma.diningSession.findUniqueOrThrow({
+      where: { id: session.id },
+    });
+    if (persisted.status === DiningSessionStatus.CLOSED) {
+      const rejectedAfterClosure = await submitOrder(table.publicCode, {
+        requestId: randomUUID(),
+        items: [{ productId: productAId, quantity: 1 }],
+      });
+      expect(rejectedAfterClosure.status).toBe(409);
+    }
+  });
+
   it('documents public menu and order contracts in OpenAPI', async () => {
     const response = await request('/openapi.json');
     expect(response.status).toBe(200);
@@ -582,6 +784,9 @@ describe('public QR menu and ordering with PostgreSQL', () => {
       openApi.components.schemas.CreatePublicOrderDto.properties?.items
         .maxItems,
     ).toBe(50);
+    expect(
+      openApi.components.schemas.PublicDiningMenuDto.properties,
+    ).toHaveProperty('acceptingOrders');
     expect(
       openApi.paths['/public/tables/{code}/orders'].post.responses,
     ).toHaveProperty('429');

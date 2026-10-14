@@ -113,6 +113,9 @@ export class PublicDiningMenuDto {
   @ApiProperty({ type: PublicTableSummaryDto })
   table!: PublicTableSummaryDto;
 
+  @ApiProperty({ type: Boolean })
+  acceptingOrders!: boolean;
+
   @ApiProperty({ type: [PublicMenuCategoryDto] })
   categories!: PublicMenuCategoryDto[];
 }

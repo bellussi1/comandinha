@@ -10,6 +10,7 @@ import {
 import {
   ApiBadRequestResponse,
   ApiBody,
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiHeader,
   ApiNotFoundResponse,
@@ -93,6 +94,9 @@ export class PublicDiningController {
   })
   @ApiBody({ type: CreatePublicOrderDto })
   @ApiCreatedResponse({ type: PublicOrderResponseDto })
+  @ApiConflictResponse({
+    description: 'A mesa não está com um atendimento aberto.',
+  })
   @ApiBadRequestResponse({
     description: 'Itens, quantidades ou observações inválidas.',
   })
@@ -105,7 +109,7 @@ export class PublicDiningController {
 
   @Get('orders')
   @ApiOperation({
-    summary: 'Lista os pedidos recentes desta mesa sem dados pessoais',
+    summary: 'Lista os pedidos recentes do atendimento aberto desta mesa',
   })
   @ApiParam({
     name: 'code',
@@ -129,7 +133,9 @@ export class PublicDiningController {
   })
   @ApiParam({ name: 'orderId', type: String, format: 'uuid' })
   @ApiOkResponse({ type: PublicOrderSummaryDto })
-  @ApiBadRequestResponse({ description: 'O identificador do pedido é inválido.' })
+  @ApiBadRequestResponse({
+    description: 'O identificador do pedido é inválido.',
+  })
   @ApiNotFoundResponse({ description: 'Mesa ou pedido não encontrado.' })
   getOrder(
     @Param('code') code: string,
