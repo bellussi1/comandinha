@@ -41,6 +41,7 @@ describe("public table menu gateway", () => {
     const menu = {
       restaurant: { name: "Casa" },
       table: { name: "Mesa 01" },
+      acceptingOrders: false,
       categories: [],
     };
     fetchMock.mockResolvedValue(Response.json(menu));

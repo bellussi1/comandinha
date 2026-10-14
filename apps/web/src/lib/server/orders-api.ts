@@ -59,6 +59,7 @@ const safeOrderMessages = new Set([
 const safePublicOrderMessages = new Set([
   "Order not found.",
   "Table not found.",
+  "This table is not accepting orders.",
   "One or more products are invalid.",
   "One or more products are unavailable.",
   "Duplicate products are not allowed.",

@@ -901,6 +901,164 @@
         ]
       }
     },
+    "/tables/{id}/session": {
+      "post": {
+        "operationId": "TablesController_openSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retorna o atendimento já aberto em uma repetição.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiningSessionResponseDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiningSessionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem abrir."
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          },
+          "409": {
+            "description": "A mesa está inativa."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Abre um atendimento para a mesa",
+        "tags": [
+          "tables"
+        ]
+      },
+      "get": {
+        "operationId": "TablesController_getSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiningSessionEnvelopeDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta o atendimento aberto e sua conta",
+        "tags": [
+          "tables"
+        ]
+      }
+    },
+    "/sessions/{id}/close": {
+      "post": {
+        "operationId": "DiningSessionsController_close",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiningSessionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Identificador inválido."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem encerrar."
+          },
+          "404": {
+            "description": "Atendimento não encontrado."
+          },
+          "409": {
+            "description": "Finalize ou cancele os pedidos antes de encerrar."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Encerra o atendimento após finalizar os pedidos",
+        "tags": [
+          "dining sessions"
+        ]
+      }
+    },
     "/orders": {
       "get": {
         "operationId": "OrdersController_list",
@@ -1187,6 +1345,9 @@
           "404": {
             "description": "Mesa não encontrada."
           },
+          "409": {
+            "description": "A mesa não está com um atendimento aberto."
+          },
           "429": {
             "description": "Limite de pedidos excedido."
           }
@@ -1227,7 +1388,7 @@
             "description": "Mesa não encontrada."
           }
         },
-        "summary": "Lista os pedidos recentes desta mesa sem dados pessoais",
+        "summary": "Lista os pedidos recentes do atendimento aberto desta mesa",
         "tags": [
           "public dining"
         ]
@@ -1793,6 +1954,33 @@
           }
         }
       },
+      "TableCurrentSessionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "projectedTotalInCents": {
+            "type": "number",
+            "minimum": 0
+          },
+          "nonTerminalOrderCount": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "openedAt",
+          "projectedTotalInCents",
+          "nonTerminalOrderCount"
+        ]
+      },
       "TableResponseDto": {
         "type": "object",
         "properties": {
@@ -1826,6 +2014,15 @@
           "activeOrderCount": {
             "type": "number",
             "minimum": 0
+          },
+          "currentSession": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TableCurrentSessionDto"
+              }
+            ]
           }
         },
         "required": [
@@ -1866,6 +2063,13 @@
           }
         }
       },
+      "DiningSessionStatus": {
+        "type": "string",
+        "enum": [
+          "OPEN",
+          "CLOSED"
+        ]
+      },
       "OrderStatus": {
         "type": "string",
         "enum": [
@@ -1875,6 +2079,154 @@
           "DELIVERED",
           "CANCELLED"
         ]
+      },
+      "DiningSessionOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameSnapshot": {
+            "type": "string"
+          },
+          "unitPriceInCents": {
+            "type": "number",
+            "minimum": 0
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineTotalInCents": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "nameSnapshot",
+          "unitPriceInCents",
+          "quantity",
+          "lineTotalInCents"
+        ]
+      },
+      "DiningSessionOrderDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          },
+          "totalInCents": {
+            "type": "number",
+            "minimum": 0
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiningSessionOrderItemDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "totalInCents",
+          "createdAt",
+          "items"
+        ]
+      },
+      "DiningSessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tableId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DiningSessionStatus"
+              }
+            ]
+          },
+          "openedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "closedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "closedTotalInCents": {
+            "type": "number",
+            "minimum": 0,
+            "nullable": true
+          },
+          "projectedTotalInCents": {
+            "type": "number",
+            "minimum": 0
+          },
+          "nonTerminalOrderCount": {
+            "type": "number",
+            "minimum": 0
+          },
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiningSessionOrderDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "tableId",
+          "status",
+          "openedAt",
+          "projectedTotalInCents",
+          "nonTerminalOrderCount",
+          "orders"
+        ]
+      },
+      "DiningSessionEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "nullable": true,
+            "type": "object",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DiningSessionResponseDto"
+              }
+            ]
+          }
+        }
       },
       "OrderTableSummaryDto": {
         "type": "object",
@@ -2136,6 +2488,9 @@
           "table": {
             "$ref": "#/components/schemas/PublicTableSummaryDto"
           },
+          "acceptingOrders": {
+            "type": "boolean"
+          },
           "categories": {
             "type": "array",
             "items": {
@@ -2146,6 +2501,7 @@
         "required": [
           "restaurant",
           "table",
+          "acceptingOrders",
           "categories"
         ]
       },

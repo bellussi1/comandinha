@@ -14,6 +14,10 @@ import {
 
 type TableResponse =
   ApiPaths["/tables"]["get"]["responses"][200]["content"]["application/json"][number];
+type TableSessionResponse =
+  ApiPaths["/tables/{id}/session"]["post"]["responses"][201]["content"]["application/json"];
+type TableSessionEnvelope =
+  ApiPaths["/tables/{id}/session"]["get"]["responses"][200]["content"]["application/json"];
 type CreateTableBody =
   ApiPaths["/tables"]["post"]["requestBody"]["content"]["application/json"];
 type UpdateTableBody =
@@ -23,6 +27,7 @@ type TableBody = CreateTableBody | UpdateTableBody;
 type TableOperation = {
   apiPath: string;
   methods: readonly ("GET" | "POST" | "PATCH")[];
+  resource: "tables" | "sessions";
   bodyFields?: readonly string[];
   requiredFields?: readonly string[];
 };
@@ -36,14 +41,59 @@ const safeTableMessages = new Set([
   "A table with this name already exists.",
   "Only restaurant owners and administrators can change tables.",
 ]);
+const safeSessionMessageTranslations = new Map([
+  ["Table not found.", "Mesa não encontrada."],
+  ["Dining session not found.", "Atendimento não encontrado."],
+  [
+    "An inactive table cannot be opened.",
+    "Ative a mesa antes de abrir um atendimento.",
+  ],
+  [
+    "Only restaurant owners and administrators can manage tables.",
+    "Apenas proprietário ou administrador pode gerenciar atendimentos.",
+  ],
+  [
+    "All orders must be delivered or cancelled before closing this table.",
+    "Finalize ou cancele os pedidos antes de fechar a conta.",
+  ],
+  ["The session total is invalid.", "O total da conta é inválido."],
+  [
+    "The session changed before it closed.",
+    "O atendimento mudou antes de ser encerrado. Atualize a tela e tente novamente.",
+  ],
+]);
+
+function safeSessionError(value: unknown): { message: string } {
+  const safe = safeUpstreamError(
+    value,
+    new Set(safeSessionMessageTranslations.keys()),
+    "Não foi possível processar o atendimento agora.",
+  );
+  return {
+    message: safeSessionMessageTranslations.get(safe.message) ?? safe.message,
+  };
+}
 
 function resolveTableOperation(segments: string[]): TableOperation | undefined {
   if (segments.length === 0) {
     return {
       apiPath: "/tables",
       methods: ["GET", "POST"],
+      resource: "tables",
       bodyFields: ["name"],
       requiredFields: ["name"],
+    };
+  }
+
+  if (
+    segments.length === 2 &&
+    uuidPattern.test(segments[0]) &&
+    segments[1] === "session"
+  ) {
+    return {
+      apiPath: `/tables/${segments[0]}/session`,
+      methods: ["GET", "POST"],
+      resource: "sessions",
     };
   }
 
@@ -51,6 +101,7 @@ function resolveTableOperation(segments: string[]): TableOperation | undefined {
     return {
       apiPath: `/tables/${segments[0]}`,
       methods: ["GET", "PATCH"],
+      resource: "tables",
       bodyFields: tableFields,
     };
   }
@@ -59,7 +110,12 @@ function resolveTableOperation(segments: string[]): TableOperation | undefined {
 }
 
 function isMalformedIdPath(segments: string[]): boolean {
-  return segments.length === 1 && !uuidPattern.test(segments[0]);
+  return (
+    (segments.length === 1 && !uuidPattern.test(segments[0])) ||
+    (segments.length === 2 &&
+      segments[1] === "session" &&
+      !uuidPattern.test(segments[0]))
+  );
 }
 
 function isValidTableBody(
@@ -121,7 +177,7 @@ async function forwardAdminTableRequest(
   }
 
   let body: TableBody | undefined;
-  if (isMutation) {
+  if (isMutation && operation.bodyFields) {
     const contentType = request.headers
       .get("content-type")
       ?.split(";", 1)[0]
@@ -158,7 +214,7 @@ async function forwardAdminTableRequest(
       !isValidTableBody(
         parsed,
         method,
-        operation.bodyFields ?? [],
+        operation.bodyFields,
         operation.requiredFields ?? [],
       )
     ) {
@@ -198,14 +254,22 @@ async function forwardAdminTableRequest(
     });
   }
 
-  return gatewayJsonResponse(
-    result.response.ok
-      ? (result.body as TableResponse | TableResponse[])
+  const safeError =
+    operation.resource === "sessions"
+      ? safeSessionError(result.body)
       : safeUpstreamError(
           result.body,
           safeTableMessages,
           "Não foi possível processar mesas agora.",
-        ),
+        );
+  return gatewayJsonResponse(
+    result.response.ok
+      ? (result.body as
+          | TableResponse
+          | TableResponse[]
+          | TableSessionResponse
+          | TableSessionEnvelope)
+      : safeError,
     result.response.status,
   );
 }
@@ -224,6 +288,71 @@ export async function proxyAdminTableRequest(
     );
   }
   return forwardAdminTableRequest(request, operation);
+}
+
+export async function proxyAdminSessionCloseRequest(
+  request: Request,
+  sessionId: string,
+): Promise<Response> {
+  if (!uuidPattern.test(sessionId)) {
+    return clientErrorResponse(400, "O identificador do atendimento é inválido.");
+  }
+  if (request.method.toUpperCase() !== "POST") {
+    return clientErrorResponse(405, "Método não permitido para esta rota.");
+  }
+  if (new URL(request.url).searchParams.size > 0) {
+    return clientErrorResponse(400, "Os filtros informados não são permitidos.");
+  }
+  if (request.body) {
+    await request.body.cancel().catch(() => undefined);
+    return clientErrorResponse(400, "Esta operação não aceita corpo.");
+  }
+  if (!isTrustedMutationOrigin(request)) {
+    return clientErrorResponse(403, "Origem não autorizada.");
+  }
+
+  const sessionToken = await readAdminSessionCookie();
+  if (!sessionToken || !/^[A-Za-z0-9_-]{43}$/.test(sessionToken)) {
+    return clientErrorResponse(
+      401,
+      "Sessão administrativa ausente ou inválida.",
+    );
+  }
+
+  const apiOrigin = getInternalApiOrigin();
+  if (!apiOrigin) {
+    return clientErrorResponse(
+      503,
+      "O serviço de atendimentos está indisponível.",
+    );
+  }
+
+  const result = await fetchApi(
+    new URL(`/sessions/${sessionId}/close`, `${apiOrigin}/`),
+    {
+      method: "POST",
+      headers: new Headers({ authorization: `Bearer ${sessionToken}` }),
+    },
+  );
+  if (result.kind === "network-error") {
+    return clientErrorResponse(
+      502,
+      "Não foi possível encerrar o atendimento agora.",
+    );
+  }
+  if (result.kind === "invalid-json" || result.kind === "no-content") {
+    return clientErrorResponse(
+      502,
+      "A resposta do serviço de atendimentos é inválida.",
+    );
+  }
+
+  return gatewayJsonResponse(
+    result.response.ok
+      ? (result.body as TableSessionResponse)
+      : safeSessionError(result.body),
+    result.response.status,
+  );
 }
 
 export async function proxyPublicTableMenuRequest(

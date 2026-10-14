@@ -23,6 +23,7 @@ const orderId = "ad97f868-d026-4ca8-a765-dd34acdb643f";
 const menu: PublicMenuResponse = {
   restaurant: { name: "Casa do Enzo" },
   table: { name: "Mesa 01" },
+  acceptingOrders: true,
   categories: [
     {
       id: "82e80217-0035-4da6-9e6f-76221a172fda",

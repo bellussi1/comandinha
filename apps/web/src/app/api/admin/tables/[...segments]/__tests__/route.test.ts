@@ -47,6 +47,7 @@ beforeEach(() => {
   process.env.APP_ORIGIN = origin;
   Reflect.set(process.env, "NODE_ENV", "test");
   jest.clearAllMocks();
+  fetchMock.mockReset();
   jest.mocked(readAdminSessionCookie).mockResolvedValue(sessionToken);
   jest.mocked(isTrustedMutationOrigin).mockReturnValue(true);
   global.fetch = fetchMock;
@@ -57,6 +58,44 @@ afterAll(() => {
 });
 
 describe("same-origin table gateway", () => {
+  it("opens and reads a table session using the admin gateway", async () => {
+    const session = {
+      id: "d4abcc94-e591-4d8d-980a-056ae9a4b8de",
+      tableId,
+      status: "OPEN",
+      orders: [],
+    };
+    fetchMock
+      .mockResolvedValueOnce(Response.json(session, { status: 201 }))
+      .mockResolvedValueOnce(Response.json(session, { status: 200 }))
+      .mockResolvedValueOnce(Response.json({ session }, { status: 200 }));
+
+    const opened = await POST(
+      request(`${tableId}/session`, { method: "POST", headers: { origin } }),
+      context([tableId, "session"]),
+    );
+    const repeatedOpen = await POST(
+      request(`${tableId}/session`, { method: "POST", headers: { origin } }),
+      context([tableId, "session"]),
+    );
+    const current = await GET(
+      request(`${tableId}/session`),
+      context([tableId, "session"]),
+    );
+
+    expect([opened.status, repeatedOpen.status, current.status]).toEqual([
+      201, 200, 200,
+    ]);
+    await expect(current.json()).resolves.toEqual({ session });
+    expect(fetchMock.mock.calls.map(([target]) => target)).toEqual([
+      new URL(`http://127.0.0.1:3001/tables/${tableId}/session`),
+      new URL(`http://127.0.0.1:3001/tables/${tableId}/session`),
+      new URL(`http://127.0.0.1:3001/tables/${tableId}/session`),
+    ]);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: "POST" });
+    expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty("body");
+  });
+
   it("serves the collection URL for listing and creating tables", async () => {
     fetchMock.mockResolvedValueOnce(Response.json([]));
     const list = await GETCollection(request(""));

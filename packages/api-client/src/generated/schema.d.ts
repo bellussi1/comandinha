@@ -183,6 +183,41 @@ export interface paths {
         patch: operations["TablesController_update"];
         trace?: never;
     };
+    "/tables/{id}/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta o atendimento aberto e sua conta */
+        get: operations["TablesController_getSession"];
+        put?: never;
+        /** Abre um atendimento para a mesa */
+        post: operations["TablesController_openSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/sessions/{id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Encerra o atendimento após finalizar os pedidos */
+        post: operations["DiningSessionsController_close"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders": {
         parameters: {
             query?: never;
@@ -275,7 +310,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Lista os pedidos recentes desta mesa sem dados pessoais */
+        /** Lista os pedidos recentes do atendimento aberto desta mesa */
         get: operations["PublicDiningController_listOrders"];
         put?: never;
         /** Cria um pedido público usando o preço atual do cardápio */
@@ -462,6 +497,14 @@ export interface components {
             /** @description Permite restaurar um produto arquivado. */
             isActive?: boolean;
         };
+        TableCurrentSessionDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            openedAt: string;
+            projectedTotalInCents: number;
+            nonTerminalOrderCount: number;
+        };
         TableResponseDto: {
             /** Format: uuid */
             id: string;
@@ -475,6 +518,7 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
             activeOrderCount: number;
+            currentSession?: components["schemas"]["TableCurrentSessionDto"] | null;
         };
         CreateTableDto: {
             /** @example Mesa 01 */
@@ -485,7 +529,47 @@ export interface components {
             isActive?: boolean;
         };
         /** @enum {string} */
+        DiningSessionStatus: "OPEN" | "CLOSED";
+        /** @enum {string} */
         OrderStatus: "PENDING" | "PREPARING" | "READY" | "DELIVERED" | "CANCELLED";
+        DiningSessionOrderItemDto: {
+            /** Format: uuid */
+            id: string;
+            nameSnapshot: string;
+            unitPriceInCents: number;
+            quantity: number;
+            notes?: string | null;
+            lineTotalInCents: number;
+        };
+        DiningSessionOrderDto: {
+            /** Format: uuid */
+            id: string;
+            status: components["schemas"]["OrderStatus"];
+            totalInCents: number;
+            /** Format: date-time */
+            createdAt: string;
+            items: components["schemas"]["DiningSessionOrderItemDto"][];
+        };
+        DiningSessionResponseDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            restaurantId: string;
+            /** Format: uuid */
+            tableId: string;
+            status: components["schemas"]["DiningSessionStatus"];
+            /** Format: date-time */
+            openedAt: string;
+            /** Format: date-time */
+            closedAt?: string | null;
+            closedTotalInCents?: number | null;
+            projectedTotalInCents: number;
+            nonTerminalOrderCount: number;
+            orders: components["schemas"]["DiningSessionOrderDto"][];
+        };
+        DiningSessionEnvelopeDto: {
+            session?: components["schemas"]["DiningSessionResponseDto"] | null;
+        };
         OrderTableSummaryDto: {
             /** Format: uuid */
             id: string;
@@ -555,6 +639,7 @@ export interface components {
         PublicDiningMenuDto: {
             restaurant: components["schemas"]["PublicRestaurantSummaryDto"];
             table: components["schemas"]["PublicTableSummaryDto"];
+            acceptingOrders: boolean;
             categories: components["schemas"]["PublicMenuCategoryDto"][];
         };
         CreatePublicOrderItemDto: {
@@ -1439,6 +1524,169 @@ export interface operations {
             };
         };
     };
+    TablesController_getSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiningSessionEnvelopeDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    TablesController_openSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Retorna o atendimento já aberto em uma repetição. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiningSessionResponseDto"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiningSessionResponseDto"];
+                };
+            };
+            /** @description Dados ou identificador inválidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem abrir. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Mesa não encontrada. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A mesa está inativa. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DiningSessionsController_close: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiningSessionResponseDto"];
+                };
+            };
+            /** @description Identificador inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sessão administrativa ausente ou inválida. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Apenas OWNER e ADMIN podem encerrar. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Atendimento não encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Finalize ou cancele os pedidos antes de encerrar. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     OrdersController_list: {
         parameters: {
             query?: {
@@ -1704,6 +1952,13 @@ export interface operations {
             };
             /** @description Mesa não encontrada. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A mesa não está com um atendimento aberto. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

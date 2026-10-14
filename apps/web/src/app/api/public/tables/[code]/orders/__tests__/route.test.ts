@@ -60,6 +60,7 @@ beforeEach(() => {
   process.env.APP_ORIGIN = origin;
   Reflect.set(process.env, "NODE_ENV", "test");
   jest.clearAllMocks();
+  fetchMock.mockReset();
   jest.mocked(isTrustedMutationOrigin).mockReturnValue(true);
   jest
     .mocked(consumePublicOrderAttempt)
@@ -72,6 +73,33 @@ afterAll(() => {
 });
 
 describe("public table orders gateway", () => {
+  it("preserves a safe conflict when the table has no open session", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { message: "This table is not accepting orders.", stack: "private" },
+        { status: 409 },
+      ),
+    );
+    const response = await POST(
+      request({
+        method: "POST",
+        body: JSON.stringify({
+          requestId,
+          items: [
+            { productId: "a8bb4d2e-f126-4b11-b85c-6116b6a39701", quantity: 1 },
+          ],
+        }),
+        headers: { origin },
+      }),
+      context(),
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      message: "This table is not accepting orders.",
+    });
+  });
+
   it("lists summaries without an admin session or service credentials", async () => {
     fetchMock.mockResolvedValue(Response.json([]));
     const response = await GET(request(), context());
