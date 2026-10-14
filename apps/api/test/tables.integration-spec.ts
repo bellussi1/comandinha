@@ -5,6 +5,7 @@ import { NestFactory } from '@nestjs/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { hashPassword } from '../src/auth/password-hasher.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { OrderStatus } from '../src/generated/prisma/client.js';
 import { configureOpenApi } from '../src/openapi.js';
 import { AppModule } from '../src/app.module.js';
 
@@ -334,5 +335,204 @@ describe('tenant-scoped table management with PostgreSQL', () => {
         })
       ).status,
     ).toBe(404);
+  });
+});
+
+describe('table dining sessions with PostgreSQL', () => {
+  async function createSessionTable(token: string, name: string) {
+    const created = await createTable(token, name);
+    expect(created.response.status).toBe(201);
+    return created.body;
+  }
+
+  async function openSession(tableId: string, token = ownerToken) {
+    return request(`/tables/${tableId}/session`, { method: 'POST', token });
+  }
+
+  async function closeSession(sessionId: string, token = ownerToken) {
+    return request(`/sessions/${sessionId}/close`, { method: 'POST', token });
+  }
+
+  it('opens idempotently, lists the current summary and lets staff read the session', async () => {
+    const table = await createSessionTable(ownerToken, 'Sessão para consulta');
+    const first = await openSession(String(table.id));
+    expect(first.status).toBe(201);
+    const firstBody = (await first.json()) as Record<string, unknown>;
+    expect(firstBody).toMatchObject({
+      restaurantId: restaurantAId,
+      tableId: table.id,
+      status: 'OPEN',
+      projectedTotalInCents: 0,
+      nonTerminalOrderCount: 0,
+    });
+
+    const retried = await openSession(String(table.id));
+    expect(retried.status).toBe(200);
+    await expect(retried.json()).resolves.toMatchObject({ id: firstBody.id });
+
+    const read = await request(`/tables/${String(table.id)}/session`, {
+      token: staffToken,
+    });
+    expect(read.status).toBe(200);
+    await expect(read.json()).resolves.toMatchObject({
+      session: { id: firstBody.id, status: 'OPEN', orders: [] },
+    });
+
+    const tables = await request('/tables', { token: ownerToken });
+    const listed = (await tables.json()) as Array<Record<string, unknown>>;
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: table.id,
+          currentSession: expect.objectContaining({
+            id: firstBody.id,
+            projectedTotalInCents: 0,
+            nonTerminalOrderCount: 0,
+          }),
+        }),
+      ]),
+    );
+  });
+
+  it('blocks closure until active orders are terminal and saves only delivered totals', async () => {
+    const table = await createSessionTable(ownerToken, 'Sessão com pedidos');
+    const opened = await openSession(String(table.id));
+    const session = (await opened.json()) as { id: string };
+
+    for (const status of [
+      OrderStatus.PENDING,
+      OrderStatus.PREPARING,
+      OrderStatus.READY,
+    ]) {
+      await prisma.order.create({
+        data: {
+          restaurantId: restaurantAId,
+          tableId: String(table.id),
+          diningSessionId: session.id,
+          status,
+          totalInCents: 900,
+        },
+      });
+      expect((await closeSession(session.id)).status).toBe(409);
+      await prisma.order.updateMany({
+        where: { tableId: String(table.id), diningSessionId: session.id },
+        data: { status: OrderStatus.CANCELLED },
+      });
+    }
+
+    await prisma.order.createMany({
+      data: [
+        {
+          restaurantId: restaurantAId,
+          tableId: String(table.id),
+          diningSessionId: session.id,
+          status: OrderStatus.DELIVERED,
+          totalInCents: 1_200,
+        },
+        {
+          restaurantId: restaurantAId,
+          tableId: String(table.id),
+          diningSessionId: session.id,
+          status: OrderStatus.CANCELLED,
+          totalInCents: 700,
+        },
+      ],
+    });
+
+    const closed = await closeSession(session.id);
+    expect(closed.status).toBe(200);
+    await expect(closed.json()).resolves.toMatchObject({
+      id: session.id,
+      status: 'CLOSED',
+      closedTotalInCents: 1_200,
+      closedAt: expect.any(String),
+    });
+
+    const retried = await closeSession(session.id);
+    expect(retried.status).toBe(200);
+    await expect(retried.json()).resolves.toMatchObject({
+      id: session.id,
+      closedTotalInCents: 1_200,
+    });
+
+    const reopened = await openSession(String(table.id));
+    expect(reopened.status).toBe(201);
+    const reopenedSession = (await reopened.json()) as Record<string, unknown>;
+    expect(reopenedSession).toMatchObject({
+      status: 'OPEN',
+      projectedTotalInCents: 0,
+    });
+    expect(reopenedSession.id).not.toBe(session.id);
+  });
+
+  it('closes an empty session at zero and keeps an inactive table unavailable', async () => {
+    const table = await createSessionTable(ownerToken, 'Sessão vazia');
+    const opened = await openSession(String(table.id));
+    const session = (await opened.json()) as { id: string };
+    const closed = await closeSession(session.id);
+    expect(closed.status).toBe(200);
+    await expect(closed.json()).resolves.toMatchObject({
+      closedTotalInCents: 0,
+      status: 'CLOSED',
+    });
+
+    const inactive = await createSessionTable(ownerToken, 'Mesa inativa');
+    const update = await request(`/tables/${String(inactive.id)}`, {
+      method: 'PATCH',
+      token: ownerToken,
+      body: { isActive: false },
+    });
+    expect(update.status).toBe(200);
+    expect((await openSession(String(inactive.id))).status).toBe(409);
+  });
+
+  it('restricts writes by role, hides other restaurants and prevents deactivation while open', async () => {
+    const ownerTable = await createSessionTable(ownerToken, 'Mesa do owner');
+    const ownerOpen = await openSession(String(ownerTable.id), staffToken);
+    expect(ownerOpen.status).toBe(403);
+    const openedOwner = await openSession(String(ownerTable.id));
+    const ownerSession = (await openedOwner.json()) as { id: string };
+    expect(openedOwner.status).toBe(201);
+
+    expect((await closeSession(ownerSession.id, staffToken)).status).toBe(403);
+    const deactivate = await request(`/tables/${String(ownerTable.id)}`, {
+      method: 'PATCH',
+      token: ownerToken,
+      body: { isActive: false },
+    });
+    expect(deactivate.status).toBe(409);
+
+    const adminTable = await createSessionTable(adminToken, 'Mesa do admin');
+    const openedAdmin = await openSession(String(adminTable.id), adminToken);
+    expect(openedAdmin.status).toBe(201);
+    const adminSession = (await openedAdmin.json()) as { id: string };
+    expect(
+      (
+        await request(`/tables/${String(adminTable.id)}/session`, {
+          token: ownerToken,
+        })
+      ).status,
+    ).toBe(404);
+    expect((await closeSession(adminSession.id, ownerToken)).status).toBe(404);
+  });
+
+  it('serializes concurrent opens and leaves only one open session for a table', async () => {
+    const table = await createSessionTable(ownerToken, 'Mesa concorrente');
+    const responses = await Promise.all([
+      openSession(String(table.id)),
+      openSession(String(table.id)),
+    ]);
+    expect(
+      responses.map(({ status }) => status).sort((left, right) => left - right),
+    ).toEqual([200, 201]);
+    const sessions = await Promise.all(
+      responses.map((response) => response.json() as Promise<{ id: string }>),
+    );
+    expect(sessions[0]?.id).toBe(sessions[1]?.id);
+    expect(
+      await prisma.diningSession.count({
+        where: { tableId: String(table.id), status: 'OPEN' },
+      }),
+    ).toBe(1);
   });
 });

@@ -5,10 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { OrderStatus } from '../generated/prisma/client.js';
+import {
+  DiningSessionStatus,
+  OrderStatus,
+} from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import type { AdminPrincipal } from '../auth/admin-principal.js';
 import { assertCanManageTables } from './tables-access.js';
+import { DiningSessionsService } from './dining-sessions.service.js';
 import type { CreateTableDto, UpdateTableDto } from './tables.dto.js';
 
 const activeOrderStatuses = [
@@ -19,7 +23,10 @@ const activeOrderStatuses = [
 
 @Injectable()
 export class TablesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly diningSessions: DiningSessionsService,
+  ) {}
 
   async list(principal: AdminPrincipal) {
     const tables = await this.prisma.restaurantTable.findMany({
@@ -51,7 +58,7 @@ export class TablesService {
             publicCode: randomBytes(32).toString('base64url'),
           },
         });
-        return { ...table, activeOrderCount: 0 };
+        return { ...table, activeOrderCount: 0, currentSession: null };
       } catch (error) {
         if (!this.hasPrismaCode(error, 'P2002')) throw error;
         if (this.isPublicCodeCollision(error) && attempt < 2) continue;
@@ -81,11 +88,37 @@ export class TablesService {
       throw new BadRequestException('Table name cannot be empty.');
 
     try {
-      const result = await this.prisma.restaurantTable.updateMany({
-        where: { id, restaurantId: principal.restaurantId },
-        data,
+      await this.prisma.$transaction(async (transaction) => {
+        const [table] = await transaction.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "RestaurantTable"
+          WHERE "id" = ${id}::uuid AND "restaurantId" = ${principal.restaurantId}::uuid
+          FOR UPDATE
+        `;
+        if (!table) throw new NotFoundException('Table not found.');
+
+        if (dto.isActive === false) {
+          const openSession = await transaction.diningSession.findFirst({
+            where: {
+              tableId: id,
+              restaurantId: principal.restaurantId,
+              status: DiningSessionStatus.OPEN,
+            },
+            select: { id: true },
+          });
+          if (openSession) {
+            throw new ConflictException(
+              'Close the current dining session before deactivating this table.',
+            );
+          }
+        }
+
+        const result = await transaction.restaurantTable.updateMany({
+          where: { id, restaurantId: principal.restaurantId },
+          data,
+        });
+        if (result.count !== 1) throw new NotFoundException('Table not found.');
       });
-      if (result.count !== 1) throw new NotFoundException('Table not found.');
     } catch (error) {
       if (this.hasPrismaCode(error, 'P2002')) {
         throw new ConflictException('A table with this name already exists.');
@@ -127,9 +160,14 @@ export class TablesService {
         typeof _count === 'object' && _count !== null ? (_count._all ?? 0) : 0;
       countByTableId.set(tableId, count);
     }
+    const sessionByTableId = await this.diningSessions.currentSummaries(
+      restaurantId,
+      tables.map(({ id }) => id),
+    );
     return tables.map((table) => ({
       ...table,
       activeOrderCount: countByTableId.get(table.id) ?? 0,
+      currentSession: sessionByTableId.get(table.id) ?? null,
     }));
   }
 

@@ -7,6 +7,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TableCurrentSessionDto } from './dining-sessions.dto.js';
 
 const validateWhenProvided = (_object: unknown, value: unknown) =>
   value !== undefined;
@@ -64,4 +65,7 @@ export class TableResponseDto {
 
   @ApiProperty({ type: Number, minimum: 0 })
   activeOrderCount!: number;
+
+  @ApiPropertyOptional({ type: TableCurrentSessionDto, nullable: true })
+  currentSession!: TableCurrentSessionDto | null;
 }
