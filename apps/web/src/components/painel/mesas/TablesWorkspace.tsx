@@ -28,10 +28,10 @@ import {
 } from "@/src/services/panel-tables";
 import { usePainelSession } from "../PainelSessionContext";
 import { TableForm } from "./TableForm";
-import { TableQrDialog } from "./TableQrDialog";
 
 type FormState = { table?: PanelTable } | null;
 type QrState = { table: PanelTable; publicUrl: string } | null;
+type QrDialogComponent = typeof import("./TableQrDialog").TableQrDialog;
 
 function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -51,6 +51,8 @@ export function TablesWorkspace() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(null);
   const [qr, setQr] = useState<QrState>(null);
+  const [QrDialog, setQrDialog] = useState<QrDialogComponent | null>(null);
+  const [qrLoadingTableId, setQrLoadingTableId] = useState<string | null>(null);
   const [pendingTableId, setPendingTableId] = useState<string | null>(null);
 
   const loadTables = useCallback(async () => {
@@ -110,9 +112,19 @@ export function TablesWorkspace() {
     }
   }
 
-  function openQr(table: PanelTable) {
-    const publicUrl = new URL(`/q/${table.publicCode}`, window.location.origin).toString();
-    setQr({ table, publicUrl });
+  async function openQr(table: PanelTable) {
+    setActionError(null);
+    setQrLoadingTableId(table.id);
+    try {
+      const module = await import("./TableQrDialog");
+      setQrDialog(() => module.TableQrDialog);
+      const publicUrl = new URL(`/q/${table.publicCode}`, window.location.origin).toString();
+      setQr({ table, publicUrl });
+    } catch {
+      setActionError("Não foi possível carregar o QR agora. Tente novamente.");
+    } finally {
+      setQrLoadingTableId(null);
+    }
   }
 
   const activeCount = tables.filter((table) => table.isActive).length;
@@ -214,14 +226,25 @@ export function TablesWorkspace() {
               </div>
               <div className="painel-table-actions">
                 <Button
-                  aria-label={`Ver QR de ${table.name}`}
+                  aria-busy={qrLoadingTableId === table.id}
+                  aria-label={qrLoadingTableId === table.id ? `Carregando QR de ${table.name}` : `Ver QR de ${table.name}`}
                   className="painel-table-qr-button"
-                  onClick={() => openQr(table)}
+                  disabled={qrLoadingTableId !== null}
+                  onClick={() => void openQr(table)}
                   type="button"
                   variant="outline"
                 >
-                  <QrCode aria-hidden="true" size={16} />
-                  Ver QR
+                  {qrLoadingTableId === table.id ? (
+                    <>
+                      <LoaderCircle aria-hidden="true" className="painel-spin" size={16} />
+                      Carregando QR…
+                    </>
+                  ) : (
+                    <>
+                      <QrCode aria-hidden="true" size={16} />
+                      Ver QR
+                    </>
+                  )}
                 </Button>
                 {canManage && (
                   <>
@@ -283,11 +306,13 @@ export function TablesWorkspace() {
         </DialogContent>
       </Dialog>
 
-      <TableQrDialog
-        onOpenChange={(open) => !open && setQr(null)}
-        publicUrl={qr?.publicUrl ?? ""}
-        table={qr?.table ?? null}
-      />
+      {QrDialog && (
+        <QrDialog
+          onOpenChange={(open) => !open && setQr(null)}
+          publicUrl={qr?.publicUrl ?? ""}
+          table={qr?.table ?? null}
+        />
+      )}
     </section>
   );
 }

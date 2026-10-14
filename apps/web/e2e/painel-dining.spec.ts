@@ -57,6 +57,23 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   let orderCreated = false;
   let submittedPayload: unknown;
   const tables = [{ ...table }];
+  const scriptRequests: string[] = [];
+  const successfulScriptResponses: string[] = [];
+
+  page.on('request', (request) => {
+    if (request.resourceType() === 'script' && request.url().includes('/_next/static/')) {
+      scriptRequests.push(request.url());
+    }
+  });
+  page.on('response', (response) => {
+    if (
+      response.request().resourceType() === 'script' &&
+      response.url().includes('/_next/static/') &&
+      response.ok()
+    ) {
+      successfulScriptResponses.push(response.url());
+    }
+  });
 
   const publicSummary = () => ({
     id: orderId,
@@ -285,9 +302,47 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   await page.getByRole('button', { name: 'Salvar alterações' }).click();
   await expect(page.getByRole('heading', { name: 'Mesa da varanda' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Ver QR de Mesa 01' }).click();
+  const scriptsBeforeQr = new Set(scriptRequests);
+  const responsesBeforeQr = new Set(successfulScriptResponses);
+  const qrButton = page.getByRole('button', { name: 'Ver QR de Mesa 01' });
+  let failedQrChunkUrl: string | null = null;
+  let notifyChunkIntercepted: () => void = () => {};
+  let releaseChunkFailure: () => void = () => {};
+  const qrChunkIntercepted = new Promise<void>((resolve) => {
+    notifyChunkIntercepted = resolve;
+  });
+  const allowChunkFailure = new Promise<void>((resolve) => {
+    releaseChunkFailure = resolve;
+  });
+  await page.route('**/_next/static/chunks/**', async (route) => {
+    const request = route.request();
+    if (request.resourceType() === 'script' && !scriptsBeforeQr.has(request.url())) {
+      failedQrChunkUrl = request.url();
+      notifyChunkIntercepted();
+      await allowChunkFailure;
+      await route.abort();
+      return;
+    }
+    await route.continue();
+  });
+  await qrButton.click();
+  await qrChunkIntercepted;
+  const qrLoadingButton = page.getByRole('button', { name: 'Carregando QR de Mesa 01' });
+  await expect(qrLoadingButton).toBeDisabled();
+  await expect(qrLoadingButton).toHaveAttribute('aria-busy', 'true');
+  releaseChunkFailure();
+  await expect(page.locator('.painel-inline-alert[role="alert"]'))
+    .toContainText('Não foi possível carregar o QR agora. Tente novamente.');
+  expect(failedQrChunkUrl).not.toBeNull();
+  await expect(qrButton).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Mesa 01' })).toBeVisible();
+  await page.unroute('**/_next/static/chunks/**');
+
+  await qrButton.click();
   const qrDialog = page.getByRole('dialog', { name: 'QR da Mesa 01' });
   await expect(qrDialog).toBeVisible();
+  await expect.poll(() => scriptRequests.filter((url) => !scriptsBeforeQr.has(url)).length).toBeGreaterThan(0);
+  await expect.poll(() => successfulScriptResponses.filter((url) => !responsesBeforeQr.has(url)).length).toBeGreaterThan(0);
   await qrDialog.evaluate(async (dialog) => {
     await Promise.all(
       dialog.getAnimations({ subtree: true }).map((animation) =>

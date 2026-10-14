@@ -137,9 +137,21 @@ describe('TablesWorkspace', () => {
     expect(screen.queryByRole('button', { name: 'Renomear Mesa 01' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Ver QR de Mesa 01' }));
 
-    expect(screen.getByRole('dialog', { name: 'QR da Mesa 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'QR da Mesa 01' })).toBeInTheDocument();
     expect(screen.getByLabelText('Link público')).toHaveValue(`http://localhost/q/${table.publicCode}`);
     expect(screen.getByTitle('QR Code da Mesa 01')).toBeInTheDocument();
+  });
+
+  it('loads QR content only after the user requests it', async () => {
+    const user = userEvent.setup();
+    renderWorkspace();
+
+    expect(await screen.findByText('Mesa 01')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'QR da Mesa 01' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Ver QR de Mesa 01' }));
+
+    expect(await screen.findByRole('dialog', { name: 'QR da Mesa 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('img', { name: 'Código QR para Mesa 01' })).toBeInTheDocument();
   });
 
   it('copies the public link, downloads SVG QR and preserves active-order visibility', async () => {
@@ -158,7 +170,7 @@ describe('TablesWorkspace', () => {
 
     expect(await screen.findByText('2 pedidos em andamento')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Ver QR de Mesa 01' }));
-    await user.click(screen.getByRole('button', { name: 'Copiar link' }));
+    await user.click(await screen.findByRole('button', { name: 'Copiar link' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(`http://localhost/q/${table.publicCode}`));
     expect(await screen.findByText('Link copiado')).toBeInTheDocument();
 
