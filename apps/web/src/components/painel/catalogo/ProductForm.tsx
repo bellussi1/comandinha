@@ -9,10 +9,14 @@ import { Textarea } from "@/src/components/ui/textarea";
 import { PriceField, parsePriceToCents } from "./PriceField";
 import { isSecureImageUrl } from "./catalog-validation";
 
-type Category = ApiPaths["/catalog/categories"]["get"]["responses"][200]["content"]["application/json"][number];
-type Product = ApiPaths["/catalog/products"]["get"]["responses"][200]["content"]["application/json"][number];
-type CreateProduct = ApiPaths["/catalog/products"]["post"]["requestBody"]["content"]["application/json"];
-type UpdateProduct = ApiPaths["/catalog/products/{id}"]["patch"]["requestBody"]["content"]["application/json"];
+type Category =
+  ApiPaths["/catalog/categories"]["get"]["responses"][200]["content"]["application/json"][number];
+type Product =
+  ApiPaths["/catalog/products"]["get"]["responses"][200]["content"]["application/json"][number];
+type CreateProduct =
+  ApiPaths["/catalog/products"]["post"]["requestBody"]["content"]["application/json"];
+type UpdateProduct =
+  ApiPaths["/catalog/products/{id}"]["patch"]["requestBody"]["content"]["application/json"];
 
 type ProductFormProps = {
   categories: Category[];
@@ -41,7 +45,9 @@ export function ProductForm({
     initialProduct?.categoryId ?? defaultCategoryId ?? "",
   );
   const [price, setPrice] = useState(
-    initialProduct ? (initialProduct.priceInCents / 100).toFixed(2).replace(".", ",") : "",
+    initialProduct
+      ? (initialProduct.priceInCents / 100).toFixed(2).replace(".", ",")
+      : "",
   );
   const [imageUrl, setImageUrl] = useState(initialProduct?.imageUrl ?? "");
   const [available, setAvailable] = useState(initialProduct?.available ?? true);
@@ -70,7 +76,9 @@ export function ProductForm({
     try {
       priceInCents = parsePriceToCents(price);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Confira o preço informado.");
+      setError(
+        cause instanceof Error ? cause.message : "Confira o preço informado.",
+      );
       return;
     }
 
@@ -124,6 +132,7 @@ export function ProductForm({
         <Button
           aria-label="Voltar ao catálogo"
           className="painel-back-button"
+          disabled={isBusy}
           onClick={onCancel}
           size="icon"
           type="button"
@@ -141,7 +150,10 @@ export function ProductForm({
       </div>
 
       <div className="painel-form-grid">
-        <label className="painel-field painel-field-wide" htmlFor="product-name">
+        <label
+          className="painel-field painel-field-wide"
+          htmlFor="product-name"
+        >
           <span>Nome do produto</span>
           <Input
             autoComplete="off"
@@ -163,7 +175,9 @@ export function ProductForm({
             required
             value={categoryId}
           >
-            <option disabled value="">Selecione uma categoria</option>
+            <option disabled value="">
+              Selecione uma categoria
+            </option>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
@@ -174,8 +188,13 @@ export function ProductForm({
 
         <PriceField onChange={setPrice} value={price} />
 
-        <label className="painel-field painel-field-wide" htmlFor="product-description">
-          <span>Descrição <small>(opcional)</small></span>
+        <label
+          className="painel-field painel-field-wide"
+          htmlFor="product-description"
+        >
+          <span>
+            Descrição <small>(opcional)</small>
+          </span>
           <Textarea
             id="product-description"
             maxLength={2_000}
@@ -186,7 +205,10 @@ export function ProductForm({
           />
         </label>
 
-        <label className="painel-field painel-field-wide" htmlFor="product-image-url">
+        <label
+          className="painel-field painel-field-wide"
+          htmlFor="product-image-url"
+        >
           <span>Imagem (URL HTTPS, opcional)</span>
           <span className="painel-input-with-icon">
             <ImagePlus aria-hidden="true" size={17} />
@@ -203,7 +225,9 @@ export function ProductForm({
         </label>
 
         <label className="painel-field" htmlFor="product-tags">
-          <span>Etiquetas <small>(opcional)</small></span>
+          <span>
+            Etiquetas <small>(opcional)</small>
+          </span>
           <Input
             id="product-tags"
             onChange={(event) => setDietaryTags(event.target.value)}
@@ -231,7 +255,11 @@ export function ProductForm({
         <label className="painel-toggle-card" htmlFor="product-available">
           <span>
             <strong>Disponível para pedidos</strong>
-            <small>{available ? "Pode ser solicitado agora" : "Temporariamente indisponível"}</small>
+            <small>
+              {available
+                ? "Pode ser solicitado agora"
+                : "Temporariamente indisponível"}
+            </small>
           </span>
           <input
             checked={available}
@@ -254,13 +282,26 @@ export function ProductForm({
         </label>
       </div>
 
-      {error && <p className="painel-form-alert" role="alert">{error}</p>}
+      {error && (
+        <p className="painel-form-alert" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="painel-form-actions">
-        <Button disabled={isBusy} onClick={onCancel} type="button" variant="outline">
+        <Button
+          disabled={isBusy}
+          onClick={onCancel}
+          type="button"
+          variant="outline"
+        >
           Cancelar
         </Button>
-        <Button className="painel-action-button" disabled={isBusy} type="submit">
+        <Button
+          className="painel-action-button"
+          disabled={isBusy}
+          type="submit"
+        >
           <Check aria-hidden="true" size={16} />
           {isBusy ? "Salvando…" : "Salvar produto"}
         </Button>

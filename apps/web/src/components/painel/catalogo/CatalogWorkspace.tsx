@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Archive,
   ArrowDownWideNarrow,
@@ -80,30 +80,35 @@ export function CatalogWorkspace() {
   const [editingProduct, setEditingProduct] = useState<CatalogProduct | null>(
     null,
   );
-  const [editingCategory, setEditingCategory] = useState<CatalogCategory | null>(
-    null,
-  );
+  const [editingCategory, setEditingCategory] =
+    useState<CatalogCategory | null>(null);
   const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingProductIds, setPendingProductIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
+  const pendingProductIdsRef = useRef(new Set<string>());
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [continueToFirstProduct, setContinueToFirstProduct] = useState(false);
-  const [defaultProductCategoryId, setDefaultProductCategoryId] = useState<string | null>(null);
+  const [defaultProductCategoryId, setDefaultProductCategoryId] = useState<
+    string | null
+  >(null);
   const [categoryToDelete, setCategoryToDelete] =
     useState<CatalogCategory | null>(null);
 
   const fetchCatalogSnapshot = useCallback(async () => {
-      const [nextCategories, nextProducts] = await Promise.all([
-        listCatalogCategories(),
-        listCatalogProducts({
-          ...(canManage && showArchived ? { includeArchived: true } : {}),
-        }),
-      ]);
-      return { categories: nextCategories, products: nextProducts };
+    const [nextCategories, nextProducts] = await Promise.all([
+      listCatalogCategories(),
+      listCatalogProducts({
+        ...(canManage && showArchived ? { includeArchived: true } : {}),
+      }),
+    ]);
+    return { categories: nextCategories, products: nextProducts };
   }, [canManage, showArchived]);
 
   const loadCatalog = useCallback(async () => {
@@ -152,8 +157,8 @@ export function CatalogWorkspace() {
       if (categoryFilter && product.categoryId !== categoryFilter) return false;
       if (!normalizedSearch) return true;
       const categoryName =
-        categories.find((category) => category.id === product.categoryId)?.name ??
-        "";
+        categories.find((category) => category.id === product.categoryId)
+          ?.name ?? "";
       return `${product.name} ${product.description ?? ""} ${categoryName}`
         .toLocaleLowerCase("pt-BR")
         .includes(normalizedSearch);
@@ -161,13 +166,17 @@ export function CatalogWorkspace() {
   }, [categories, categoryFilter, products, search]);
 
   function openProductEditor(product?: CatalogProduct) {
+    if (product && pendingProductIdsRef.current.has(product.id)) return;
     setActionError(null);
     setDefaultProductCategoryId(null);
     setEditingProduct(product ?? null);
     setEditor("product");
   }
 
-  function openCategoryEditor(category?: CatalogCategory, continueToProduct = false) {
+  function openCategoryEditor(
+    category?: CatalogCategory,
+    continueToProduct = false,
+  ) {
     setActionError(null);
     setEditingCategory(category ?? null);
     setContinueToFirstProduct(continueToProduct);
@@ -195,9 +204,7 @@ export function CatalogWorkspace() {
     await loadCatalog();
   }
 
-  async function saveCategory(
-    payload: CreateCatalogCategory,
-  ) {
+  async function saveCategory(payload: CreateCatalogCategory) {
     const createdCategory = await createCatalogCategory(payload);
     if (continueToFirstProduct) {
       setCategories((current) => [
@@ -221,46 +228,56 @@ export function CatalogWorkspace() {
     await loadCatalog();
   }
 
-  async function changeAvailability(product: CatalogProduct) {
+  async function runProductAction(
+    productId: string,
+    action: () => Promise<unknown>,
+    fallback: string,
+  ) {
+    if (pendingProductIdsRef.current.has(productId)) return;
     setActionError(null);
+    pendingProductIdsRef.current.add(productId);
+    setPendingProductIds(new Set(pendingProductIdsRef.current));
     try {
-      await updateCatalogProduct(product.id, { available: !product.available });
+      await action();
       await loadCatalog();
     } catch (error) {
-      setActionError(
-        messageFor(error, "Não foi possível atualizar a disponibilidade."),
-      );
+      setActionError(messageFor(error, fallback));
+    } finally {
+      pendingProductIdsRef.current.delete(productId);
+      setPendingProductIds(new Set(pendingProductIdsRef.current));
     }
+  }
+
+  async function changeAvailability(product: CatalogProduct) {
+    await runProductAction(
+      product.id,
+      () => updateCatalogProduct(product.id, { available: !product.available }),
+      "Não foi possível atualizar a disponibilidade.",
+    );
   }
 
   async function changeFeatured(product: CatalogProduct) {
-    setActionError(null);
-    try {
-      await updateCatalogProduct(product.id, { featured: !product.featured });
-      await loadCatalog();
-    } catch (error) {
-      setActionError(messageFor(error, "Não foi possível atualizar o destaque."));
-    }
+    await runProductAction(
+      product.id,
+      () => updateCatalogProduct(product.id, { featured: !product.featured }),
+      "Não foi possível atualizar o destaque.",
+    );
   }
 
   async function archiveProduct(product: CatalogProduct) {
-    setActionError(null);
-    try {
-      await archiveCatalogProduct(product.id);
-      await loadCatalog();
-    } catch (error) {
-      setActionError(messageFor(error, "Não foi possível arquivar o produto."));
-    }
+    await runProductAction(
+      product.id,
+      () => archiveCatalogProduct(product.id),
+      "Não foi possível arquivar o produto.",
+    );
   }
 
   async function restoreProduct(product: CatalogProduct) {
-    setActionError(null);
-    try {
-      await updateCatalogProduct(product.id, { isActive: true });
-      await loadCatalog();
-    } catch (error) {
-      setActionError(messageFor(error, "Não foi possível restaurar o produto."));
-    }
+    await runProductAction(
+      product.id,
+      () => updateCatalogProduct(product.id, { isActive: true }),
+      "Não foi possível restaurar o produto.",
+    );
   }
 
   async function deleteCategory() {
@@ -318,7 +335,10 @@ export function CatalogWorkspace() {
           <h1>Cardápio com ordem.</h1>
           <p>Organize produtos e categorias em um só lugar.</p>
         </div>
-        <span className="painel-catalog-count" aria-label={`${products.length} produtos e ${categories.length} categorias`}>
+        <span
+          className="painel-catalog-count"
+          aria-label={`${products.length} produtos e ${categories.length} categorias`}
+        >
           <Utensils aria-hidden="true" size={16} />
           {products.length} produtos
           <span aria-hidden="true">·</span>
@@ -326,7 +346,11 @@ export function CatalogWorkspace() {
         </span>
       </div>
 
-      <div className="painel-catalog-tabs" role="tablist" aria-label="Seções do catálogo">
+      <div
+        className="painel-catalog-tabs"
+        role="tablist"
+        aria-label="Seções do catálogo"
+      >
         <button
           aria-selected={tab === "products"}
           className={tab === "products" ? "is-active" : ""}
@@ -366,7 +390,11 @@ export function CatalogWorkspace() {
           <CircleAlert aria-hidden="true" size={23} />
           <h2>O catálogo não carregou.</h2>
           <p>{loadError}</p>
-          <Button onClick={() => void loadCatalog()} type="button" variant="outline">
+          <Button
+            onClick={() => void loadCatalog()}
+            type="button"
+            variant="outline"
+          >
             Tentar novamente
           </Button>
         </div>
@@ -391,7 +419,10 @@ export function CatalogWorkspace() {
                     value={search}
                   />
                 </label>
-                <label className="painel-filter-select" htmlFor="catalog-category-filter">
+                <label
+                  className="painel-filter-select"
+                  htmlFor="catalog-category-filter"
+                >
                   <ArrowDownWideNarrow aria-hidden="true" size={17} />
                   <select
                     id="catalog-category-filter"
@@ -422,11 +453,17 @@ export function CatalogWorkspace() {
             )}
             {canManage && (
               <Button
-                aria-label={categories.length === 0 ? "Criar categoria e incluir o primeiro produto" : undefined}
+                aria-label={
+                  categories.length === 0
+                    ? "Criar categoria e incluir o primeiro produto"
+                    : undefined
+                }
                 className="painel-action-button painel-new-button"
-                onClick={() => categories.length === 0
-                  ? openCategoryEditor(undefined, true)
-                  : openProductEditor()}
+                onClick={() =>
+                  categories.length === 0
+                    ? openCategoryEditor(undefined, true)
+                    : openProductEditor()
+                }
                 type="button"
               >
                 <Plus aria-hidden="true" size={17} />
@@ -437,8 +474,14 @@ export function CatalogWorkspace() {
 
           {filteredProducts.length === 0 ? (
             <div className="painel-catalog-state painel-empty-state">
-              <span className="painel-empty-mark"><PackageOpen aria-hidden="true" size={25} /></span>
-              <h2>{products.length === 0 ? "Nenhum produto por aqui" : "Nenhum resultado encontrado"}</h2>
+              <span className="painel-empty-mark">
+                <PackageOpen aria-hidden="true" size={25} />
+              </span>
+              <h2>
+                {products.length === 0
+                  ? "Nenhum produto por aqui"
+                  : "Nenhum resultado encontrado"}
+              </h2>
               <p>
                 {products.length === 0
                   ? categories.length === 0
@@ -450,9 +493,10 @@ export function CatalogWorkspace() {
           ) : (
             <div className="painel-product-list">
               {filteredProducts.map((product, index) => {
-                const categoryName = categories.find(
-                  (category) => category.id === product.categoryId,
-                )?.name ?? "Sem categoria";
+                const categoryName =
+                  categories.find(
+                    (category) => category.id === product.categoryId,
+                  )?.name ?? "Sem categoria";
                 return (
                   <article
                     className="painel-product-card"
@@ -481,29 +525,56 @@ export function CatalogWorkspace() {
                       <div className="painel-product-meta">
                         <span>{categoryName}</span>
                         {product.prepTimeMinutes && (
-                          <span><Clock3 aria-hidden="true" size={13} /> {product.prepTimeMinutes} min</span>
+                          <span>
+                            <Clock3 aria-hidden="true" size={13} />{" "}
+                            {product.prepTimeMinutes} min
+                          </span>
                         )}
                         {product.dietaryTags.slice(0, 2).map((tag) => (
-                          <span key={tag}><Leaf aria-hidden="true" size={12} /> {tag}</span>
+                          <span key={tag}>
+                            <Leaf aria-hidden="true" size={12} /> {tag}
+                          </span>
                         ))}
                       </div>
                     </div>
                     <div className="painel-product-price">
-                      <strong>{money.format(product.priceInCents / 100)}</strong>
-                      <span className={product.isActive ? product.available ? "is-available" : "is-unavailable" : "is-archived"}>
-                        {product.isActive ? product.available ? "Disponível" : "Indisponível" : "Arquivado"}
+                      <strong>
+                        {money.format(product.priceInCents / 100)}
+                      </strong>
+                      <span
+                        className={
+                          product.isActive
+                            ? product.available
+                              ? "is-available"
+                              : "is-unavailable"
+                            : "is-archived"
+                        }
+                      >
+                        {product.isActive
+                          ? product.available
+                            ? "Disponível"
+                            : "Indisponível"
+                          : "Arquivado"}
                       </span>
                     </div>
                     {canManage && (
-                      <div className="painel-product-actions" aria-label={`Ações de ${product.name}`}>
+                      <div
+                        className="painel-product-actions"
+                        aria-label={`Ações de ${product.name}`}
+                      >
                         {product.isActive ? (
                           <>
                             <button
                               aria-label={`Marcar ${product.name} ${product.available ? "indisponível" : "disponível"}`}
                               aria-pressed={product.available}
                               className="painel-icon-action"
+                              disabled={pendingProductIds.has(product.id)}
                               onClick={() => void changeAvailability(product)}
-                              title={product.available ? "Marcar indisponível" : "Marcar disponível"}
+                              title={
+                                product.available
+                                  ? "Marcar indisponível"
+                                  : "Marcar disponível"
+                              }
                               type="button"
                             >
                               <Check aria-hidden="true" size={17} />
@@ -512,41 +583,59 @@ export function CatalogWorkspace() {
                               </span>
                             </button>
                             <button
-                              aria-label={product.featured ? `Remover destaque de ${product.name}` : `Destacar ${product.name}`}
+                              aria-label={
+                                product.featured
+                                  ? `Remover destaque de ${product.name}`
+                                  : `Destacar ${product.name}`
+                              }
                               aria-pressed={product.featured}
                               className={`painel-icon-action${product.featured ? " is-active" : ""}`}
+                              disabled={pendingProductIds.has(product.id)}
                               onClick={() => void changeFeatured(product)}
-                              title={product.featured ? "Remover destaque" : "Destacar produto"}
+                              title={
+                                product.featured
+                                  ? "Remover destaque"
+                                  : "Destacar produto"
+                              }
                               type="button"
                             >
                               <Sparkles aria-hidden="true" size={17} />
-                              <span className="painel-action-label">Destaque</span>
+                              <span className="painel-action-label">
+                                Destaque
+                              </span>
                             </button>
                             <button
                               aria-label={`Editar ${product.name}`}
                               className="painel-icon-action"
+                              disabled={pendingProductIds.has(product.id)}
                               onClick={() => openProductEditor(product)}
                               title="Editar produto"
                               type="button"
                             >
                               <PencilLine aria-hidden="true" size={17} />
-                              <span className="painel-action-label">Editar</span>
+                              <span className="painel-action-label">
+                                Editar
+                              </span>
                             </button>
                             <button
                               aria-label={`Arquivar ${product.name}`}
                               className="painel-icon-action is-danger"
+                              disabled={pendingProductIds.has(product.id)}
                               onClick={() => void archiveProduct(product)}
                               title="Arquivar produto"
                               type="button"
                             >
                               <Archive aria-hidden="true" size={17} />
-                              <span className="painel-action-label">Arquivar</span>
+                              <span className="painel-action-label">
+                                Arquivar
+                              </span>
                             </button>
                           </>
                         ) : (
                           <button
                             aria-label={`Restaurar ${product.name}`}
                             className="painel-restore-button"
+                            disabled={pendingProductIds.has(product.id)}
                             onClick={() => void restoreProduct(product)}
                             type="button"
                           >
@@ -565,11 +654,18 @@ export function CatalogWorkspace() {
         <>
           <div className="painel-catalog-toolbar painel-category-toolbar">
             <div className="painel-toolbar-copy">
-              <span>{categories.length} {categories.length === 1 ? "categoria" : "categorias"}</span>
+              <span>
+                {categories.length}{" "}
+                {categories.length === 1 ? "categoria" : "categorias"}
+              </span>
               <small>Os produtos permanecem separados por seção.</small>
             </div>
             {canManage && (
-              <Button className="painel-action-button painel-new-button" onClick={() => openCategoryEditor()} type="button">
+              <Button
+                className="painel-action-button painel-new-button"
+                onClick={() => openCategoryEditor()}
+                type="button"
+              >
                 <Plus aria-hidden="true" size={17} />
                 Nova categoria
               </Button>
@@ -577,7 +673,9 @@ export function CatalogWorkspace() {
           </div>
           {categories.length === 0 ? (
             <div className="painel-catalog-state painel-empty-state">
-              <span className="painel-empty-mark"><FolderPlus aria-hidden="true" size={25} /></span>
+              <span className="painel-empty-mark">
+                <FolderPlus aria-hidden="true" size={25} />
+              </span>
               <h2>Organize o cardápio por categorias</h2>
               <p>Crie seções como bebidas, pratos principais ou sobremesas.</p>
             </div>
@@ -589,13 +687,16 @@ export function CatalogWorkspace() {
                   key={category.id}
                   style={{ "--card-index": index } as React.CSSProperties}
                 >
-                  <div className="painel-category-index">{String(index + 1).padStart(2, "0")}</div>
+                  <div className="painel-category-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
                   <div className="painel-category-copy">
                     <h2>{category.name}</h2>
                     <p>{category.description || "Sem descrição"}</p>
                   </div>
                   <span className="painel-category-count">
-                    {category.productCount} {category.productCount === 1 ? "produto" : "produtos"}
+                    {category.productCount}{" "}
+                    {category.productCount === 1 ? "produto" : "produtos"}
                   </span>
                   {canManage && (
                     <div className="painel-category-actions">
@@ -612,7 +713,10 @@ export function CatalogWorkspace() {
                       <button
                         aria-label={`Excluir ${category.name}`}
                         className="painel-icon-action is-danger"
-                        onClick={() => { setActionError(null); setCategoryToDelete(category); }}
+                        onClick={() => {
+                          setActionError(null);
+                          setCategoryToDelete(category);
+                        }}
                         title="Excluir categoria"
                         type="button"
                       >
@@ -642,7 +746,8 @@ export function CatalogWorkspace() {
             <AlertDialogHeader>
               <AlertDialogTitle>Excluir categoria?</AlertDialogTitle>
               <AlertDialogDescription>
-                {categoryToDelete?.name} será removida do catálogo. Categorias com produtos não podem ser excluídas.
+                {categoryToDelete?.name} será removida do catálogo. Categorias
+                com produtos não podem ser excluídas.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

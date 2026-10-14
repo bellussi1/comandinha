@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
@@ -10,15 +10,24 @@ type TableFormProps = {
   initialTable?: PanelTable;
   onCancel: () => void;
   onSave: (payload: { name: string }) => Promise<void>;
+  isSaving?: boolean;
 };
 
-export function TableForm({ initialTable, onCancel, onSave }: TableFormProps) {
+export function TableForm({
+  initialTable,
+  onCancel,
+  onSave,
+  isSaving: isSavingExternal = false,
+}: TableFormProps) {
   const [name, setName] = useState(initialTable?.name ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const pendingRef = useRef(false);
+  const isBusy = isSaving || isSavingExternal;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isBusy || pendingRef.current) return;
     const trimmedName = name.trim();
     if (trimmedName.length === 0 || trimmedName.length > 80) {
       setError("Informe um nome de 1 a 80 caracteres.");
@@ -26,12 +35,18 @@ export function TableForm({ initialTable, onCancel, onSave }: TableFormProps) {
     }
 
     setError(null);
+    pendingRef.current = true;
     setIsSaving(true);
     try {
       await onSave({ name: trimmedName });
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Não foi possível salvar a mesa.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível salvar a mesa.",
+      );
     } finally {
+      pendingRef.current = false;
       setIsSaving(false);
     }
   }
@@ -53,13 +68,32 @@ export function TableForm({ initialTable, onCancel, onSave }: TableFormProps) {
         />
         <small>Use um nome que a equipe reconheça rapidamente.</small>
       </label>
-      {error && <p className="painel-inline-alert" role="alert">{error}</p>}
+      {error && (
+        <p className="painel-inline-alert" role="alert">
+          {error}
+        </p>
+      )}
       <div className="painel-table-form-actions">
-        <Button onClick={onCancel} type="button" variant="outline">
+        <Button
+          disabled={isBusy}
+          onClick={onCancel}
+          type="button"
+          variant="outline"
+        >
           Cancelar
         </Button>
-        <Button className="painel-action-button" disabled={isSaving} type="submit">
-          {isSaving && <LoaderCircle aria-hidden="true" className="painel-spin" size={16} />}
+        <Button
+          className="painel-action-button"
+          disabled={isBusy}
+          type="submit"
+        >
+          {isSaving && (
+            <LoaderCircle
+              aria-hidden="true"
+              className="painel-spin"
+              size={16}
+            />
+          )}
           {initialTable ? "Salvar alterações" : "Criar mesa"}
         </Button>
       </div>

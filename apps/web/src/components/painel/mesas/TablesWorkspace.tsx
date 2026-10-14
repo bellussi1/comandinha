@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Armchair,
   CircleAlert,
@@ -44,7 +44,8 @@ function orderCountLabel(count: number): string {
 
 export function TablesWorkspace() {
   const session = usePainelSession();
-  const canManage = session.membership.role === "OWNER" || session.membership.role === "ADMIN";
+  const canManage =
+    session.membership.role === "OWNER" || session.membership.role === "ADMIN";
   const [tables, setTables] = useState<PanelTable[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -53,19 +54,27 @@ export function TablesWorkspace() {
   const [qr, setQr] = useState<QrState>(null);
   const [QrDialog, setQrDialog] = useState<QrDialogComponent | null>(null);
   const [qrLoadingTableId, setQrLoadingTableId] = useState<string | null>(null);
-  const [pendingTableId, setPendingTableId] = useState<string | null>(null);
+  const [pendingTableIds, setPendingTableIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const pendingTableIdsRef = useRef(new Set<string>());
+  const [isSavingForm, setIsSavingForm] = useState(false);
+  const isSavingFormRef = useRef(false);
+  const formGenerationRef = useRef(0);
 
-  const loadTables = useCallback(async () => {
-    setIsLoading(true);
-    setLoadError(null);
+  const loadTables = useCallback(async (quiet = false) => {
+    if (!quiet) setIsLoading(true);
+    if (!quiet) setLoadError(null);
     try {
       const result = await listTables();
       setTables(result);
       setLoadError(null);
     } catch (error) {
-      setLoadError(getActionError(error, "Não foi possível carregar as mesas."));
+      setLoadError(
+        getActionError(error, "Não foi possível carregar as mesas."),
+      );
     } finally {
-      setIsLoading(false);
+      if (!quiet) setIsLoading(false);
     }
   }, []);
 
@@ -79,7 +88,10 @@ export function TablesWorkspace() {
         }
       })
       .catch((error: unknown) => {
-        if (active) setLoadError(getActionError(error, "Não foi possível carregar as mesas."));
+        if (active)
+          setLoadError(
+            getActionError(error, "Não foi possível carregar as mesas."),
+          );
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -90,26 +102,52 @@ export function TablesWorkspace() {
   }, []);
 
   async function saveTable(payload: { name: string }) {
-    if (form?.table) {
-      await updateTable(form.table.id, payload);
-    } else {
-      await createTable(payload);
+    if (isSavingFormRef.current) return;
+    isSavingFormRef.current = true;
+    setIsSavingForm(true);
+    const generation = formGenerationRef.current;
+    try {
+      if (form?.table) {
+        await updateTable(form.table.id, payload);
+      } else {
+        await createTable(payload);
+      }
+      if (formGenerationRef.current === generation) setForm(null);
+      await loadTables(true);
+    } finally {
+      isSavingFormRef.current = false;
+      setIsSavingForm(false);
     }
-    setForm(null);
-    await loadTables();
   }
 
   async function toggleTable(table: PanelTable) {
+    if (pendingTableIdsRef.current.has(table.id)) return;
     setActionError(null);
-    setPendingTableId(table.id);
+    pendingTableIdsRef.current.add(table.id);
+    setPendingTableIds(new Set(pendingTableIdsRef.current));
     try {
       await updateTable(table.id, { isActive: !table.isActive });
-      await loadTables();
+      await loadTables(true);
     } catch (error) {
-      setActionError(getActionError(error, "Não foi possível atualizar a mesa."));
+      setActionError(
+        getActionError(error, "Não foi possível atualizar a mesa."),
+      );
     } finally {
-      setPendingTableId(null);
+      pendingTableIdsRef.current.delete(table.id);
+      setPendingTableIds(new Set(pendingTableIdsRef.current));
     }
+  }
+
+  function openForm(nextForm: FormState) {
+    if (isSavingFormRef.current) return;
+    formGenerationRef.current += 1;
+    setForm(nextForm);
+  }
+
+  function closeForm() {
+    if (isSavingFormRef.current) return;
+    formGenerationRef.current += 1;
+    setForm(null);
   }
 
   async function openQr(table: PanelTable) {
@@ -118,7 +156,10 @@ export function TablesWorkspace() {
     try {
       const qrModule = await import("./TableQrDialog");
       setQrDialog(() => qrModule.TableQrDialog);
-      const publicUrl = new URL(`/q/${table.publicCode}`, window.location.origin).toString();
+      const publicUrl = new URL(
+        `/q/${table.publicCode}`,
+        window.location.origin,
+      ).toString();
       setQr({ table, publicUrl });
     } catch {
       setActionError("Não foi possível carregar o QR agora. Tente novamente.");
@@ -130,11 +171,15 @@ export function TablesWorkspace() {
   const activeCount = tables.filter((table) => table.isActive).length;
 
   return (
-    <section aria-busy={isLoading} className="painel-dining-page painel-tables-page">
+    <section
+      aria-busy={isLoading}
+      className="painel-dining-page painel-tables-page"
+    >
       <div className="painel-dining-heading">
         <div className="painel-page-heading">
           <span className="painel-eyebrow">
-            {session.restaurant.name.toLocaleUpperCase("pt-BR")} · ESPAÇO DE TRABALHO
+            {session.restaurant.name.toLocaleUpperCase("pt-BR")} · ESPAÇO DE
+            TRABALHO
           </span>
           <h1>Mesas com acesso direto.</h1>
           <p>Organize os lugares e deixe o cardápio a um QR de distância.</p>
@@ -154,19 +199,28 @@ export function TablesWorkspace() {
         <div className="painel-inline-alert" role="alert">
           <CircleAlert aria-hidden="true" size={18} />
           <span>{actionError}</span>
-          <button aria-label="Fechar aviso" onClick={() => setActionError(null)} type="button">×</button>
+          <button
+            aria-label="Fechar aviso"
+            onClick={() => setActionError(null)}
+            type="button"
+          >
+            ×
+          </button>
         </div>
       )}
 
       <div className="painel-dining-toolbar">
         <div>
           <span className="painel-eyebrow">SALÃO</span>
-          <p>{tables.length} {tables.length === 1 ? "mesa cadastrada" : "mesas cadastradas"}</p>
+          <p>
+            {tables.length}{" "}
+            {tables.length === 1 ? "mesa cadastrada" : "mesas cadastradas"}
+          </p>
         </div>
         {canManage && (
           <Button
             className="painel-action-button"
-            onClick={() => setForm({})}
+            onClick={() => openForm({})}
             type="button"
           >
             <Plus aria-hidden="true" size={17} />
@@ -180,7 +234,11 @@ export function TablesWorkspace() {
           <CircleAlert aria-hidden="true" size={24} />
           <h2>As mesas não carregaram.</h2>
           <p>{loadError}</p>
-          <Button onClick={() => void loadTables()} type="button" variant="outline">
+          <Button
+            onClick={() => void loadTables()}
+            type="button"
+            variant="outline"
+          >
             <RefreshCw aria-hidden="true" size={16} />
             Tentar novamente
           </Button>
@@ -192,11 +250,17 @@ export function TablesWorkspace() {
         </div>
       ) : tables.length === 0 ? (
         <div className="painel-dining-state painel-dining-empty">
-          <span className="painel-dining-empty-icon"><Armchair aria-hidden="true" size={24} /></span>
+          <span className="painel-dining-empty-icon">
+            <Armchair aria-hidden="true" size={24} />
+          </span>
           <h2>Ainda não há mesas</h2>
           <p>Cadastre a primeira mesa para criar seu link e código QR.</p>
           {canManage && (
-            <Button className="painel-action-button" onClick={() => setForm({})} type="button">
+            <Button
+              className="painel-action-button"
+              onClick={() => openForm({})}
+              type="button"
+            >
               <Plus aria-hidden="true" size={17} />
               Criar primeira mesa
             </Button>
@@ -214,20 +278,28 @@ export function TablesWorkspace() {
                 <span aria-hidden="true" className="painel-table-mark">
                   <Armchair size={19} />
                 </span>
-                <span className={`painel-table-status${table.isActive ? " is-active" : ""}`}>
+                <span
+                  className={`painel-table-status${table.isActive ? " is-active" : ""}`}
+                >
                   <span aria-hidden="true" />
                   {table.isActive ? "Ativa" : "Inativa"}
                 </span>
               </div>
               <div className="painel-table-copy">
-                <span className="painel-eyebrow">MESA {String(index + 1).padStart(2, "0")}</span>
+                <span className="painel-eyebrow">
+                  MESA {String(index + 1).padStart(2, "0")}
+                </span>
                 <h2>{table.name}</h2>
                 <p>{orderCountLabel(table.activeOrderCount)}</p>
               </div>
               <div className="painel-table-actions">
                 <Button
                   aria-busy={qrLoadingTableId === table.id}
-                  aria-label={qrLoadingTableId === table.id ? `Carregando QR de ${table.name}` : `Ver QR de ${table.name}`}
+                  aria-label={
+                    qrLoadingTableId === table.id
+                      ? `Carregando QR de ${table.name}`
+                      : `Ver QR de ${table.name}`
+                  }
                   className="painel-table-qr-button"
                   disabled={qrLoadingTableId !== null}
                   onClick={() => void openQr(table)}
@@ -236,7 +308,11 @@ export function TablesWorkspace() {
                 >
                   {qrLoadingTableId === table.id ? (
                     <>
-                      <LoaderCircle aria-hidden="true" className="painel-spin" size={16} />
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="painel-spin"
+                        size={16}
+                      />
                       Carregando QR…
                     </>
                   ) : (
@@ -251,7 +327,7 @@ export function TablesWorkspace() {
                     <button
                       aria-label={`Renomear ${table.name}`}
                       className="painel-icon-action"
-                      onClick={() => setForm({ table })}
+                      onClick={() => openForm({ table })}
                       title="Renomear mesa"
                       type="button"
                     >
@@ -261,7 +337,7 @@ export function TablesWorkspace() {
                     <button
                       aria-label={`${table.isActive ? "Desativar" : "Ativar"} ${table.name}`}
                       className="painel-icon-action"
-                      disabled={pendingTableId === table.id}
+                      disabled={pendingTableIds.has(table.id)}
                       onClick={() => void toggleTable(table)}
                       title={table.isActive ? "Desativar mesa" : "Ativar mesa"}
                       type="button"
@@ -283,14 +359,19 @@ export function TablesWorkspace() {
         </div>
       )}
 
-      <Dialog open={form !== null} onOpenChange={(open) => !open && setForm(null)}>
+      <Dialog
+        open={form !== null}
+        onOpenChange={(open) => !open && closeForm()}
+      >
         <DialogContent
           className="painel-table-editor-dialog"
           overlayClassName="painel-table-editor-overlay"
         >
           <DialogHeader>
             <span className="painel-eyebrow">GESTÃO DO SALÃO</span>
-            <DialogTitle>{form?.table ? "Renomear mesa" : "Adicionar mesa"}</DialogTitle>
+            <DialogTitle>
+              {form?.table ? "Renomear mesa" : "Adicionar mesa"}
+            </DialogTitle>
             <DialogDescription>
               O código QR da mesa continua o mesmo depois de uma renomeação.
             </DialogDescription>
@@ -299,7 +380,8 @@ export function TablesWorkspace() {
             <TableForm
               initialTable={form.table}
               key={form.table?.id ?? "new-table"}
-              onCancel={() => setForm(null)}
+              isSaving={isSavingForm}
+              onCancel={closeForm}
               onSave={saveTable}
             />
           )}

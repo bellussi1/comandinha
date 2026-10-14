@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ApiPaths } from "@comandinha/api-client";
 import * as catalog from "@/src/services/catalog";
@@ -7,7 +7,8 @@ import { CatalogWorkspace } from "../CatalogWorkspace";
 
 type Category = catalog.CatalogCategory;
 type Product = catalog.CatalogProduct;
-type Session = ApiPaths["/auth/sessions/current"]["get"]["responses"][200]["content"]["application/json"];
+type Session =
+  ApiPaths["/auth/sessions/current"]["get"]["responses"][200]["content"]["application/json"];
 
 const category: Category = {
   id: "category-1",
@@ -41,7 +42,11 @@ const product: Product = {
 
 const ownerSession: Session = {
   user: { id: "user-1", name: "Enzo Bellussi", email: "enzo@example.com" },
-  restaurant: { id: "restaurant-1", name: "Casa do Enzo", slug: "casa-do-enzo" },
+  restaurant: {
+    id: "restaurant-1",
+    name: "Casa do Enzo",
+    slug: "casa-do-enzo",
+  },
   membership: { id: "membership-1", role: "OWNER" },
   expiresAt: "2027-01-01T00:00:00.000Z",
 };
@@ -87,15 +92,20 @@ describe("CatalogWorkspace", () => {
     seedCatalog([]);
     renderWorkspace();
 
-    expect(await screen.findByText("Nenhum produto por aqui"))
-      .toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Novo produto" }))
-      .toBeEnabled();
+    expect(
+      await screen.findByText("Nenhum produto por aqui"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Novo produto" })).toBeEnabled();
   });
 
   it("continues to the first product after creating the first category", async () => {
     const user = userEvent.setup();
-    const firstCategory = { ...category, id: "category-first", name: "Lanches", nameNormalized: "lanches" };
+    const firstCategory = {
+      ...category,
+      id: "category-first",
+      name: "Lanches",
+      nameNormalized: "lanches",
+    };
     service.listCatalogCategories.mockResolvedValue([]);
     service.listCatalogProducts.mockResolvedValue([]);
     service.createCatalogCategory.mockResolvedValue(firstCategory);
@@ -109,8 +119,9 @@ describe("CatalogWorkspace", () => {
     await user.type(screen.getByLabelText("Nome da categoria"), "Lanches");
     await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
 
-    expect(await screen.findByRole("heading", { name: "Novo produto" }))
-      .toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Novo produto" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Categoria")).toHaveValue("category-first");
   });
 
@@ -119,18 +130,103 @@ describe("CatalogWorkspace", () => {
     seedCatalog([]);
     renderWorkspace();
 
-    await user.click((await screen.findAllByRole("button", { name: "Novo produto" }))[0]);
+    await user.click(
+      (await screen.findAllByRole("button", { name: "Novo produto" }))[0],
+    );
     expect(screen.getByLabelText("Categoria")).toHaveDisplayValue(
       "Selecione uma categoria",
     );
-    expect(within(screen.getByLabelText("Categoria")).getByRole("option", { name: "Bebidas" }))
-      .toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText("Categoria")).getByRole("option", {
+        name: "Bebidas",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the category editor open while its save is pending", async () => {
+    const user = userEvent.setup();
+    let finishSave!: (value: Category) => void;
+    seedCatalog();
+    service.createCatalogCategory.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    renderWorkspace();
+
+    await user.click(await screen.findByRole("tab", { name: /Categorias/ }));
+    await user.click(screen.getByRole("button", { name: "Nova categoria" }));
+    await user.type(screen.getByLabelText("Nome da categoria"), "Lanches");
+    await user.click(screen.getByRole("button", { name: "Salvar categoria" }));
+
+    const back = screen.getByRole("button", { name: "Voltar ao catálogo" });
+    const backWasDisabled = back.hasAttribute("disabled");
+    await user.click(back);
+    const editorStayedOpen =
+      screen.queryByRole("heading", { name: "Nova categoria" }) !== null;
+    await act(async () => {
+      finishSave({
+        ...category,
+        id: "category-2",
+        name: "Lanches",
+        nameNormalized: "lanches",
+      });
+    });
+    expect(backWasDisabled).toBe(true);
+    expect(editorStayedOpen).toBe(true);
+    expect(
+      await screen.findByRole("button", { name: "Nova categoria" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the product editor open while its save is pending", async () => {
+    const user = userEvent.setup();
+    let finishSave!: (value: Product) => void;
+    seedCatalog();
+    service.createCatalogProduct.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    renderWorkspace();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Novo produto" }),
+    );
+    await user.type(screen.getByLabelText("Nome do produto"), "Chá gelado");
+    await user.selectOptions(screen.getByLabelText("Categoria"), category.id);
+    await user.type(screen.getByPlaceholderText("0,00"), "12,34");
+    await user.click(screen.getByRole("button", { name: "Salvar produto" }));
+
+    const back = screen.getByRole("button", { name: "Voltar ao catálogo" });
+    const backWasDisabled = back.hasAttribute("disabled");
+    await user.click(back);
+    const editorStayedOpen =
+      screen.queryByRole("heading", { name: "Novo produto" }) !== null;
+    await act(async () => {
+      finishSave({
+        ...product,
+        id: "product-2",
+        name: "Chá gelado",
+        priceInCents: 1234,
+      });
+    });
+    expect(backWasDisabled).toBe(true);
+    expect(editorStayedOpen).toBe(true);
+    expect(
+      await screen.findByRole("button", { name: "Novo produto" }),
+    ).toBeInTheDocument();
   });
 
   it("updates availability through the typed catalog API", async () => {
     const user = userEvent.setup();
     seedCatalog();
-    service.updateCatalogProduct.mockResolvedValue({ ...product, available: false });
+    service.updateCatalogProduct.mockResolvedValue({
+      ...product,
+      available: false,
+    });
     service.listCatalogProducts
       .mockResolvedValueOnce([product])
       .mockResolvedValueOnce([{ ...product, available: false }]);
@@ -148,6 +244,55 @@ describe("CatalogWorkspace", () => {
       }),
     );
     expect(await screen.findByText("Indisponível")).toBeInTheDocument();
+  });
+
+  it("keeps quick-action locks independent for separate products", async () => {
+    const user = userEvent.setup();
+    const secondProduct: Product = {
+      ...product,
+      id: "product-2",
+      name: "Chá gelado",
+    };
+    let finishFirst!: (value: Product) => void;
+    let finishSecond!: (value: Product) => void;
+    service.listCatalogCategories.mockResolvedValue([category]);
+    service.listCatalogProducts.mockResolvedValue([product, secondProduct]);
+    service.updateCatalogProduct
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishSecond = resolve;
+          }),
+      );
+    renderWorkspace();
+
+    const firstAction = await screen.findByRole("button", {
+      name: "Marcar Suco de laranja indisponível",
+    });
+    const secondAction = screen.getByRole("button", {
+      name: "Marcar Chá gelado indisponível",
+    });
+    await user.click(firstAction);
+    await user.click(secondAction);
+    expect(firstAction).toBeDisabled();
+    expect(secondAction).toBeDisabled();
+
+    await act(async () => {
+      finishSecond({ ...secondProduct, available: false });
+    });
+    await waitFor(() => expect(secondAction).toBeEnabled());
+    expect(firstAction).toBeDisabled();
+    await user.click(firstAction);
+    expect(service.updateCatalogProduct).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      finishFirst({ ...product, available: false });
+    });
   });
 
   it("puts clear labels beside the product quick-action icons", async () => {
@@ -169,7 +314,10 @@ describe("CatalogWorkspace", () => {
     const archivedProduct = { ...product, isActive: false };
     seedCatalog();
     service.archiveCatalogProduct.mockResolvedValue(undefined);
-    service.updateCatalogProduct.mockResolvedValue({ ...product, isActive: true });
+    service.updateCatalogProduct.mockResolvedValue({
+      ...product,
+      isActive: true,
+    });
     service.listCatalogProducts
       .mockResolvedValueOnce([product])
       .mockResolvedValueOnce([])
@@ -181,10 +329,13 @@ describe("CatalogWorkspace", () => {
       await screen.findByRole("button", { name: "Arquivar Suco de laranja" }),
     );
     expect(service.archiveCatalogProduct).toHaveBeenCalledWith(product.id);
-    expect(await screen.findByText("Nenhum produto por aqui"))
-      .toBeInTheDocument();
+    expect(
+      await screen.findByText("Nenhum produto por aqui"),
+    ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Mostrar arquivados" }));
+    await user.click(
+      screen.getByRole("button", { name: "Mostrar arquivados" }),
+    );
     const restore = await screen.findByRole("button", {
       name: "Restaurar Suco de laranja",
     });
@@ -195,8 +346,9 @@ describe("CatalogWorkspace", () => {
         isActive: true,
       }),
     );
-    expect(await screen.findByRole("button", { name: "Arquivar Suco de laranja" }))
-      .toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Arquivar Suco de laranja" }),
+    ).toBeInTheDocument();
   });
 
   it("explains why a category with products cannot be deleted", async () => {
@@ -211,7 +363,9 @@ describe("CatalogWorkspace", () => {
     renderWorkspace();
 
     await user.click(await screen.findByRole("tab", { name: /Categorias/ }));
-    await user.click(await screen.findByRole("button", { name: "Excluir Bebidas" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Excluir Bebidas" }),
+    );
     await user.click(screen.getByRole("button", { name: "Excluir categoria" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -225,9 +379,16 @@ describe("CatalogWorkspace", () => {
     renderWorkspace(staffSession);
 
     expect(await screen.findByText("Suco de laranja")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Novo produto" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: /Categorias/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Marcar Suco de laranja indisponível" }))
-      .not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Novo produto" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("tab", { name: /Categorias/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Marcar Suco de laranja indisponível",
+      }),
+    ).not.toBeInTheDocument();
   });
 });

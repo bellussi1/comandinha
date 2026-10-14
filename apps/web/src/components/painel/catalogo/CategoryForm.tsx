@@ -8,9 +8,12 @@ import { Input } from "@/src/components/ui/input";
 import { Textarea } from "@/src/components/ui/textarea";
 import { isSecureImageUrl } from "./catalog-validation";
 
-type Category = ApiPaths["/catalog/categories"]["get"]["responses"][200]["content"]["application/json"][number];
-type CategoryInput = ApiPaths["/catalog/categories"]["post"]["requestBody"]["content"]["application/json"];
-type CategoryUpdate = ApiPaths["/catalog/categories/{id}"]["patch"]["requestBody"]["content"]["application/json"];
+type Category =
+  ApiPaths["/catalog/categories"]["get"]["responses"][200]["content"]["application/json"][number];
+type CategoryInput =
+  ApiPaths["/catalog/categories"]["post"]["requestBody"]["content"]["application/json"];
+type CategoryUpdate =
+  ApiPaths["/catalog/categories/{id}"]["patch"]["requestBody"]["content"]["application/json"];
 
 type CategoryFormProps = {
   initialCategory?: Category;
@@ -85,6 +88,7 @@ export function CategoryForm({
         <Button
           aria-label="Voltar ao catálogo"
           className="painel-back-button"
+          disabled={isBusy}
           onClick={onCancel}
           size="icon"
           type="button"
@@ -102,7 +106,10 @@ export function CategoryForm({
       </div>
 
       <div className="painel-form-grid">
-        <label className="painel-field painel-field-wide" htmlFor="category-name">
+        <label
+          className="painel-field painel-field-wide"
+          htmlFor="category-name"
+        >
           <span>Nome da categoria</span>
           <Input
             autoComplete="off"
@@ -127,8 +134,13 @@ export function CategoryForm({
           />
         </label>
 
-        <label className="painel-field painel-field-wide" htmlFor="category-description">
-          <span>Descrição <small>(opcional)</small></span>
+        <label
+          className="painel-field painel-field-wide"
+          htmlFor="category-description"
+        >
+          <span>
+            Descrição <small>(opcional)</small>
+          </span>
           <Textarea
             id="category-description"
             maxLength={2_000}
@@ -139,7 +151,10 @@ export function CategoryForm({
           />
         </label>
 
-        <label className="painel-field painel-field-wide" htmlFor="category-image-url">
+        <label
+          className="painel-field painel-field-wide"
+          htmlFor="category-image-url"
+        >
           <span>Imagem (URL HTTPS, opcional)</span>
           <span className="painel-input-with-icon">
             <ImagePlus aria-hidden="true" size={17} />
@@ -155,13 +170,26 @@ export function CategoryForm({
         </label>
       </div>
 
-      {error && <p className="painel-form-alert" role="alert">{error}</p>}
+      {error && (
+        <p className="painel-form-alert" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="painel-form-actions">
-        <Button disabled={isBusy} onClick={onCancel} type="button" variant="outline">
+        <Button
+          disabled={isBusy}
+          onClick={onCancel}
+          type="button"
+          variant="outline"
+        >
           Cancelar
         </Button>
-        <Button className="painel-action-button" disabled={isBusy} type="submit">
+        <Button
+          className="painel-action-button"
+          disabled={isBusy}
+          type="submit"
+        >
           <Check aria-hidden="true" size={16} />
           {isBusy ? "Salvando…" : "Salvar categoria"}
         </Button>
