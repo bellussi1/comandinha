@@ -465,7 +465,8 @@
   color: inherit;
   background: transparent;
   cursor: pointer;
-  transition: background-color var(--comandinha-motion-fast) var(--comandinha-motion-ease);
+  transition: background-color var(--comandinha-motion-fast)
+    var(--comandinha-motion-ease);
 }
 
 .painel-logout-button:hover:not(:disabled) {
@@ -746,7 +747,9 @@
     color: #716772;
     font-size: 0.62rem;
     font-weight: 700;
-    transition: color 160ms ease, background-color 160ms ease;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease;
   }
 
   .painel-mobile-nav-link.is-active {
@@ -1538,7 +1541,8 @@
 }
 
 .painel-confirm-dialog :is(button, a, input, select, textarea):focus-visible,
-.painel-table-editor-dialog :is(button, a, input, select, textarea):focus-visible,
+.painel-table-editor-dialog
+  :is(button, a, input, select, textarea):focus-visible,
 .painel-qr-dialog :is(button, a, input, select, textarea):focus-visible {
   outline: 3px solid var(--comandinha-color-focus);
   outline-offset: 3px;
@@ -1809,6 +1813,19 @@
   gap: 1.5rem;
 }
 
+.painel-dining-heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.painel-order-refresh {
+  min-height: 2.75rem;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
 .painel-dashboard-intro {
   margin-bottom: 2rem;
 }
@@ -1886,13 +1903,20 @@
   padding: 1.1rem;
   background: #fff;
   box-shadow: var(--comandinha-shadow-card);
-  animation: painel-dining-enter var(--comandinha-motion-enter) var(--comandinha-motion-ease) both;
+  animation: painel-dining-enter var(--comandinha-motion-enter)
+    var(--comandinha-motion-ease) both;
   animation-delay: calc(var(--metric-index, 0) * 45ms);
 }
 
-.painel-dashboard-metric:nth-child(2) { --metric-index: 1; }
-.painel-dashboard-metric:nth-child(3) { --metric-index: 2; }
-.painel-dashboard-metric:nth-child(4) { --metric-index: 3; }
+.painel-dashboard-metric:nth-child(2) {
+  --metric-index: 1;
+}
+.painel-dashboard-metric:nth-child(3) {
+  --metric-index: 2;
+}
+.painel-dashboard-metric:nth-child(4) {
+  --metric-index: 3;
+}
 
 .painel-dashboard-metric-icon,
 .painel-dashboard-shortcut-icon {
@@ -1974,7 +1998,8 @@
     transform var(--comandinha-motion-base) var(--comandinha-motion-ease),
     border-color var(--comandinha-motion-base) var(--comandinha-motion-ease),
     box-shadow var(--comandinha-motion-base) var(--comandinha-motion-ease);
-  animation: painel-dining-enter var(--comandinha-motion-enter) var(--comandinha-motion-ease) both;
+  animation: painel-dining-enter var(--comandinha-motion-enter)
+    var(--comandinha-motion-ease) both;
 }
 
 .painel-dashboard-shortcut:first-child {
@@ -1991,8 +2016,12 @@
   content: "";
 }
 
-.painel-dashboard-shortcut:nth-child(2) { animation-delay: 45ms; }
-.painel-dashboard-shortcut:nth-child(3) { animation-delay: 90ms; }
+.painel-dashboard-shortcut:nth-child(2) {
+  animation-delay: 45ms;
+}
+.painel-dashboard-shortcut:nth-child(3) {
+  animation-delay: 90ms;
+}
 
 .painel-dashboard-shortcut:hover {
   transform: translateY(-2px);
@@ -2299,7 +2328,10 @@
   border-radius: 0.75rem;
   color: #786d78;
   background: transparent;
-  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
 }
 
 .painel-icon-action:hover:not(:disabled) {
@@ -2481,7 +2513,10 @@
   background: transparent;
   font-size: 0.72rem;
   font-weight: 700;
-  transition: color 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease;
 }
 
 .painel-order-filters button:hover {
@@ -2594,6 +2629,14 @@
   flex: 0 0 auto;
   color: #857b84;
   font-variant-numeric: tabular-nums;
+}
+
+.painel-order-item-notes {
+  display: block;
+  margin-top: 0.1rem;
+  color: #827781;
+  font-size: 0.68rem;
+  font-style: italic;
 }
 
 .painel-order-notes {
@@ -2732,6 +2775,11 @@
 
   .painel-dining-heading {
     display: block;
+  }
+
+  .painel-dining-heading-actions {
+    flex-wrap: wrap;
+    margin-top: 0.9rem;
   }
 
   .painel-dining-count {

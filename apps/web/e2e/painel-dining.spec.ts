@@ -5,6 +5,7 @@ const tableId = '82e80217-0035-4da6-9e6f-76221a172fda';
 const secondTableId = '94b8f82a-3b0e-46b3-b724-27353566d8f9';
 const productId = '0f7b1db9-cba9-4d4b-a5ea-ae798e56b53a';
 const orderId = 'ad97f868-d026-4ca8-a765-dd34acdb643f';
+const longTableName = 'Mesa da varanda externa';
 const createdAt = '2026-10-13T12:00:00.000Z';
 
 const session = {
@@ -96,7 +97,7 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
     tableId,
     notes: null,
     updatedAt: createdAt,
-    table: { id: tableId, name: 'Mesa 01' },
+    table: { id: tableId, name: longTableName },
     items: [
       {
         id: 'b19a9f58-17b1-4a88-8da2-570c3b43d540',
@@ -445,7 +446,10 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   expect(cartBounds!.x + cartBounds!.width).toBeLessThanOrEqual(360);
   await page.getByRole('button', { name: 'Enviar pedido' }).click();
   await expect(page.getByText('Pedido recebido pelo restaurante')).toBeVisible();
-  expect(submittedPayload).toEqual({ items: [{ productId, quantity: 1 }] });
+  expect(submittedPayload).toEqual({
+    requestId: expect.any(String),
+    items: [{ productId, quantity: 1 }],
+  });
 
   await page.goto('/painel/pedidos');
   await expect(page.getByRole('heading', { name: 'Pedidos, sem perder o ritmo.' })).toBeVisible();
@@ -466,6 +470,23 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
     expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
   }
   await page.setViewportSize({ width: 320, height: 800 });
+  const longTableAction = page.getByRole('button', {
+    name: `Iniciar preparo do pedido da ${longTableName}`,
+  });
+  const actionGeometry = await longTableAction.evaluate((button) => {
+    const bounds = button.getBoundingClientRect();
+    const card = button.closest('.painel-order-card')!.getBoundingClientRect();
+    return {
+      leftInsideCard: bounds.left >= card.left,
+      rightInsideCard: bounds.right <= card.right,
+      noClippedLabel: button.scrollWidth <= button.clientWidth,
+    };
+  });
+  expect(actionGeometry).toEqual({
+    leftInsideCard: true,
+    rightInsideCard: true,
+    noClippedLabel: true,
+  });
   for (const button of await page.getByRole('group', { name: 'Filtrar pedidos por status' }).getByRole('button').all()) {
     expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   }
@@ -477,7 +498,7 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   );
   expect(reducedMotionDuration).toBeLessThanOrEqual(0.001);
 
-  await page.getByRole('button', { name: 'Iniciar preparo do pedido da Mesa 01' }).click();
+  await longTableAction.click();
   await expect(page.locator('.painel-order-status')).toHaveText('Em preparo');
   await page.goto(publicUrl);
   await expect(page.getByText('Seu pedido está sendo preparado')).toBeVisible();
