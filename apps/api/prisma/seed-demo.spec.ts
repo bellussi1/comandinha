@@ -12,7 +12,13 @@ describe('seedDemo category key migration', () => {
       { id: 'category-desserts', nameNormalized: 'sobremesas' },
     ];
     const transaction = {
-      restaurantTable: { upsert: vi.fn() },
+      restaurantTable: {
+        upsert: vi.fn().mockResolvedValue({ id: 'demo-table' }),
+      },
+      diningSession: {
+        count: vi.fn().mockResolvedValue(1),
+        create: vi.fn(),
+      },
       catalogCategory: {
         findUnique: vi.fn().mockResolvedValue(null),
         findFirst: vi.fn(
@@ -60,5 +66,6 @@ describe('seedDemo category key migration', () => {
     });
     expect(transaction.catalogCategory.upsert).toHaveBeenCalledTimes(2);
     expect(transaction.catalogProduct.create).not.toHaveBeenCalled();
+    expect(transaction.diningSession.create).not.toHaveBeenCalled();
   });
 });
