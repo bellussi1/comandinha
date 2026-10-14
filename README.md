@@ -1,6 +1,6 @@
 # Comandinha
 
-Fundação técnica para reconstruir o Comandinha como um monorepo TypeScript. O repositório reúne a interface web existente e uma API NestJS criada de forma independente para preparar a evolução dos fluxos do produto.
+Monorepo TypeScript para a evolução do Comandinha. Reúne a interface Next.js, uma API NestJS e o PostgreSQL local para catálogo, mesas com QR, pedidos e atendimentos por sessão. **O produto segue em migração e não está pronto para produção.**
 
 ## Estado do projeto
 
@@ -82,7 +82,7 @@ Liveness e readiness verificam a infraestrutura; não são funcionalidades do pr
 
 - `http://localhost:3000/painel/login` usa as sessões administrativas do NestJS. Em desenvolvimento local, entre com o e-mail e a senha configurados em `DEMO_OWNER_EMAIL` e `DEMO_OWNER_PASSWORD` no `.env`, após aplicar as migrações e executar o seed local.
 - `http://localhost:3000/painel/catalogo` gerencia categorias e produtos no PostgreSQL novo. `OWNER` e `ADMIN` podem alterar o catálogo; `STAFF` pode consultá-lo.
-- `http://localhost:3000/painel/mesas` gerencia mesas, ativa/desativa o acesso e exibe o QR e o link público de cada mesa.
+- `http://localhost:3000/painel/mesas` gerencia mesas, ativa/desativa o acesso, abre atendimentos, consulta contas e encerra sessões depois que os pedidos forem finalizados. Também exibe o QR e o link público de cada mesa.
 - `http://localhost:3000/painel/pedidos` acompanha os pedidos recebidos pelo QR e permite avançar o status de preparo e entrega.
 - O catálogo local abastece o cardápio QR novo. Os dados do sistema legado não foram copiados ou migrados para o PostgreSQL novo.
 - `/admin` permanece como área administrativa legada durante a migração. Seus fluxos continuam usando a autenticação e a API existentes até serem substituídos por novas áreas do painel.
@@ -100,10 +100,11 @@ O seed local cria ou atualiza o restaurante e o proprietário configurados no `.
    ```
 
 3. Entre em `http://localhost:3000/painel/login` com `DEMO_OWNER_EMAIL` e `DEMO_OWNER_PASSWORD`.
-4. Abra `/painel/mesas`, escolha **Ver QR** e abra o link público exibido. A rota `/q/{code}` mostra o cardápio da mesa; adicione um produto, revise o carrinho e envie o pedido.
+4. Abra `/painel/mesas`, escolha **Ver QR** e abra o link público exibido. O seed cria uma sessão inicial para cada mesa de demonstração sem histórico; a rota `/q/{code}` mostra o cardápio da mesa, permite adicionar produtos e enviar pedidos.
 5. Abra `/painel/pedidos` e avance o pedido por **Iniciar preparo**, **Marcar como pronto** e **Entregar**. O cardápio público acompanha o status do pedido enquanto a página está aberta.
+6. Em `/painel/mesas`, abra **Ver conta**, confira os pedidos e encerre o atendimento. O total final é calculado pela API com os pedidos entregues. Para receber novos pedidos na mesma mesa, abra um novo atendimento; o QR permanece igual e o histórico anterior continua preservado.
 
-O fluxo de demonstração cobre catálogo, QR, carrinho e pedidos. Pagamento e chamada de garçom permanecem nos fluxos existentes enquanto a migração continua.
+O fluxo de demonstração cobre catálogo, QR, carrinho, pedidos e encerramento local de atendimento. Encerrar registra o total da sessão; não confirma nem processa pagamento. Pagamento e chamada de garçom estão fora deste fluxo.
 
 ## Comandos
 
@@ -161,11 +162,11 @@ O login limita cinco tentativas por combinação de conta e origem confiável no
 
 ## Limitações atuais
 
-- A nova API oferece autenticação multi-tenant, catálogo, mesas e pedidos; pagamento, fechamento de conta e chamada de garçom ainda dependem dos fluxos legados.
+- A nova API oferece autenticação multi-tenant, catálogo, mesas, pedidos e sessões de atendimento; pagamento e chamada de garçom ainda dependem dos fluxos legados.
 - A tela nova de login está em `/painel/login`; o login e os fluxos em `/admin` permanecem ligados à API legada enquanto a migração acontece.
 - O cardápio em `/q/{code}` usa o catálogo e o banco novos. Os dados do legado não são sincronizados automaticamente.
 - Nenhuma conta, categoria, produto ou outro dado legado foi importado para o novo banco PostgreSQL.
 - O backend legado é apenas referência: seu código e seu banco de dados não foram incorporados. O repositório legado não declara licença.
 - Não há deploy, infraestrutura de produção, dados de clientes ou alegação de prontidão operacional neste marco.
 
-Consulte [ADR 0001](docs/adr/0001-typescript-monorepo.md) para a decisão do monorepo e [ADR 0002](docs/adr/0002-admin-sessions-and-tenant-context.md) para sessões administrativas e contexto multi-tenant.
+Consulte o [índice da documentação](docs/README.md), o guia de [sessões de mesa](docs/funcionalidades/sessoes-de-mesa.md), [ADR 0001](docs/adr/0001-typescript-monorepo.md) para a decisão do monorepo e [ADR 0002](docs/adr/0002-admin-sessions-and-tenant-context.md) para sessões administrativas e contexto multi-tenant.
