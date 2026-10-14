@@ -14,6 +14,9 @@ export default defineConfig({
   webServer: {
     command: `pnpm exec next dev --hostname 127.0.0.1 --port ${port}`,
     url: baseURL,
+    env: {
+      COMANDINHA_WEB_DIST_DIR: '.next-playwright',
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

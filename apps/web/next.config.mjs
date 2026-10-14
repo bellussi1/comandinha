@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: process.env.COMANDINHA_WEB_DIST_DIR ?? '.next',
   reactStrictMode: true,
   compress: true,
   poweredByHeader: false,
