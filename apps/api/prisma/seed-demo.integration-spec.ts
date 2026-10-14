@@ -4,6 +4,7 @@ import type { SeedConfig } from './seed-config.js';
 import { seedOwner } from './seed-owner.js';
 import { seedDemo } from './seed-demo.js';
 import { PrismaService } from '../src/database/prisma.service.js';
+import { DiningSessionStatus } from '../src/generated/prisma/client.js';
 
 const prisma = new PrismaService();
 const suffix = randomUUID();
@@ -269,6 +270,56 @@ describe('local demo seed with PostgreSQL', () => {
       await prisma.catalogProduct.count({
         where: { restaurantId: restaurantBId, name: { in: demoProductNames } },
       }),
+    ).toBe(0);
+  });
+
+  it('opens demo table sessions once and never reopens a closed session', async () => {
+    const owner = await seedOwner(prisma, config);
+    await seedDemo(prisma, owner.restaurantId);
+
+    const tables = await prisma.restaurantTable.findMany({
+      where: { restaurantId: restaurantAId, name: { in: demoTableNames } },
+      select: { id: true, name: true },
+    });
+    const initialSessions = await prisma.diningSession.findMany({
+      where: { restaurantId: restaurantAId },
+    });
+    expect(initialSessions).toHaveLength(demoTableNames.length);
+    expect(
+      initialSessions.every(
+        ({ status }) => status === DiningSessionStatus.OPEN,
+      ),
+    ).toBe(true);
+
+    const closedTable = tables[0];
+    const closedSession = initialSessions.find(
+      ({ tableId }) => tableId === closedTable?.id,
+    );
+    expect(closedSession).toBeDefined();
+    await prisma.diningSession.update({
+      where: { id: closedSession!.id },
+      data: {
+        status: DiningSessionStatus.CLOSED,
+        closedAt: new Date(),
+        closedTotalInCents: 0,
+      },
+    });
+
+    await seedDemo(prisma, owner.restaurantId);
+    const sessionsAfterRerun = await prisma.diningSession.findMany({
+      where: { restaurantId: restaurantAId },
+    });
+    expect(sessionsAfterRerun).toHaveLength(demoTableNames.length);
+    expect(
+      sessionsAfterRerun.find(({ id }) => id === closedSession!.id)?.status,
+    ).toBe(DiningSessionStatus.CLOSED);
+    expect(
+      sessionsAfterRerun.filter(
+        ({ status }) => status === DiningSessionStatus.OPEN,
+      ),
+    ).toHaveLength(demoTableNames.length - 1);
+    expect(
+      await prisma.diningSession.count({ where: { tableId: customTableId } }),
     ).toBe(0);
   });
 });

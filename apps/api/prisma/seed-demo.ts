@@ -92,8 +92,9 @@ export async function seedDemo(
   restaurantId: string,
 ): Promise<void> {
   await prisma.$transaction(async (transaction) => {
+    const tables: Array<{ id: string }> = [];
     for (const name of demoTables) {
-      await transaction.restaurantTable.upsert({
+      const table = await transaction.restaurantTable.upsert({
         where: { restaurantId_name: { restaurantId, name } },
         create: {
           restaurantId,
@@ -102,6 +103,18 @@ export async function seedDemo(
         },
         update: {},
       });
+      tables.push(table);
+    }
+
+    for (const table of tables) {
+      const sessionCount = await transaction.diningSession.count({
+        where: { restaurantId, tableId: table.id },
+      });
+      if (sessionCount === 0) {
+        await transaction.diningSession.create({
+          data: { restaurantId, tableId: table.id },
+        });
+      }
     }
 
     for (const category of demoCategories) {
