@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const tableCode = 'Q'.repeat(43);
 const tableId = '82e80217-0035-4da6-9e6f-76221a172fda';
+const secondTableId = '94b8f82a-3b0e-46b3-b724-27353566d8f9';
 const productId = '0f7b1db9-cba9-4d4b-a5ea-ae798e56b53a';
 const orderId = 'ad97f868-d026-4ca8-a765-dd34acdb643f';
 const createdAt = '2026-10-13T12:00:00.000Z';
@@ -55,6 +56,7 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   let orderStatus: 'PENDING' | 'PREPARING' = 'PENDING';
   let orderCreated = false;
   let submittedPayload: unknown;
+  const tables = [{ ...table }];
 
   const publicSummary = () => ({
     id: orderId,
@@ -112,7 +114,30 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
       return;
     }
     if (url.pathname === '/api/admin/tables' && method === 'GET') {
-      await route.fulfill({ status: 200, json: [table] });
+      await route.fulfill({ status: 200, json: tables });
+      return;
+    }
+    if (url.pathname === '/api/admin/tables' && method === 'POST') {
+      const body = request.postDataJSON() as { name: string };
+      const createdTable = {
+        ...table,
+        id: secondTableId,
+        name: body.name,
+        publicCode: 'R'.repeat(43),
+      };
+      tables.push(createdTable);
+      await route.fulfill({ status: 201, json: createdTable });
+      return;
+    }
+    const tableMatch = /^\/api\/admin\/tables\/([^/]+)$/.exec(url.pathname);
+    if (tableMatch && method === 'PATCH') {
+      const targetTable = tables.find((entry) => entry.id === tableMatch[1]);
+      if (!targetTable) {
+        await route.fulfill({ status: 404, json: { message: 'Not found' } });
+        return;
+      }
+      Object.assign(targetTable, request.postDataJSON());
+      await route.fulfill({ status: 200, json: targetTable });
       return;
     }
     if (url.pathname === '/api/admin/orders/summary' && method === 'GET') {
@@ -214,6 +239,52 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   }
 
   await page.setViewportSize({ width: 320, height: 800 });
+  await page.getByRole('button', { name: 'Nova mesa' }).click();
+  const createTableDialog = page.getByRole('dialog', { name: 'Adicionar mesa' });
+  await expect(createTableDialog).toBeVisible();
+  await createTableDialog.evaluate(async (dialog) => {
+    await Promise.all(
+      dialog.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => undefined),
+      ),
+    );
+  });
+  let editorBounds = await createTableDialog.boundingBox();
+  expect(editorBounds).not.toBeNull();
+  expect(editorBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(editorBounds!.x + editorBounds!.width).toBeLessThanOrEqual(320);
+  expect(editorBounds!.y).toBeGreaterThanOrEqual(0);
+  expect(editorBounds!.y + editorBounds!.height).toBeLessThanOrEqual(800);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await page.getByLabel('Nome da mesa').fill('Mesa 02');
+  let saveTableBounds = await page.getByRole('button', { name: 'Criar mesa' }).boundingBox();
+  expect(saveTableBounds?.height).toBeGreaterThanOrEqual(44);
+  await page.getByRole('button', { name: 'Criar mesa' }).click();
+  await expect(page.getByRole('heading', { name: 'Mesa 02' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Renomear Mesa 02' }).click();
+  const renameTableDialog = page.getByRole('dialog', { name: 'Renomear mesa' });
+  await expect(renameTableDialog).toBeVisible();
+  await renameTableDialog.evaluate(async (dialog) => {
+    await Promise.all(
+      dialog.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => undefined),
+      ),
+    );
+  });
+  editorBounds = await renameTableDialog.boundingBox();
+  expect(editorBounds).not.toBeNull();
+  expect(editorBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(editorBounds!.x + editorBounds!.width).toBeLessThanOrEqual(320);
+  expect(editorBounds!.y).toBeGreaterThanOrEqual(0);
+  expect(editorBounds!.y + editorBounds!.height).toBeLessThanOrEqual(800);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await page.getByLabel('Nome da mesa').fill('Mesa da varanda');
+  saveTableBounds = await page.getByRole('button', { name: 'Salvar alterações' }).boundingBox();
+  expect(saveTableBounds?.height).toBeGreaterThanOrEqual(44);
+  await page.getByRole('button', { name: 'Salvar alterações' }).click();
+  await expect(page.getByRole('heading', { name: 'Mesa da varanda' })).toBeVisible();
+
   await page.getByRole('button', { name: 'Ver QR de Mesa 01' }).click();
   const qrDialog = page.getByRole('dialog', { name: 'QR da Mesa 01' });
   await expect(qrDialog).toBeVisible();
@@ -338,6 +409,13 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
       viewportWidth: window.innerWidth,
     }));
     expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+  }
+  await page.setViewportSize({ width: 320, height: 800 });
+  for (const button of await page.getByRole('group', { name: 'Filtrar pedidos por status' }).getByRole('button').all()) {
+    expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  }
+  for (const button of await page.locator('.painel-order-actions').getByRole('button').all()) {
+    expect((await button.boundingBox())?.height).toBeGreaterThanOrEqual(44);
   }
   const reducedMotionDuration = await page.locator('.painel-order-card').evaluate((element) =>
     Number.parseFloat(getComputedStyle(element).animationDuration),

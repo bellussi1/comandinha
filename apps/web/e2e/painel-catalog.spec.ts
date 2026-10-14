@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 const categoryId = 'fa3103b4-39dd-4e5d-9204-d2b3da8a6f87';
 const productId = 'cb62d0d2-3b99-4e1d-9b13-b68d0f94a8e3';
@@ -8,6 +8,24 @@ const session = {
   membership: { id: 'membership-id', role: 'OWNER' },
   expiresAt: '2027-10-13T12:00:00.000Z',
 };
+
+async function expectMobileCatalogEditor(page: Page, saveLabel: string) {
+  const editor = page.locator('.painel-editor-form');
+  const bounds = await editor.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+
+  const saveButton = await page.getByRole('button', { name: saveLabel }).boundingBox();
+  expect(saveButton?.height).toBeGreaterThanOrEqual(44);
+
+  const dimensions = await page.evaluate(() => ({
+    pageWidth: document.documentElement.scrollWidth,
+    viewportWidth: window.innerWidth,
+  }));
+  expect(dimensions.viewportWidth).toBe(320);
+  expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
+}
 
 test('owner logs in, maintains the catalog, restores an archived product, and logs out', async ({ page }) => {
   const categories: Array<Record<string, unknown>> = [];
@@ -166,10 +184,13 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
   await expect(mobileBrand).toHaveCSS('outline-color', 'rgb(216, 173, 97)');
   await page.setViewportSize({ width: 1440, height: 900 });
 
+  await page.setViewportSize({ width: 320, height: 800 });
   await page.getByRole('button', { name: 'Criar categoria e incluir o primeiro produto' }).click();
+  await expectMobileCatalogEditor(page, 'Salvar categoria');
   await page.getByLabel('Nome da categoria').fill('Bebidas');
   await page.getByRole('button', { name: 'Salvar categoria' }).click();
   await expect(page.getByRole('heading', { name: 'Novo produto' })).toBeVisible();
+  await expectMobileCatalogEditor(page, 'Salvar produto');
   await expect(page.getByLabel('Categoria')).toHaveValue(categoryId);
 
   await page.getByLabel('Nome do produto').fill('Suco de laranja');
@@ -177,6 +198,7 @@ test('owner logs in, maintains the catalog, restores an archived product, and lo
   await page.getByRole('button', { name: 'Salvar produto' }).click();
   await expect(page.getByText('Suco de laranja')).toBeVisible();
   await expect(page.getByText('R$ 12,34')).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 900 });
 
   await page.getByRole('button', { name: 'Marcar Suco de laranja indisponível' }).click();
   await expect(page.getByText('Indisponível')).toBeVisible();

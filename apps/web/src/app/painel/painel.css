@@ -2322,6 +2322,11 @@
   background: #fffdfa;
 }
 
+.painel-table-editor-dialog {
+  box-sizing: border-box;
+  width: min(32rem, calc(100vw - 2rem));
+}
+
 .painel-table-editor-dialog > div:first-of-type,
 .painel-qr-dialog > div:first-of-type {
   gap: 0.45rem;
@@ -2760,8 +2765,14 @@
     justify-content: stretch;
   }
 
-  .painel-order-actions .button {
+  .painel-order-actions > button {
+    min-height: 2.75rem;
     flex: 1 1 auto;
+  }
+
+  .painel-order-filters button,
+  .painel-table-form-actions > * {
+    min-height: 2.75rem;
   }
 
   .painel-qr-actions {
