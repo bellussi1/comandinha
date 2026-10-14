@@ -51,7 +51,6 @@ export function PainelLoginForm() {
 
       if (response.ok) {
         router.push("/painel/catalogo");
-        router.refresh();
         return;
       }
 
