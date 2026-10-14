@@ -129,6 +129,7 @@ export class PublicDiningController {
   })
   @ApiParam({ name: 'orderId', type: String, format: 'uuid' })
   @ApiOkResponse({ type: PublicOrderSummaryDto })
+  @ApiBadRequestResponse({ description: 'O identificador do pedido é inválido.' })
   @ApiNotFoundResponse({ description: 'Mesa ou pedido não encontrado.' })
   getOrder(
     @Param('code') code: string,

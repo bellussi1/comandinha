@@ -45,7 +45,9 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista pedidos do restaurante da sessão' })
+  @ApiOperation({
+    summary: 'Lista até 100 pedidos mais recentes do restaurante da sessão',
+  })
   @ApiQuery({ name: 'status', required: false, enum: OrderStatus })
   @ApiOkResponse({ type: [OrderResponseDto] })
   list(

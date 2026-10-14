@@ -1267,6 +1267,9 @@
               }
             }
           },
+          "400": {
+            "description": "O identificador do pedido é inválido."
+          },
           "404": {
             "description": "Mesa ou pedido não encontrado."
           }

@@ -1739,6 +1739,13 @@ export interface operations {
                     "application/json": components["schemas"]["PublicOrderSummaryDto"];
                 };
             };
+            /** @description O identificador do pedido é inválido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Mesa ou pedido não encontrado. */
             404: {
                 headers: {
