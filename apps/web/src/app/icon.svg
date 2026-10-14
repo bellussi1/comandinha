@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Comandinha</title>
+  <rect width="512" height="512" rx="112" fill="#ef756d"/>
+  <path d="M148 83h216a28 28 0 0 1 28 28v258l-31-18-31 18-31-18-31 18-31-18-31 18-31-18-27 16V111a28 28 0 0 1 28-28Z" fill="#fff4e7" stroke="#422438" stroke-width="18" stroke-linejoin="round"/>
+  <circle cx="256" cy="157" r="30" fill="#e7a747" stroke="#422438" stroke-width="14"/>
+  <path d="M205 225h102M205 273h102M205 321h76" fill="none" stroke="#422438" stroke-width="17" stroke-linecap="round"/>
+</svg>
