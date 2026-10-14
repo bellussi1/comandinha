@@ -116,8 +116,8 @@ export function TablesWorkspace() {
     setActionError(null);
     setQrLoadingTableId(table.id);
     try {
-      const module = await import("./TableQrDialog");
-      setQrDialog(() => module.TableQrDialog);
+      const qrModule = await import("./TableQrDialog");
+      setQrDialog(() => qrModule.TableQrDialog);
       const publicUrl = new URL(`/q/${table.publicCode}`, window.location.origin).toString();
       setQr({ table, publicUrl });
     } catch {
