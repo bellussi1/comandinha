@@ -157,6 +157,8 @@
   .public-menu-page,
   .painel-confirm-dialog,
   .painel-table-editor-dialog,
+  .painel-table-session-dialog,
+  .painel-session-confirm-dialog,
   .painel-qr-dialog,
   .public-menu-cart-dialog
 ) {

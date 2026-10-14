@@ -7,6 +7,18 @@ const productId = '0f7b1db9-cba9-4d4b-a5ea-ae798e56b53a';
 const orderId = 'ad97f868-d026-4ca8-a765-dd34acdb643f';
 const longTableName = 'Mesa da varanda externa';
 const createdAt = '2026-10-13T12:00:00.000Z';
+const diningSession = {
+  id: 'bc865275-7edc-4d6c-a8e5-325c21ee6a72',
+  restaurantId: 'restaurant-id',
+  tableId,
+  status: 'OPEN',
+  openedAt: createdAt,
+  closedAt: null,
+  closedTotalInCents: null,
+  projectedTotalInCents: 0,
+  nonTerminalOrderCount: 0,
+  orders: [],
+};
 
 const session = {
   user: { id: 'user-id', name: 'Enzo Bellussi', email: 'enzo@example.com' },
@@ -24,6 +36,12 @@ const table = {
   createdAt,
   updatedAt: createdAt,
   activeOrderCount: 0,
+  currentSession: {
+    id: diningSession.id,
+    openedAt: diningSession.openedAt,
+    projectedTotalInCents: 0,
+    nonTerminalOrderCount: 0,
+  },
 };
 
 const menu = {
@@ -147,6 +165,10 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
       await route.fulfill({ status: 201, json: createdTable });
       return;
     }
+    if (url.pathname === `/api/admin/tables/${tableId}/session` && method === 'GET') {
+      await route.fulfill({ status: 200, json: { session: diningSession } });
+      return;
+    }
     const tableMatch = /^\/api\/admin\/tables\/([^/]+)$/.exec(url.pathname);
     if (tableMatch && method === 'PATCH') {
       const targetTable = tables.find((entry) => entry.id === tableMatch[1]);
@@ -244,6 +266,20 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
 
   await page.goto('/painel/mesas');
   await expect(page.getByRole('heading', { name: 'Mesas com acesso direto.' })).toBeVisible();
+  const tableAccountButton = page.getByRole('button', { name: 'Ver conta da Mesa 01' });
+  await expect(tableAccountButton).toBeVisible();
+  expect((await tableAccountButton.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+  await tableAccountButton.click();
+  const tableAccountDialog = page.getByRole('dialog', { name: 'Conta da Mesa 01' });
+  await expect(tableAccountDialog).toBeVisible();
+  await expect(tableAccountDialog.getByText('R$ 0,00')).toBeVisible();
+  await tableAccountDialog.evaluate(async (dialog) => {
+    await Promise.all(
+      dialog.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => undefined),
+      ),
+    );
+  });
   for (const viewport of [
     { width: 320, height: 800 },
     { width: 360, height: 800 },
@@ -251,13 +287,28 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
     { width: 1440, height: 900 },
   ]) {
     await page.setViewportSize(viewport);
+    await tableAccountDialog.evaluate(async (dialog) => {
+      await Promise.all(
+        dialog.getAnimations({ subtree: true }).map((animation) =>
+          animation.finished.catch(() => undefined),
+        ),
+      );
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    });
     const dimensions = await page.evaluate(() => ({
       pageWidth: document.documentElement.scrollWidth,
       viewportWidth: window.innerWidth,
     }));
     expect(dimensions.pageWidth).toBeLessThanOrEqual(dimensions.viewportWidth);
-    await expect(page.getByRole('button', { name: 'Ver QR de Mesa 01' })).toBeVisible();
+    const accountBounds = await tableAccountDialog.boundingBox();
+    expect(accountBounds).not.toBeNull();
+    expect(accountBounds!.x).toBeGreaterThanOrEqual(0);
+    expect(accountBounds!.x + accountBounds!.width).toBeLessThanOrEqual(viewport.width);
+    expect(accountBounds!.y).toBeGreaterThanOrEqual(0);
+    expect(accountBounds!.y + accountBounds!.height).toBeLessThanOrEqual(viewport.height);
   }
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Ver QR de Mesa 01' })).toBeVisible();
 
   await page.setViewportSize({ width: 320, height: 800 });
   await page.getByRole('button', { name: 'Nova mesa' }).click();

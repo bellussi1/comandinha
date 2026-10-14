@@ -2275,6 +2275,11 @@
   box-shadow: 0 0 0 3px #e9f3ec;
 }
 
+.painel-table-status.is-serving > span {
+  background: #c77845;
+  box-shadow: 0 0 0 3px #fbefe5;
+}
+
 .painel-table-copy {
   margin-block: 1rem auto;
 }
@@ -2296,6 +2301,68 @@
   margin: 0;
   color: #817781;
   font-size: 0.72rem;
+}
+
+.painel-table-session-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+  border: 1px solid #eee4e7;
+  border-radius: 0.85rem;
+  padding: 0.65rem 0.7rem;
+  background: #fffdfa;
+}
+
+.painel-table-session-entry > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.painel-table-session-entry .painel-eyebrow {
+  color: #8c7d87;
+  font-size: 0.56rem;
+}
+
+.painel-table-session-entry strong {
+  color: var(--painel-plum);
+  font-family: var(--comandinha-font-display);
+  font-size: 1.08rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-root .painel-table-session-button {
+  min-height: 2.75rem;
+  gap: 0.4rem;
+  border: 1px solid var(--painel-plum);
+  border-radius: 0.75rem;
+  color: #fffaf5;
+  background: var(--painel-plum);
+  box-shadow: none;
+  transition:
+    transform var(--comandinha-motion-fast) var(--comandinha-motion-ease),
+    background-color var(--comandinha-motion-fast) var(--comandinha-motion-ease);
+}
+
+.painel-root .painel-table-session-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--painel-plum-deep);
+}
+
+.painel-root .painel-table-session-button.is-secondary {
+  min-height: 2.75rem;
+  flex: 0 0 auto;
+  border-color: #e6dce4;
+  color: var(--painel-plum);
+  background: #fff;
+  font-size: 0.74rem;
+}
+
+.painel-root .painel-table-session-button.is-secondary:hover:not(:disabled) {
+  border-color: #c9b4c4;
+  background: #fbf7fa;
 }
 
 .painel-table-actions {
@@ -2346,7 +2413,8 @@
 }
 
 .painel-table-editor-dialog,
-.painel-qr-dialog {
+.painel-qr-dialog,
+body .painel-table-session-dialog {
   max-height: min(90dvh, 48rem);
   overflow-y: auto;
   border: 1px solid #e9e1e7;
@@ -2365,17 +2433,281 @@
 }
 
 .painel-table-editor-dialog h2,
-.painel-qr-dialog h2 {
+.painel-qr-dialog h2,
+.painel-table-session-dialog h2,
+.painel-session-confirm-dialog h2 {
   color: var(--painel-plum);
   font-size: 1.35rem;
   letter-spacing: -0.04em;
 }
 
 .painel-table-editor-dialog [data-radix-dialog-description],
-.painel-qr-dialog [data-radix-dialog-description] {
+.painel-qr-dialog [data-radix-dialog-description],
+.painel-table-session-dialog [data-radix-dialog-description],
+.painel-session-confirm-dialog [data-radix-alert-dialog-description] {
   color: #786e78;
   font-size: 0.82rem;
   line-height: 1.55;
+}
+
+.painel-table-session-dialog {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 34rem !important;
+  width: min(34rem, calc(100vw - 1rem)) !important;
+  padding: 1.15rem;
+}
+
+@media (max-width: 40rem) {
+  body .painel-table-session-dialog {
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: 50% !important;
+    width: min(34rem, calc(100vw - 2rem)) !important;
+    max-width: none !important;
+  }
+}
+
+.painel-table-session-dialog > div:first-of-type {
+  gap: 0.45rem;
+}
+
+.painel-session-balance {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid #eadfe5;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
+  background: #fcf8f7;
+}
+
+.painel-session-balance > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.painel-session-balance .painel-eyebrow {
+  color: #8c7d87;
+  font-size: 0.58rem;
+}
+
+.painel-session-balance strong {
+  color: var(--painel-plum);
+  font-family: var(--comandinha-font-display);
+  font-size: clamp(1.6rem, 8vw, 2.15rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.painel-session-order-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #706572;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.painel-session-blocking-note {
+  margin: 0;
+  color: #8a4138;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.painel-session-orders {
+  display: grid;
+  max-height: min(36dvh, 22rem);
+  gap: 0.6rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0 0.15rem 0 0;
+  list-style: none;
+  overscroll-behavior: contain;
+}
+
+.painel-session-order {
+  min-width: 0;
+  border: 1px solid #eee8e5;
+  border-radius: 0.85rem;
+  padding: 0.75rem;
+  background: #fff;
+}
+
+.painel-session-order-heading,
+.painel-session-order-items li,
+.painel-session-order-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.painel-session-order-heading > strong {
+  color: var(--painel-plum);
+  font-size: 0.78rem;
+}
+
+.painel-session-order-status {
+  border-radius: 999px;
+  padding: 0.22rem 0.5rem;
+  color: #765d33;
+  background: #fbf3df;
+  font-size: 0.65rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.painel-session-order-status.is-delivered {
+  color: #38654f;
+  background: #eaf4ed;
+}
+
+.painel-session-order-status.is-cancelled {
+  color: #756b75;
+  background: #f1eeef;
+}
+
+.painel-session-order-items {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.7rem 0;
+  padding: 0;
+  color: #6f6670;
+  font-size: 0.75rem;
+  list-style: none;
+}
+
+.painel-session-order-items li {
+  align-items: flex-start;
+}
+
+.painel-session-order-items li span {
+  overflow-wrap: anywhere;
+}
+
+.painel-session-order-items li strong {
+  flex: 0 0 auto;
+  color: #554b56;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-session-order-total {
+  border-top: 1px solid #f0ece9;
+  padding-top: 0.55rem;
+  color: #7c717b;
+  font-size: 0.7rem;
+}
+
+.painel-session-order-total strong {
+  color: var(--painel-plum);
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-session-empty,
+.painel-session-state {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  color: #796e79;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.painel-session-empty p {
+  margin: 0;
+}
+
+.painel-session-error {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.6rem;
+  border: 1px solid #f1c5bd;
+  border-radius: 0.8rem;
+  padding: 0.75rem;
+  color: #8a4138;
+  background: #fff6f3;
+  font-size: 0.78rem;
+}
+
+.painel-session-error .button {
+  grid-column: 2;
+  justify-self: start;
+}
+
+.painel-session-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  border-top: 1px solid #f0ece9;
+  padding-top: 0.8rem;
+}
+
+.painel-session-dialog-actions > * {
+  min-height: 2.75rem;
+}
+
+.painel-session-dialog-actions .painel-session-close-button,
+.painel-session-confirm-action {
+  border: 1px solid var(--painel-plum);
+  color: #fffaf5;
+  background: var(--painel-plum);
+}
+
+.painel-session-dialog-actions .painel-session-close-button:hover:not(:disabled),
+.painel-session-confirm-action:hover:not(:disabled) {
+  background: var(--painel-plum-deep);
+}
+
+.painel-session-confirm-dialog {
+  box-sizing: border-box;
+  width: min(28rem, calc(100vw - 1rem));
+  border: 1px solid #e9e1e7;
+  border-radius: 1.1rem;
+  background: #fffdfa;
+}
+
+.painel-session-confirm-dialog [data-radix-alert-dialog-description] strong {
+  color: var(--painel-plum);
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-session-confirm-overlay,
+.painel-table-session-overlay {
+  background: rgb(36 26 35 / 54%);
+}
+
+.painel-session-success {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  border: 1px solid #c8ddce;
+  border-radius: 0.8rem;
+  padding: 0.75rem 0.9rem;
+  color: #38654f;
+  background: #f0f7f1;
+  font-size: 0.8rem;
+}
+
+.painel-session-success button {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 0.5rem;
+  color: inherit;
+  background: transparent;
+  font-size: 1.2rem;
 }
 
 .painel-table-form {
@@ -2806,6 +3138,23 @@
     min-height: 12.6rem;
   }
 
+  .painel-table-session-entry {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .painel-root .painel-table-session-button.is-secondary {
+    min-height: 2.75rem;
+  }
+
+  .painel-session-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .painel-session-dialog-actions > * {
+    width: 100%;
+  }
+
   .painel-order-card {
     padding: 0.85rem;
   }
@@ -2846,8 +3195,12 @@
   .painel-confirm-dialog,
   .painel-confirm-overlay,
   .painel-table-editor-dialog,
+  .painel-table-session-dialog,
+  .painel-session-confirm-dialog,
   .painel-qr-dialog,
   .painel-table-editor-overlay,
+  .painel-table-session-overlay,
+  .painel-session-confirm-overlay,
   .painel-qr-overlay {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
@@ -2863,6 +3216,7 @@
   .painel-dashboard-shortcut:hover,
   .painel-table-card:hover,
   .painel-order-card:hover,
+  .painel-root .painel-table-session-button:hover:not(:disabled),
   .painel-root .painel-action-button:hover:not(:disabled),
   .painel-table-editor-dialog .painel-action-button:hover:not(:disabled),
   .painel-qr-dialog .painel-action-button:hover:not(:disabled) {

@@ -1,7 +1,11 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ApiPaths } from "@comandinha/api-client";
 import * as tables from "../../../../services/panel-tables";
+import type {
+  PanelDiningSession,
+  PanelDiningSessionEnvelope,
+} from "../../../../services/panel-tables";
 import { PainelSessionProvider } from "../../PainelSessionContext";
 import { TablesWorkspace } from "../TablesWorkspace";
 
@@ -19,6 +23,46 @@ const table: Table = {
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   activeOrderCount: 2,
+  currentSession: null,
+};
+
+const openDiningSession: PanelDiningSession = {
+  id: "d4abcc94-e591-4d8d-980a-056ae9a4b8de",
+  restaurantId: table.restaurantId,
+  tableId: table.id,
+  status: "OPEN",
+  openedAt: "2026-10-14T12:00:00.000Z",
+  closedAt: null,
+  closedTotalInCents: null,
+  projectedTotalInCents: 5290,
+  nonTerminalOrderCount: 1,
+  orders: [
+    {
+      id: "b6b8600d-a6ef-4c66-8b1b-32e7c79692a3",
+      status: "PENDING",
+      totalInCents: 5290,
+      createdAt: "2026-10-14T12:10:00.000Z",
+      items: [
+        {
+          id: "e9d5a68e-b5ab-4503-bb4e-c7d41b2982e0",
+          nameSnapshot: "Smash clássico",
+          unitPriceInCents: 5290,
+          quantity: 1,
+          notes: null,
+          lineTotalInCents: 5290,
+        },
+      ],
+    },
+  ],
+};
+const activeTable: Table = {
+  ...table,
+  currentSession: {
+    id: openDiningSession.id,
+    openedAt: openDiningSession.openedAt,
+    projectedTotalInCents: openDiningSession.projectedTotalInCents,
+    nonTerminalOrderCount: openDiningSession.nonTerminalOrderCount,
+  },
 };
 
 const ownerSession: Session = {
@@ -42,6 +86,9 @@ jest.mock(
     listTables: jest.fn(),
     createTable: jest.fn(),
     updateTable: jest.fn(),
+    openTableSession: jest.fn(),
+    getTableSession: jest.fn(),
+    closeTableSession: jest.fn(),
   }),
   { virtual: true },
 );
@@ -66,6 +113,148 @@ describe("TablesWorkspace", () => {
       name: "Mesa 04",
     });
     service.updateTable.mockResolvedValue(table);
+    service.openTableSession.mockResolvedValue(openDiningSession);
+    service.getTableSession.mockResolvedValue({
+      session: openDiningSession,
+    } satisfies PanelDiningSessionEnvelope);
+    service.closeTableSession.mockResolvedValue({
+      ...openDiningSession,
+      status: "CLOSED",
+      closedAt: "2026-10-14T13:00:00.000Z",
+      closedTotalInCents: 5290,
+      nonTerminalOrderCount: 0,
+    });
+  });
+
+  it("starts an open service from the table card and shows the account", async () => {
+    const user = userEvent.setup();
+    service.listTables
+      .mockResolvedValueOnce([table])
+      .mockResolvedValueOnce([activeTable]);
+    renderWorkspace();
+
+    expect(await screen.findByText("Livre")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Iniciar atendimento para Mesa 01" }),
+    );
+
+    expect(service.openTableSession).toHaveBeenCalledWith(table.id);
+    expect(
+      await screen.findByRole("dialog", { name: "Conta da Mesa 01" }),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        within(screen.getByRole("dialog", { name: "Conta da Mesa 01" })).getByRole(
+          "region",
+          { name: "Resumo da conta" },
+        ),
+      ).getByText("R$ 52,90"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a projected total and prevents closing while an order is pending", async () => {
+    const user = userEvent.setup();
+    service.listTables.mockResolvedValue([activeTable]);
+    renderWorkspace();
+
+    expect(await screen.findByText("Em atendimento")).toBeInTheDocument();
+    expect(screen.getByText("R$ 52,90")).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Ver conta da Mesa 01" }),
+    );
+
+    expect(service.getTableSession).toHaveBeenCalledWith(table.id);
+    expect(
+      await screen.findByRole("dialog", { name: "Conta da Mesa 01" }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/Smash clássico/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fechar conta" })).toBeDisabled();
+    expect(screen.getByText(/1 pedido ainda precisa ser finalizado/)).toBeInTheDocument();
+  });
+
+  it("lets STAFF inspect the account without opening or closing sessions", async () => {
+    const user = userEvent.setup();
+    service.listTables.mockResolvedValue([activeTable]);
+    renderWorkspace(staffSession);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Ver conta da Mesa 01" }),
+    );
+
+    expect(
+      within(
+        within(
+          await screen.findByRole("dialog", { name: "Conta da Mesa 01" }),
+        ).getByRole("region", { name: "Resumo da conta" }),
+      ).getByText("R$ 52,90"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Iniciar atendimento para Mesa 01" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Fechar conta" })).not.toBeInTheDocument();
+  });
+
+  it("requires confirmation, closes with the server total and refreshes the table", async () => {
+    const user = userEvent.setup();
+    const settledSession: PanelDiningSession = {
+      ...openDiningSession,
+      projectedTotalInCents: 2990,
+      nonTerminalOrderCount: 0,
+      orders: [
+        {
+          ...openDiningSession.orders[0]!,
+          status: "DELIVERED",
+          totalInCents: 2990,
+          items: [
+            {
+              ...openDiningSession.orders[0]!.items[0]!,
+              unitPriceInCents: 2990,
+              lineTotalInCents: 2990,
+            },
+          ],
+        },
+      ],
+    };
+    service.listTables
+      .mockResolvedValueOnce([{ ...activeTable, currentSession: {
+        ...activeTable.currentSession!,
+        projectedTotalInCents: 2990,
+        nonTerminalOrderCount: 0,
+      } }])
+      .mockResolvedValueOnce([table]);
+    service.getTableSession.mockResolvedValue({ session: settledSession });
+    service.closeTableSession.mockResolvedValue({
+      ...settledSession,
+      status: "CLOSED",
+      closedAt: "2026-10-14T13:00:00.000Z",
+      closedTotalInCents: 2990,
+    });
+    renderWorkspace();
+
+    await user.click(
+      await screen.findByRole("button", { name: "Ver conta da Mesa 01" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Fechar conta" }),
+    );
+    expect(
+      await screen.findByRole("alertdialog", {
+        name: "Encerrar atendimento da Mesa 01?",
+      }),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Confirmar encerramento" }),
+    );
+
+    await waitFor(() =>
+      expect(service.closeTableSession).toHaveBeenCalledWith(
+        openDiningSession.id,
+      ),
+    );
+    expect(
+      await screen.findByRole("status"),
+    ).toHaveTextContent("Conta encerrada. Total registrado: R$ 29,90.");
+    expect(await screen.findByText("Livre")).toBeInTheDocument();
   });
 
   it("creates and renames tables through the typed service", async () => {

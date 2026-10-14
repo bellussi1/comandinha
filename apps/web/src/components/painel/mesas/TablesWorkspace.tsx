@@ -6,7 +6,9 @@ import {
   CircleAlert,
   LoaderCircle,
   Plus,
+  Play,
   QrCode,
+  ReceiptText,
   RefreshCw,
   SquarePen,
   ToggleLeft,
@@ -23,15 +25,29 @@ import {
 import {
   createTable,
   listTables,
+  closeTableSession,
+  getTableSession,
+  openTableSession,
   updateTable,
+  type PanelDiningSession,
   type PanelTable,
 } from "@/src/services/panel-tables";
 import { usePainelSession } from "../PainelSessionContext";
 import { TableForm } from "./TableForm";
+import { TableSessionDialog } from "./TableSessionDialog";
 
 type FormState = { table?: PanelTable } | null;
 type QrState = { table: PanelTable; publicUrl: string } | null;
 type QrDialogComponent = typeof import("./TableQrDialog").TableQrDialog;
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+function formatCurrency(amountInCents: number): string {
+  return currencyFormatter.format(amountInCents / 100);
+}
 
 function getActionError(error: unknown, fallback: string): string {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -53,11 +69,24 @@ export function TablesWorkspace() {
   const [form, setForm] = useState<FormState>(null);
   const [qr, setQr] = useState<QrState>(null);
   const [QrDialog, setQrDialog] = useState<QrDialogComponent | null>(null);
+  const [sessionDialogTable, setSessionDialogTable] =
+    useState<PanelTable | null>(null);
+  const [sessionDetails, setSessionDetails] =
+    useState<PanelDiningSession | null>(null);
+  const [sessionLoadError, setSessionLoadError] = useState<string | null>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [isClosingSession, setIsClosingSession] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const [openingSessionTableIds, setOpeningSessionTableIds] = useState<
+    ReadonlySet<string>
+  >(() => new Set());
   const [qrLoadingTableId, setQrLoadingTableId] = useState<string | null>(null);
   const [pendingTableIds, setPendingTableIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
   const pendingTableIdsRef = useRef(new Set<string>());
+  const openingSessionTableIdsRef = useRef(new Set<string>());
+  const isClosingSessionRef = useRef(false);
   const [isSavingForm, setIsSavingForm] = useState(false);
   const isSavingFormRef = useRef(false);
   const formGenerationRef = useRef(0);
@@ -138,6 +167,83 @@ export function TablesWorkspace() {
     }
   }
 
+  async function loadSessionDetails(table: PanelTable) {
+    setIsLoadingSession(true);
+    setSessionLoadError(null);
+    setSessionDetails(null);
+    try {
+      const result = await getTableSession(table.id);
+      setSessionDetails(result.session ?? null);
+    } catch (error) {
+      setSessionLoadError(
+        getActionError(error, "Não foi possível carregar a conta da mesa."),
+      );
+    } finally {
+      setIsLoadingSession(false);
+    }
+  }
+
+  async function viewSession(table: PanelTable) {
+    setSessionDialogTable(table);
+    setSessionNotice(null);
+    await loadSessionDetails(table);
+  }
+
+  async function startSession(table: PanelTable) {
+    if (openingSessionTableIdsRef.current.has(table.id)) return;
+    setActionError(null);
+    setSessionNotice(null);
+    openingSessionTableIdsRef.current.add(table.id);
+    setOpeningSessionTableIds(new Set(openingSessionTableIdsRef.current));
+    try {
+      const opened = await openTableSession(table.id);
+      setSessionDialogTable(table);
+      setSessionDetails(opened);
+      setSessionLoadError(null);
+      await loadTables(true);
+    } catch (error) {
+      setActionError(
+        getActionError(error, "Não foi possível iniciar o atendimento."),
+      );
+    } finally {
+      openingSessionTableIdsRef.current.delete(table.id);
+      setOpeningSessionTableIds(new Set(openingSessionTableIdsRef.current));
+    }
+  }
+
+  async function finishSession() {
+    if (!sessionDialogTable || !sessionDetails || isClosingSessionRef.current) {
+      return;
+    }
+
+    isClosingSessionRef.current = true;
+    setIsClosingSession(true);
+    setSessionLoadError(null);
+    try {
+      const closed = await closeTableSession(sessionDetails.id);
+      await loadTables(true);
+      setSessionDialogTable(null);
+      setSessionDetails(null);
+      setSessionNotice(
+        `Conta encerrada. Total registrado: ${formatCurrency(closed.closedTotalInCents ?? 0)}.`,
+      );
+    } catch (error) {
+      setSessionLoadError(
+        getActionError(error, "Não foi possível encerrar a conta agora."),
+      );
+    } finally {
+      isClosingSessionRef.current = false;
+      setIsClosingSession(false);
+    }
+  }
+
+  function closeSessionDialog(open: boolean) {
+    if (open || isClosingSessionRef.current) return;
+    setSessionDialogTable(null);
+    setSessionDetails(null);
+    setSessionLoadError(null);
+  }
+
   function openForm(nextForm: FormState) {
     if (isSavingFormRef.current) return;
     formGenerationRef.current += 1;
@@ -209,6 +315,19 @@ export function TablesWorkspace() {
         </div>
       )}
 
+      {sessionNotice && (
+        <div className="painel-session-success" role="status">
+          <span>{sessionNotice}</span>
+          <button
+            aria-label="Fechar confirmação"
+            onClick={() => setSessionNotice(null)}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <div className="painel-dining-toolbar">
         <div>
           <span className="painel-eyebrow">SALÃO</span>
@@ -268,7 +387,17 @@ export function TablesWorkspace() {
         </div>
       ) : (
         <div className="painel-table-grid">
-          {tables.map((table, index) => (
+          {tables.map((table, index) => {
+            const currentSession = table.currentSession;
+            const nonTerminalOrderCount =
+              currentSession?.nonTerminalOrderCount ?? table.activeOrderCount;
+            const statusLabel = currentSession
+              ? "Em atendimento"
+              : table.isActive
+                ? "Livre"
+                : "Inativa";
+
+            return (
             <article
               className={`painel-table-card${table.isActive ? "" : " is-inactive"}`}
               key={table.id}
@@ -279,10 +408,10 @@ export function TablesWorkspace() {
                   <Armchair size={19} />
                 </span>
                 <span
-                  className={`painel-table-status${table.isActive ? " is-active" : ""}`}
+                  className={`painel-table-status${currentSession ? " is-serving" : table.isActive ? " is-active" : ""}`}
                 >
                   <span aria-hidden="true" />
-                  {table.isActive ? "Ativa" : "Inativa"}
+                  {statusLabel}
                 </span>
               </div>
               <div className="painel-table-copy">
@@ -290,8 +419,50 @@ export function TablesWorkspace() {
                   MESA {String(index + 1).padStart(2, "0")}
                 </span>
                 <h2>{table.name}</h2>
-                <p>{orderCountLabel(table.activeOrderCount)}</p>
+                <p>{orderCountLabel(nonTerminalOrderCount)}</p>
               </div>
+              {currentSession ? (
+                <div className="painel-table-session-entry">
+                  <div>
+                    <span className="painel-eyebrow">CONTA PARCIAL</span>
+                    <strong>
+                      {formatCurrency(currentSession.projectedTotalInCents)}
+                    </strong>
+                  </div>
+                  <Button
+                    aria-label={`Ver conta da ${table.name}`}
+                    className="painel-table-session-button is-secondary"
+                    onClick={() => void viewSession(table)}
+                    type="button"
+                    variant="outline"
+                  >
+                    <ReceiptText aria-hidden="true" size={16} />
+                    Ver conta
+                  </Button>
+                </div>
+              ) : canManage && table.isActive ? (
+                <Button
+                  aria-busy={openingSessionTableIds.has(table.id)}
+                  aria-label={`Iniciar atendimento para ${table.name}`}
+                  className="painel-table-session-button"
+                  disabled={openingSessionTableIds.has(table.id)}
+                  onClick={() => void startSession(table)}
+                  type="button"
+                >
+                  {openingSessionTableIds.has(table.id) ? (
+                    <LoaderCircle
+                      aria-hidden="true"
+                      className="painel-spin"
+                      size={16}
+                    />
+                  ) : (
+                    <Play aria-hidden="true" size={15} />
+                  )}
+                  {openingSessionTableIds.has(table.id)
+                    ? "Iniciando atendimento…"
+                    : "Iniciar atendimento"}
+                </Button>
+              ) : null}
               <div className="painel-table-actions">
                 <Button
                   aria-busy={qrLoadingTableId === table.id}
@@ -337,9 +508,17 @@ export function TablesWorkspace() {
                     <button
                       aria-label={`${table.isActive ? "Desativar" : "Ativar"} ${table.name}`}
                       className="painel-icon-action"
-                      disabled={pendingTableIds.has(table.id)}
+                      disabled={
+                        pendingTableIds.has(table.id) || currentSession != null
+                      }
                       onClick={() => void toggleTable(table)}
-                      title={table.isActive ? "Desativar mesa" : "Ativar mesa"}
+                      title={
+                        currentSession
+                          ? "Feche o atendimento antes de desativar a mesa"
+                          : table.isActive
+                            ? "Desativar mesa"
+                            : "Ativar mesa"
+                      }
                       type="button"
                     >
                       {table.isActive ? (
@@ -355,7 +534,8 @@ export function TablesWorkspace() {
                 )}
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -395,6 +575,21 @@ export function TablesWorkspace() {
           table={qr?.table ?? null}
         />
       )}
+
+      <TableSessionDialog
+        canManage={canManage}
+        error={sessionLoadError}
+        isClosing={isClosingSession}
+        isLoading={isLoadingSession}
+        onConfirmClose={() => void finishSession()}
+        onOpenChange={closeSessionDialog}
+        onRetry={() => {
+          if (sessionDialogTable) void loadSessionDetails(sessionDialogTable);
+        }}
+        open={sessionDialogTable !== null}
+        session={sessionDetails}
+        table={sessionDialogTable}
+      />
     </section>
   );
 }
