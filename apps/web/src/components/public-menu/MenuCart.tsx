@@ -16,6 +16,7 @@ type MenuCartProps = {
   lines: CartLine[];
   products: PublicMenuProduct[];
   isReady: boolean;
+  canOrder: boolean;
   isOpen: boolean;
   isSubmitting: boolean;
   submitError: string | null;
@@ -35,6 +36,7 @@ export function MenuCart({
   lines,
   products,
   isReady,
+  canOrder,
   isOpen,
   isSubmitting,
   submitError,
@@ -60,7 +62,7 @@ export function MenuCart({
         <Button
           aria-label={`Abrir carrinho · ${itemCount} ${itemCount === 1 ? "item" : "itens"}`}
           className="public-menu-cart-trigger"
-          disabled={!isReady || lines.length === 0}
+          disabled={!isReady || !canOrder || lines.length === 0}
           onClick={() => onOpenChange(true)}
           type="button"
         >
@@ -131,7 +133,7 @@ export function MenuCart({
                         <button
                           aria-label={`Remover ${product?.name ?? "produto indisponível"}`}
                           className="public-menu-remove-item"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || !canOrder}
                           onClick={() => onRemove(line.productId)}
                           type="button"
                         >
@@ -147,7 +149,7 @@ export function MenuCart({
                           >
                             <button
                               aria-label={`Diminuir ${product.name}`}
-                              disabled={line.quantity <= 1 || isSubmitting}
+                              disabled={line.quantity <= 1 || isSubmitting || !canOrder}
                               onClick={() =>
                                 onQuantityChange(
                                   line.productId,
@@ -161,7 +163,7 @@ export function MenuCart({
                             <span aria-live="polite">{line.quantity}</span>
                             <button
                               aria-label={`Aumentar ${product.name}`}
-                              disabled={line.quantity >= 20 || isSubmitting}
+                              disabled={line.quantity >= 20 || isSubmitting || !canOrder}
                               onClick={() =>
                                 onQuantityChange(
                                   line.productId,
@@ -186,7 +188,7 @@ export function MenuCart({
                           <span>Observação para a cozinha (opcional)</span>
                           <textarea
                             aria-label={`Observação para ${product.name}`}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !canOrder}
                             maxLength={200}
                             onChange={(event) =>
                               onNotesChange(line.productId, event.target.value)
@@ -219,7 +221,10 @@ export function MenuCart({
               <Button
                 className="public-menu-submit-button"
                 disabled={
-                  isSubmitting || lines.length === 0 || hasUnavailableProduct
+                  !canOrder ||
+                  isSubmitting ||
+                  lines.length === 0 ||
+                  hasUnavailableProduct
                 }
                 onClick={() => void onSubmit()}
                 type="button"

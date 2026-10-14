@@ -26,7 +26,8 @@ describe("public dining requests", () => {
 
     await expect(submitPublicOrder("A".repeat(43), payload)).rejects.toMatchObject({
       status: 409,
-      message: "Esta mesa não está recebendo pedidos no momento.",
+      message:
+        "A mesa está fechada para novos pedidos. Peça à equipe para abrir o atendimento.",
     });
   });
 });

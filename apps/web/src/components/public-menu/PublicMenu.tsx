@@ -14,6 +14,7 @@ import {
   Clock3,
   LoaderCircle,
   Plus,
+  RefreshCw,
   Star,
 } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
@@ -207,6 +208,15 @@ function menuErrorMessage(error: unknown): string {
     : "Não foi possível carregar o cardápio agora.";
 }
 
+function isClosedSessionConflict(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "status" in error &&
+    error.status === 409 &&
+    error.message.startsWith("A mesa está fechada para novos pedidos.")
+  );
+}
+
 function PublicMenuExperience({ code }: { code: string }) {
   const cartKey = cartStorageKey(code);
   const lastOrderKey = lastOrderStorageKey(code);
@@ -232,7 +242,9 @@ function PublicMenuExperience({ code }: { code: string }) {
     setIsLoading(true);
     setMenuError(null);
     try {
-      receiveMenu(await getPublicMenu(code));
+      const nextMenu = await getPublicMenu(code);
+      receiveMenu(nextMenu);
+      setSubmitError(null);
     } catch (error) {
       setMenuError(menuErrorMessage(error));
     } finally {
@@ -329,7 +341,7 @@ function PublicMenuExperience({ code }: { code: string }) {
   }
 
   async function sendOrder() {
-    if (submissionRef.current || !lines.length) return;
+    if (submissionRef.current || !lines.length || !menu?.acceptingOrders) return;
     submissionRef.current = true;
     setIsSubmitting(true);
     setSubmitError(null);
@@ -349,6 +361,13 @@ function PublicMenuExperience({ code }: { code: string }) {
       setCartOpen(false);
       setCartNotice(null);
     } catch (error) {
+      if (isClosedSessionConflict(error)) {
+        setMenu((currentMenu) =>
+          currentMenu
+            ? { ...currentMenu, acceptingOrders: false }
+            : currentMenu,
+        );
+      }
       setSubmitError(menuErrorMessage(error));
     } finally {
       submissionRef.current = false;
@@ -381,6 +400,32 @@ function PublicMenuExperience({ code }: { code: string }) {
               </div>
               <span className="public-menu-header-note">PEDIDO À MESA</span>
             </header>
+
+            {!menu.acceptingOrders && (
+              <aside
+                aria-live="polite"
+                className="public-menu-session-closed"
+                role="status"
+              >
+                <div>
+                  <strong>Atendimento pausado</strong>
+                  <p>A equipe precisa abrir a mesa para receber novos pedidos.</p>
+                  {menuError && (
+                    <span className="public-menu-session-refresh-error" role="alert">
+                      {menuError}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  onClick={() => void loadMenu()}
+                  type="button"
+                  variant="outline"
+                >
+                  <RefreshCw aria-hidden="true" size={15} />
+                  Atualizar cardápio
+                </Button>
+              </aside>
+            )}
 
             {lastOrderId && (
               <OrderTracking
@@ -532,7 +577,7 @@ function PublicMenuExperience({ code }: { code: string }) {
                           <Button
                             aria-label={`Adicionar ${product.name} ao carrinho`}
                             className="public-menu-add-button"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || !menu.acceptingOrders}
                             onClick={() => addProduct(product)}
                             type="button"
                             variant="outline"
@@ -602,6 +647,7 @@ function PublicMenuExperience({ code }: { code: string }) {
         )}
 
         <MenuCart
+          canOrder={menu?.acceptingOrders ?? false}
           isOpen={cartOpen}
           isReady={Boolean(menu) && !isLoading}
           isSubmitting={isSubmitting}

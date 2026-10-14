@@ -47,6 +47,7 @@ const table = {
 const menu = {
   restaurant: { name: 'Casa do Enzo' },
   table: { name: 'Mesa 01' },
+  acceptingOrders: true,
   categories: [
     {
       id: '02b35e28-760d-4558-94c5-4e0b9244be6b',
@@ -557,6 +558,132 @@ test('owner opens a table QR, sends an order, advances it, and sees public track
   await page.goto(publicUrl);
   await expect(page.getByText('Seu pedido está sendo preparado')).toBeVisible();
   await expect(page.locator('.public-order-status')).toHaveText('Preparando');
+});
+
+test('keeps the QR menu readable while a table closes and reopens across viewports', async ({
+  page,
+}) => {
+  let acceptingOrders = true;
+  let orderCreated = false;
+  const publicOrder = {
+    id: orderId,
+    status: 'PENDING',
+    totalInCents: 2990,
+    createdAt,
+    items: [
+      {
+        nameSnapshot: 'Smash clássico',
+        quantity: 1,
+        unitPriceInCents: 2990,
+        lineTotalInCents: 2990,
+      },
+    ],
+  };
+
+  await page.route(`**/api/public/tables/${tableCode}/**`, async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    if (pathname.endsWith('/menu') && request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        json: { ...menu, acceptingOrders },
+      });
+      return;
+    }
+    if (pathname.endsWith(`/orders/${orderId}`) && request.method() === 'GET') {
+      await route.fulfill({
+        status: orderCreated ? 200 : 404,
+        json: orderCreated ? publicOrder : { message: 'Order not found.' },
+      });
+      return;
+    }
+    if (pathname.endsWith('/orders') && request.method() === 'GET') {
+      await route.fulfill({ status: 200, json: [] });
+      return;
+    }
+    if (pathname.endsWith('/orders') && request.method() === 'POST') {
+      if (!acceptingOrders) {
+        await route.fulfill({
+          status: 409,
+          json: { message: 'This table is not accepting orders.' },
+        });
+        return;
+      }
+      orderCreated = true;
+      await route.fulfill({ status: 201, json: publicOrder });
+      return;
+    }
+    await route.fulfill({ status: 404, json: { message: 'Unexpected test API request' } });
+  });
+
+  await page.goto(`/q/${tableCode}`);
+  await expect(page.getByRole('heading', { name: 'Casa do Enzo' })).toBeVisible();
+  const viewports = [
+    { width: 320, height: 800 },
+    { width: 360, height: 800 },
+    { width: 768, height: 1024 },
+    { width: 1440, height: 900 },
+  ];
+  const addButton = page.getByRole('button', {
+    name: 'Adicionar Smash clássico ao carrinho',
+  });
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    await expect(addButton).toBeEnabled();
+    await expect(page.getByRole('heading', { name: 'Smash clássico' })).toBeVisible();
+  }
+
+  await page.setViewportSize({ width: 360, height: 800 });
+  await addButton.click();
+  await page.getByRole('button', { name: /Abrir carrinho/ }).click();
+  acceptingOrders = false;
+  await page.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(page.getByRole('alert')).toContainText(
+    'A mesa está fechada para novos pedidos.',
+  );
+  await page.keyboard.press('Escape');
+  const closedNotice = page.getByRole('status');
+  await expect(closedNotice).toContainText(
+    'A equipe precisa abrir a mesa para receber novos pedidos.',
+  );
+  const refreshButton = page.getByRole('button', { name: 'Atualizar cardápio' });
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    await expect(page.getByRole('heading', { name: 'Smash clássico' })).toBeVisible();
+    await expect(addButton).toBeDisabled();
+    await expect(page.getByRole('button', { name: /Abrir carrinho/ })).toBeDisabled();
+  }
+  await page.setViewportSize({ width: 320, height: 800 });
+  await refreshButton.focus();
+  await expect(refreshButton).toHaveCSS('outline-style', 'solid');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reducedMotionDuration = await page.locator('.public-menu-product').first().evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).animationDuration),
+  );
+  expect(reducedMotionDuration).toBeLessThanOrEqual(0.001);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+
+  acceptingOrders = true;
+  await refreshButton.click();
+  await expect(addButton).toBeEnabled();
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      viewport.width,
+    );
+    await expect(addButton).toBeEnabled();
+    await expect(page.getByRole('button', { name: /Abrir carrinho · 1 item/ })).toBeEnabled();
+  }
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.getByRole('button', { name: /Abrir carrinho · 1 item/ }).click();
+  await page.getByRole('button', { name: 'Enviar pedido' }).click();
+  await expect(page.getByText('Pedido recebido pelo restaurante')).toBeVisible();
 });
 
 test('keeps legacy admin and table menu routes reachable during migration', async ({ page }) => {

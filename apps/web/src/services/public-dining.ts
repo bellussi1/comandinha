@@ -63,7 +63,7 @@ async function requestPublicJson<T>(
       "One or more products are unavailable.":
         "Um ou mais itens acabaram. Revise seu pedido e tente novamente.",
       "This table is not accepting orders.":
-        "Esta mesa não está recebendo pedidos no momento.",
+        "A mesa está fechada para novos pedidos. Peça à equipe para abrir o atendimento.",
     };
     throw new PublicDiningRequestError(
       response.status,

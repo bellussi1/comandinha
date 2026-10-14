@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ApiPaths } from "@comandinha/api-client";
 import * as dining from "../../../services/public-dining";
@@ -61,6 +61,7 @@ const menu: PublicMenuResponse = {
     },
   ],
 };
+const closedMenu: PublicMenuResponse = { ...menu, acceptingOrders: false };
 
 const createdOrder: PublicOrderResponse = {
   id: orderId,
@@ -112,6 +113,106 @@ describe("PublicMenu", () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it("keeps a closed table menu readable and preserves its cart until the session reopens", async () => {
+    const savedCart = [{ productId: burgerId, quantity: 2, notes: "Sem cebola" }];
+    localStorage.setItem(
+      `comandinha:qr-cart:${tableCode}`,
+      JSON.stringify(savedCart),
+    );
+    service.getPublicMenu
+      .mockResolvedValueOnce(closedMenu)
+      .mockResolvedValueOnce(menu);
+    const user = userEvent.setup();
+    renderMenu();
+
+    expect(
+      await screen.findByRole("heading", { name: "Casa do Enzo" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Smash clássico" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "A equipe precisa abrir a mesa para receber novos pedidos.",
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    ).toBeDisabled();
+    const cartTrigger = screen.getByRole("button", { name: /Abrir carrinho · 2 itens/ });
+    expect(cartTrigger).toBeDisabled();
+    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toBe(
+      JSON.stringify(savedCart),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Atualizar cardápio" }));
+
+    expect(await screen.findByRole("button", { name: /Abrir carrinho · 2 itens/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    ).toBeEnabled();
+    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toBe(
+      JSON.stringify(savedCart),
+    );
+  });
+
+  it("closes ordering after a session conflict and lets the guest refresh the menu", async () => {
+    service.submitPublicOrder.mockRejectedValueOnce(
+      Object.assign(
+        new Error(
+          "A mesa está fechada para novos pedidos. Peça à equipe para abrir o atendimento.",
+        ),
+        { status: 409 },
+      ),
+    );
+    const user = userEvent.setup();
+    renderMenu();
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: /Abrir carrinho/ }));
+    await user.click(screen.getByRole("button", { name: "Enviar pedido" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A mesa está fechada para novos pedidos.",
+    );
+    const cart = screen.getByRole("dialog", { name: "Seu carrinho" });
+    expect(within(cart).getByRole("button", { name: "Enviar pedido" })).toBeDisabled();
+    expect(
+      within(cart).getByRole("button", { name: "Aumentar Smash clássico" }),
+    ).toBeDisabled();
+    expect(
+      within(cart).getByRole("button", { name: "Remover Smash clássico" }),
+    ).toBeDisabled();
+    expect(within(cart).getByLabelText("Observação para Smash clássico")).toBeDisabled();
+    await user.keyboard("{Escape}");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "A equipe precisa abrir a mesa para receber novos pedidos.",
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Abrir carrinho · 1 item/ })).toBeDisabled();
+    expect(localStorage.getItem(`comandinha:qr-cart:${tableCode}`)).toContain(
+      burgerId,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Atualizar cardápio" }));
+    expect(await screen.findByRole("button", { name: /Abrir carrinho · 1 item/ })).toBeEnabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Adicionar Smash clássico ao carrinho",
+      }),
+    ).toBeEnabled();
   });
 
   it("loads categories, filters the menu and calculates cart totals from server prices", async () => {
