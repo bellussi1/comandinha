@@ -1,0 +1,2296 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/sessions": {
+      "post": {
+        "operationId": "AuthController_create",
+        "parameters": [
+          {
+            "name": "x-comandinha-client-key",
+            "in": "header",
+            "description": "Hash da origem confiável encaminhado pelo gateway; compõe o limite por conta/origem.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedSessionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciais inválidas ou gateway não autorizado."
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MembershipSelectionRequiredDto"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de tentativas excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TooManyRequestsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cria uma sessão administrativa pelo gateway same-origin",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/sessions/current": {
+      "get": {
+        "operationId": "AuthController_current",
+        "parameters": [
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionMetadataDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ausente, revogada ou expirada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Valida a sessão administrativa atual",
+        "tags": [
+          "auth"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthController_revoke",
+        "parameters": [
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Sessão revogada."
+          },
+          "401": {
+            "description": "Sessão ausente, revogada ou expirada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Revoga a sessão administrativa atual",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/health/live": {
+      "get": {
+        "operationId": "HealthController_live",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A API está ativa.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok"
+                      ],
+                      "example": "ok"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verifica se a API está ativa",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "HealthController_ready",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A API e o banco de dados estão disponíveis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ready"
+                      ],
+                      "example": "ready"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "O banco de dados não está disponível.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not-ready"
+                      ],
+                      "example": "not-ready"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "summary": "Verifica a disponibilidade da API e do banco de dados",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/catalog/categories": {
+      "get": {
+        "operationId": "CatalogCategoriesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Lista as categorias do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogCategoriesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "409": {
+            "description": "Já existe uma categoria com esse nome."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Cria uma categoria no restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      }
+    },
+    "/catalog/categories/{id}": {
+      "get": {
+        "operationId": "CatalogCategoriesController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta uma categoria do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogCategoriesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategoryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          },
+          "409": {
+            "description": "Já existe uma categoria com esse nome."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Atualiza uma categoria do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogCategoriesController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Categoria removida."
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          },
+          "409": {
+            "description": "A categoria ainda possui produtos."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Remove uma categoria vazia do restaurante da sessão",
+        "tags": [
+          "catalog categories"
+        ]
+      }
+    },
+    "/catalog/products": {
+      "get": {
+        "operationId": "CatalogProductsController_list",
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogProductResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem consultar produtos arquivados."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Lista produtos ativos ou, para administradores, arquivados",
+        "tags": [
+          "catalog products"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCatalogProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Categoria não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Cria um produto no restaurante da sessão",
+        "tags": [
+          "catalog products"
+        ]
+      }
+    },
+    "/catalog/products/{id}": {
+      "get": {
+        "operationId": "CatalogProductsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta um produto do restaurante da sessão",
+        "tags": [
+          "catalog products"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogProductsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCatalogProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Produto ou categoria não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Atualiza ou restaura um produto do restaurante da sessão",
+        "tags": [
+          "catalog products"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogProductsController_archive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Produto arquivado."
+          },
+          "400": {
+            "description": "Dados inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar o catálogo."
+          },
+          "404": {
+            "description": "Produto não encontrado."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Arquiva um produto sem apagar seus dados",
+        "tags": [
+          "catalog products"
+        ]
+      }
+    },
+    "/tables": {
+      "get": {
+        "operationId": "TablesController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TableResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Lista as mesas do restaurante da sessão",
+        "tags": [
+          "tables"
+        ]
+      },
+      "post": {
+        "operationId": "TablesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem criar mesas."
+          },
+          "409": {
+            "description": "Já existe uma mesa com esse nome."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Cria uma mesa e o código público do QR",
+        "tags": [
+          "tables"
+        ]
+      }
+    },
+    "/tables/{id}": {
+      "get": {
+        "operationId": "TablesController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta uma mesa do restaurante da sessão",
+        "tags": [
+          "tables"
+        ]
+      },
+      "patch": {
+        "operationId": "TablesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTableDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TableResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "403": {
+            "description": "Apenas OWNER e ADMIN podem alterar mesas."
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          },
+          "409": {
+            "description": "Já existe uma mesa com esse nome."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Renomeia ou ativa/desativa uma mesa",
+        "tags": [
+          "tables"
+        ]
+      }
+    },
+    "/orders": {
+      "get": {
+        "operationId": "OrdersController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "PENDING",
+                "PREPARING",
+                "READY",
+                "DELIVERED",
+                "CANCELLED"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrderResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Lista até 100 pedidos mais recentes do restaurante da sessão",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/summary": {
+      "get": {
+        "operationId": "OrdersController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderSummaryResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Conta pedidos por status no restaurante da sessão",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "OrdersController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Pedido não encontrado."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Consulta um pedido do restaurante da sessão",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/orders/{id}/status": {
+      "patch": {
+        "operationId": "OrdersController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou identificador inválidos."
+          },
+          "401": {
+            "description": "Sessão administrativa ausente ou inválida."
+          },
+          "404": {
+            "description": "Pedido não encontrado."
+          },
+          "409": {
+            "description": "Transição de status não permitida."
+          }
+        },
+        "security": [
+          {
+            "admin-session": []
+          }
+        ],
+        "summary": "Avança ou cancela um pedido conforme o fluxo permitido",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/public/tables/{code}/menu": {
+      "get": {
+        "operationId": "PublicDiningController_getMenu",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Código de mesa base64url com 43 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicDiningMenuDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          }
+        },
+        "summary": "Consulta o cardápio público de uma mesa ativa",
+        "tags": [
+          "public dining"
+        ]
+      }
+    },
+    "/public/tables/{code}/orders": {
+      "post": {
+        "operationId": "PublicDiningController_createOrder",
+        "parameters": [
+          {
+            "name": "x-comandinha-client-key",
+            "in": "header",
+            "description": "Hash SHA-256 da origem confiável encaminhado pelo BFF.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-comandinha-gateway-secret",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Código de mesa base64url com 43 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePublicOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Itens, quantidades ou observações inválidas."
+          },
+          "401": {
+            "description": "Gateway não autorizado."
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          },
+          "429": {
+            "description": "Limite de pedidos excedido."
+          }
+        },
+        "summary": "Cria um pedido público usando o preço atual do cardápio",
+        "tags": [
+          "public dining"
+        ]
+      },
+      "get": {
+        "operationId": "PublicDiningController_listOrders",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Código de mesa base64url com 43 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicOrderSummaryDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mesa não encontrada."
+          }
+        },
+        "summary": "Lista os pedidos recentes desta mesa sem dados pessoais",
+        "tags": [
+          "public dining"
+        ]
+      }
+    },
+    "/public/tables/{code}/orders/{orderId}": {
+      "get": {
+        "operationId": "PublicDiningController_getOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "description": "Código de mesa base64url com 43 caracteres.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderSummaryDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "O identificador do pedido é inválido."
+          },
+          "404": {
+            "description": "Mesa ou pedido não encontrado."
+          }
+        },
+        "summary": "Acompanha um pedido específico desta mesa sem dados pessoais",
+        "tags": [
+          "public dining"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Comandinha API",
+    "description": "API do Comandinha para gerenciamento de pedidos e restaurantes.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "admin-session": {
+        "scheme": "bearer",
+        "bearerFormat": "opaque session token",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "CreateSessionRequestDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "owner@example.com"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "writeOnly": true
+          },
+          "restaurantSlug": {
+            "type": "string",
+            "example": "my-restaurant",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "SessionUserDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "email"
+        ]
+      },
+      "SessionRestaurantDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ]
+      },
+      "SessionMembershipDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "STAFF"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "role"
+        ]
+      },
+      "CreatedSessionDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/SessionUserDto"
+          },
+          "restaurant": {
+            "$ref": "#/components/schemas/SessionRestaurantDto"
+          },
+          "membership": {
+            "$ref": "#/components/schemas/SessionMembershipDto"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sessionToken": {
+            "type": "string",
+            "description": "Opaque session secret; returned only to the trusted Next.js gateway."
+          }
+        },
+        "required": [
+          "user",
+          "restaurant",
+          "membership",
+          "expiresAt",
+          "sessionToken"
+        ]
+      },
+      "MembershipChoiceDto": {
+        "type": "object",
+        "properties": {
+          "membershipId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "OWNER",
+              "ADMIN",
+              "STAFF"
+            ]
+          },
+          "restaurant": {
+            "$ref": "#/components/schemas/SessionRestaurantDto"
+          }
+        },
+        "required": [
+          "membershipId",
+          "role",
+          "restaurant"
+        ]
+      },
+      "MembershipSelectionRequiredDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "RESTAURANT_SELECTION_REQUIRED"
+            ]
+          },
+          "memberships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MembershipChoiceDto"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "memberships"
+        ]
+      },
+      "TooManyRequestsDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "example": 429
+          },
+          "message": {
+            "type": "string",
+            "example": "ThrottlerException: Too Many Requests"
+          }
+        },
+        "required": [
+          "statusCode",
+          "message"
+        ]
+      },
+      "SessionMetadataDto": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/SessionUserDto"
+          },
+          "restaurant": {
+            "$ref": "#/components/schemas/SessionRestaurantDto"
+          },
+          "membership": {
+            "$ref": "#/components/schemas/SessionMembershipDto"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "user",
+          "restaurant",
+          "membership",
+          "expiresAt"
+        ]
+      },
+      "CatalogCategoryResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameNormalized": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "displayOrder": {
+            "type": "number"
+          },
+          "productCount": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "name",
+          "nameNormalized",
+          "displayOrder",
+          "productCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCatalogCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Bebidas"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "example": "https://example.com/menu.jpg"
+          },
+          "displayOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647,
+            "description": "Ordem da categoria. O valor padrão é zero."
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateCatalogCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "nullable": true
+          },
+          "displayOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        }
+      },
+      "CatalogProductResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "priceInCents": {
+            "type": "number",
+            "description": "Preço em centavos inteiros."
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "dietaryTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "categoryId",
+          "name",
+          "priceInCents",
+          "available",
+          "featured",
+          "dietaryTags",
+          "isActive",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateCatalogProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "example": "Suco de laranja"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceInCents": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Preço em centavos inteiros."
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri"
+          },
+          "available": {
+            "type": "boolean",
+            "description": "Disponível para pedidos. O valor padrão é true."
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Destaque no catálogo. O valor padrão é false."
+          },
+          "dietaryTags": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440
+          }
+        },
+        "required": [
+          "name",
+          "categoryId",
+          "priceInCents"
+        ]
+      },
+      "UpdateCatalogProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "nullable": true
+          },
+          "categoryId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "priceInCents": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 2147483647,
+            "description": "Preço em centavos inteiros."
+          },
+          "imageUrl": {
+            "type": "string",
+            "maxLength": 2048,
+            "format": "uri",
+            "nullable": true
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "dietaryTags": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 60
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 1440,
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Permite restaurar um produto arquivado."
+          }
+        }
+      },
+      "TableResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "publicCode": {
+            "type": "string",
+            "minLength": 43,
+            "maxLength": 43
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "activeOrderCount": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "name",
+          "publicCode",
+          "isActive",
+          "createdAt",
+          "updatedAt",
+          "activeOrderCount"
+        ]
+      },
+      "CreateTableDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "example": "Mesa 01"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateTableDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OrderStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "PREPARING",
+          "READY",
+          "DELIVERED",
+          "CANCELLED"
+        ]
+      },
+      "OrderTableSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ]
+      },
+      "OrderItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nameSnapshot": {
+            "type": "string"
+          },
+          "unitPriceInCents": {
+            "type": "number"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineTotalInCents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "nameSnapshot",
+          "unitPriceInCents",
+          "quantity",
+          "lineTotalInCents"
+        ]
+      },
+      "OrderResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "restaurantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tableId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalInCents": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "table": {
+            "$ref": "#/components/schemas/OrderTableSummaryDto"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItemResponseDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "restaurantId",
+          "tableId",
+          "status",
+          "totalInCents",
+          "createdAt",
+          "updatedAt",
+          "table",
+          "items"
+        ]
+      },
+      "OrderSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "PENDING": {
+            "type": "number",
+            "minimum": 0
+          },
+          "PREPARING": {
+            "type": "number",
+            "minimum": 0
+          },
+          "READY": {
+            "type": "number",
+            "minimum": 0
+          },
+          "DELIVERED": {
+            "type": "number",
+            "minimum": 0
+          },
+          "CANCELLED": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "PENDING",
+          "PREPARING",
+          "READY",
+          "DELIVERED",
+          "CANCELLED"
+        ]
+      },
+      "UpdateOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "PublicRestaurantSummaryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "PublicTableSummaryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "PublicMenuProductDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "priceInCents": {
+            "type": "number"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "featured": {
+            "type": "boolean"
+          },
+          "dietaryTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "prepTimeMinutes": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "priceInCents",
+          "imageUrl",
+          "featured",
+          "dietaryTags",
+          "prepTimeMinutes"
+        ]
+      },
+      "PublicMenuCategoryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicMenuProductDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "products"
+        ]
+      },
+      "PublicDiningMenuDto": {
+        "type": "object",
+        "properties": {
+          "restaurant": {
+            "$ref": "#/components/schemas/PublicRestaurantSummaryDto"
+          },
+          "table": {
+            "$ref": "#/components/schemas/PublicTableSummaryDto"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicMenuCategoryDto"
+            }
+          }
+        },
+        "required": [
+          "restaurant",
+          "table",
+          "categories"
+        ]
+      },
+      "CreatePublicOrderItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 20
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "CreatePublicOrderDto": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "minItems": 1,
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePublicOrderItemDto"
+            }
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "requestId",
+          "items"
+        ]
+      },
+      "PublicOrderItemSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "nameSnapshot": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitPriceInCents": {
+            "type": "number"
+          },
+          "lineTotalInCents": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "nameSnapshot",
+          "quantity",
+          "unitPriceInCents",
+          "lineTotalInCents"
+        ]
+      },
+      "PublicOrderResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          },
+          "totalInCents": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicOrderItemSnapshotDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "totalInCents",
+          "createdAt",
+          "items"
+        ]
+      },
+      "PublicOrderSummaryDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OrderStatus"
+              }
+            ]
+          },
+          "totalInCents": {
+            "type": "number"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicOrderItemSnapshotDto"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "totalInCents",
+          "createdAt",
+          "items"
+        ]
+      }
+    }
+  }
+}
