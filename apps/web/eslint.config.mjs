@@ -13,7 +13,7 @@ export default defineConfig([
   },
   globalIgnores([
     '.next/**',
-    '.next-ui-check/**',
+    '.next-*/**',
     'out/**',
     'build/**',
     'next-env.d.ts',
